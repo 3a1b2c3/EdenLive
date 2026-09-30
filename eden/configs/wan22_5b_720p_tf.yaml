@@ -1,0 +1,162 @@
+# Wan2.2-TI2V-5B (720p) + Proxy-DINO — teacher forcing, chunk-autoregressive.
+#
+# 117 frames @24fps at 1280x704, with a bounded KV window (18 latent frames + 6 sink).
+#
+# The proxy timeline matches the training window: 117 frames from the start at 24 FPS.
+# Deliberately NOT the canonical test set's uniform full-five-second sampling, which would
+# time-compress a five-second source into the shorter 117-frame generation horizon.
+#
+# NOTE: the data block still asserts the proxy clip is exactly 5.0s (+-0.05). The two
+# recordings under examples/samples/ are 12.1s and 18.4s, so point this at a 5-second proxy
+# or override the check:
+#   data.dataset.params.columns.proxy_video.params.duration_seconds=null
+
+model:
+  adapter: wan22_diffusers
+  model_id: Wan-AI/Wan2.2-TI2V-5B-Diffusers
+  torch_dtype: bfloat16
+  local_files_only: true
+  gradient_checkpointing: false
+  max_sequence_length: 512
+  teacher_forcing_attention_backend: flash4
+  proxy_dino:
+    # This checkpoint was trained with `zero`: the unconditional CFG branch uses zero DINO
+    # control, so guidance pushes along the proxy axis as well as text. Must match how the
+    # checkpoint was trained; `zero` and `same` are not interchangeable.
+    cfg_unconditional_control: zero
+    # This is the newly added Wan patch-embedding control slice (not the frozen,
+    # checkpoint-loaded DINO patch projection). Zero-init keeps the model numerically
+    # equivalent to base Wan before finetuning.
+    channel_concat_zero_init: true
+    checkpoint_path: /path/to/proxy-dino/best.pt
+    control_dim: 1024
+    enabled: true
+    image_size:
+    - 288
+    - 512
+    local_files_only: true
+    # Override these paths for the local DINOv3 backbone and the finetuned proxy.
+    model_path: /path/to/dinov3-vitl16-pretrain-lvd1689m
+    patchify_factor: 2
+    # Offline inference decodes RGB source clips; cached target latents are training-only.
+    use_cached_latents: false
+    vae_time_compression_ratio: 4
+    video_context_time_axis: decoded
+
+runtime:
+  fsdp2:
+    enabled: true
+    meta_init: true
+    mixed_precision: bf16
+    param_dtype: bf16
+    reduce_dtype: fp32
+    reshard_after_forward: true
+    wrap_policy: transformer_block
+  sequence_parallel:
+    axis: temporal
+    enabled: true
+    layout: balanced_blocks
+    size: 1
+  attention_backend:
+    backend: native
+    enabled: false
+  torch_compile:
+    backend: inductor
+    dynamic: false
+    enabled: true
+    fullgraph: false
+    mode: default
+    preserve_precision: true
+  kv_cache:
+    compression: none
+    context:
+      debug_window: false
+      # Bounded sliding window: 18 attendable latent frames plus 6 always-resident sink
+      # frames at the start of the rollout.
+      max_latent_frames: 18
+      sink_latent_frames: 6
+    enabled: true
+    quantized: false
+
+data:
+  dataset:
+    name: manifest
+    params:
+      columns:
+        first_frame:
+          condition: image
+          loader: image
+          params:
+            height: 704
+            resize_mode: center_crop
+            value_range: -1,1
+            width: 1280
+          required: true
+        prompt:
+          condition: text
+          loader: text
+          required: true
+        proxy_video:
+          condition: video_context
+          loader: video
+          params:
+            # 117 frames from the start at 24 FPS, matching the training window.
+            clip_position: start
+            duration_seconds: 5.0
+            duration_tolerance_seconds: 0.05
+            fps: 24
+            height: 704
+            num_frames: 117
+            num_threads: 2
+            pad_short: true
+            sampling: fps
+            value_range: -1,1
+            width: 1280
+          required: true
+      id_column: id
+      metadata_columns:
+      - proxy_video
+      - first_frame
+      # Point these at your own manifest. The repo ships two runnable proxy recordings:
+      # path=examples/samples/manifest.csv root=examples/samples.
+      path: /path/to/proxy_manifest.csv
+      root: /path/to/proxy_dataset
+  batch_size: 1
+  shuffle: false
+  num_workers: 4
+  pin_memory: true
+  drop_last: false
+  persistent_workers: true
+  prefetch_factor: 1
+
+inference:
+  strategy: chunk_causal
+  outputs:
+  - video
+  checkpoint: /path/to/ckpts/5b_720p/tf
+  output_dir: inference/wan22_5b_720p_tf
+  max_batches: 0
+  num_samples: 1
+  height: 704
+  width: 1280
+  num_frames: 117
+  fps: 24
+  chunk_size: 3
+  pack_first_frame: true
+  num_inference_steps: 30
+  guidance_scale: 3.0
+  guidance_scale_proxy: 4.0
+  negative_prompt: Vibrant colors, overexposed, static, blurry details, subtitles, style, artwork, painting,
+    image, still, overall grayish, worst quality, low quality, JPEG compression residue, ugly, incomplete,
+    extra fingers, poorly drawn hands, poorly drawn face, deformed, disfigured, deformed limbs, fused
+    fingers, three legs
+  use_image_condition: true
+  seed: 42
+  output_type: np
+  save_condition_videos:
+    video_context: proxy
+  scheduler:
+    name: flow_euler
+    schedule: shifted_linear
+    shift: 5.0
+    stretch: false

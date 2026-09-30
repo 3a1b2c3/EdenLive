@@ -43,7 +43,7 @@ python -c 'import torch, flash_attn.cute; print(torch.__version__, torch.version
 
 ## 配置
 
-可复用 preset 位于 `eden/configs/runtime/wan22_tf_fa4_compile.yaml`：
+在所用 config 的 `model:` / `runtime:` 块里设置以下键（每个 config 自包含，没有共享 preset 文件）：
 
 ```yaml
 model:

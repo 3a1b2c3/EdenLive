@@ -111,7 +111,7 @@ def build_dataloader(config: dict[str, Any], runtime_context=None) -> DataLoader
     if "sources" in config or (config.get("datasets") is not None and config.get("weights") is not None):
         raise ValueError(
             "weighted multi-source data configs belong to training; offline inference takes a single "
-            "`data.dataset` (see eden/configs/data/proxy_video_test.yaml)"
+            "`data.dataset` (see any config under eden/configs/)"
         )
 
     datasets_cfg = config.get("datasets")

@@ -23,7 +23,7 @@ from eden.core.config import load_config
 from eden.core.factory import build_model_adapter, build_runtime_plugins
 from eden.inference.strategies import default_strategies
 
-CONFIG_ROOT = Path(__file__).resolve().parents[1] / "configs" / "inference"
+CONFIG_ROOT = Path(__file__).resolve().parents[1] / "configs"
 
 
 def check_config(path: Path, strategies: dict) -> list[str]:

@@ -18,7 +18,7 @@ By [Vast AI](xxx)
 </div>
 
 > **Placeholders.** Links marked `xxx` and the `/path/to/...` entries in
-> `eden/configs/models/*.yaml` are not yet published. See
+> `eden/configs/*.yaml` are not yet published. See
 > [Before publishing](#before-publishing).
 
 <div align="center">
@@ -89,59 +89,60 @@ own data.
 manifest plus timed `dynamicPrompts` for the events in the clip. `prompts.txt` is the
 same content, readable.
 
-Two models ship, each in the same three inference modes:
+Two models ship, each in the same three inference modes. Every config in
+`eden/configs/` is self-contained — one file, no includes:
 
 | Mode | Wan2.1-I2V-14B @ 480p | Wan2.2-TI2V-5B @ 720p |
 | --- | --- | --- |
-| Bidirectional | `wan21_i2v_14b_480p_proxy_dino_to_real/bidir_same.yaml` | `wan22_5b_proxy_dino_to_real/proxy_dino-video-tiv2v-bidir.yaml` |
-| Teacher forcing | `wan21_i2v_14b_480p_proxy_dino_to_real/tf_v2.yaml` | `wan22_5b_proxy_dino_to_real/proxy_dino-video-tiv2v-tf_chunkar.yaml` |
-| Few-step | `wan21_i2v_14b_480p_proxy_dino_to_real/sgf.yaml` | `wan22_5b_proxy_dino_to_real/proxy_dino-video-tiv2v-rollout_dmd_chunkar.yaml` |
+| Bidirectional | `wan21_14b_480p_bidir.yaml` | `wan22_5b_720p_bidir.yaml` |
+| Teacher forcing | `wan21_14b_480p_tf.yaml` | `wan22_5b_720p_tf.yaml` |
+| Few-step | `wan21_14b_480p_few_step.yaml` | `wan22_5b_720p_few_step.yaml` |
 
-All paths are relative to `eden/configs/inference/`. The 14B commands below run the
-shipped recordings as-is; swap the `--config` for the 5B column to run that model.
+The 14B commands below run the shipped recordings as-is; swap the `--config` for the 5B
+column to run that model.
 
 **Bidirectional** — all frames denoise jointly, highest quality:
 
 ```bash
 torchrun --nproc_per_node=2 -m eden.scripts.infer \
-  --config eden/configs/inference/wan21_i2v_14b_480p_proxy_dino_to_real/bidir_same.yaml \
+  --config eden/configs/wan21_14b_480p_bidir.yaml \
   data.dataset.params.path=examples/samples/manifest.csv \
   data.dataset.params.root=examples/samples \
   runtime.sequence_parallel.size=2 \
-  inference.checkpoint=/path/to/ckpts/14b_480p/bidir_same
+  inference.checkpoint=/path/to/ckpts/14b_480p/bidir
 ```
 
 **Teacher forcing** — chunk-autoregressive with unbounded KV context, 30 steps per chunk:
 
 ```bash
 torchrun --nproc_per_node=2 -m eden.scripts.infer \
-  --config eden/configs/inference/wan21_i2v_14b_480p_proxy_dino_to_real/tf_v2.yaml \
+  --config eden/configs/wan21_14b_480p_tf.yaml \
   data.dataset.params.path=examples/samples/manifest.csv \
   data.dataset.params.root=examples/samples \
   runtime.sequence_parallel.size=2 \
-  inference.checkpoint=/path/to/ckpts/14b_480p/tf_v2
+  inference.checkpoint=/path/to/ckpts/14b_480p/tf
 ```
 
 **Few-step** — chunk-autoregressive, 4 steps per chunk, near real time:
 
 ```bash
 torchrun --nproc_per_node=2 -m eden.scripts.infer \
-  --config eden/configs/inference/wan21_i2v_14b_480p_proxy_dino_to_real/sgf.yaml \
+  --config eden/configs/wan21_14b_480p_few_step.yaml \
   data.dataset.params.path=examples/samples/manifest.csv \
   data.dataset.params.root=examples/samples \
   runtime.sequence_parallel.size=2 \
-  inference.checkpoint=/path/to/ckpts/14b_480p/sgf
+  inference.checkpoint=/path/to/ckpts/14b_480p/few_step
 ```
 
 The 5B configs generate at 1280x704 — 121 frames bidirectional, 117 teacher forcing, 237
-few-step. They inherit `proxy_video_test`, which asserts the proxy clip is **exactly 5.0s
-±0.05** (`data.dataset.params.columns.proxy_video.params.duration_seconds`), so the two
-shipped recordings (12.1s and 18.4s) are rejected by the loader. Point them at a 5-second
-proxy, or override that check:
+few-step. Each asserts the proxy clip is **exactly 5.0s ±0.05**
+(`data.dataset.params.columns.proxy_video.params.duration_seconds`), so the two shipped
+recordings (12.1s and 18.4s) are rejected by the loader. Point them at a 5-second proxy, or
+override that check:
 
 ```bash
 torchrun --nproc_per_node=2 -m eden.scripts.infer \
-  --config eden/configs/inference/wan22_5b_proxy_dino_to_real/proxy_dino-video-tiv2v-bidir.yaml \
+  --config eden/configs/wan22_5b_720p_bidir.yaml \
   data.dataset.params.path=examples/samples/manifest.csv \
   data.dataset.params.root=examples/samples \
   data.dataset.params.columns.proxy_video.params.duration_seconds=null \
@@ -218,15 +219,34 @@ python -m eden.scripts.infer --config CONFIG.yaml \
 
 ## Configuration
 
-Configs are YAML with a lightweight `defaults:` composition (no Hydra) plus dotlist
-overrides. A config composes a model group, a runtime group, and a data group, then sets
-the `inference:` block:
+Each config in `eden/configs/` is one self-contained YAML file — no includes, no group
+composition — plus dotlist overrides on the command line. Four blocks: `model:` names the
+adapter and the weight directories, `runtime:` the parallelism and caching, `data:` the
+manifest and how frames are sampled, `inference:` the sampling itself.
 
 ```yaml
-defaults:
-  - models: wan22_5b_proxy_dino_channel_concat
-  - runtime: fsdp2_sp_kv
-  - data: proxy_video_test
+model:
+  adapter: wan22_diffusers
+  model_id: /path/to/Wan2.2-TI2V-5B-Diffusers
+  torch_dtype: bfloat16
+  proxy_dino:
+    enabled: true
+    model_path: /path/to/dinov3-vitl16-pretrain-lvd1689m
+    checkpoint_path: /path/to/proxy-dino/best.pt
+
+runtime:
+  sequence_parallel: {enabled: true, size: 1, axis: temporal, layout: balanced_blocks}
+  kv_cache:
+    enabled: true
+    context: {max_latent_frames: 18, sink_latent_frames: 6}
+
+data:
+  dataset:
+    name: manifest
+    params:
+      path: /path/to/proxy_manifest.csv
+      root: /path/to/proxy_dataset
+      # ... column loaders
 
 inference:
   strategy: chunk_causal      # or: diffusion
@@ -273,8 +293,9 @@ still need a real inference run.
 
 - [ ] Replace every `xxx` link: project page, paper, model repo, demo, clone URL.
 - [ ] Publish weights and document the download.
-- [ ] Replace the `/path/to/...` placeholders in `eden/configs/` with the published
-      weight, checkpoint, and manifest locations.
+- [ ] Replace the `/path/to/...` placeholders in `eden/configs/` — `model.model_id`,
+      `model.proxy_dino.*`, `inference.checkpoint`, and the manifest paths — with the
+      published locations.
 - [ ] Add more example results alongside `docs/assets/generated.mp4`.
 - [ ] Fill in the citation block.
 

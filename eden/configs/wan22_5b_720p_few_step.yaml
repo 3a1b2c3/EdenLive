@@ -1,0 +1,174 @@
+# Wan2.2-TI2V-5B (720p) + Proxy-DINO — few-step (rollout DMD), 4 steps per chunk,
+# near real time.
+#
+# 237 frames @24fps at 1280x704 — the longest rollout of the three modes, with a bounded KV
+# window (18 latent frames + 6 sink) and FSDP2 meta-init disabled.
+#
+# NOTE: the data block asserts the proxy clip is exactly 5.0s (+-0.05). The two recordings
+# under examples/samples/ are 12.1s and 18.4s, so point this at a 5-second proxy or
+# override the check:
+#   data.dataset.params.columns.proxy_video.params.duration_seconds=null
+#
+# The proxy must also be long enough to cover the generated clip: 237 frames is 60 latent
+# frames, and chunk-AR consumes one proxy frame per latent frame.
+
+model:
+  adapter: wan22_diffusers
+  model_id: Wan-AI/Wan2.2-TI2V-5B-Diffusers
+  torch_dtype: bfloat16
+  local_files_only: true
+  gradient_checkpointing: false
+  max_sequence_length: 512
+  proxy_dino:
+    # This checkpoint was trained with `zero`: the unconditional CFG branch uses zero DINO
+    # control, so guidance pushes along the proxy axis as well as text. Must match how the
+    # checkpoint was trained; `zero` and `same` are not interchangeable.
+    cfg_unconditional_control: zero
+    # This is the newly added Wan patch-embedding control slice (not the frozen,
+    # checkpoint-loaded DINO patch projection). Zero-init keeps the model numerically
+    # equivalent to base Wan before finetuning.
+    channel_concat_zero_init: true
+    checkpoint_path: /path/to/proxy-dino/best.pt
+    control_dim: 1024
+    enabled: true
+    image_size:
+    - 288
+    - 512
+    local_files_only: true
+    # Override these paths for the local DINOv3 backbone and the finetuned proxy.
+    model_path: /path/to/dinov3-vitl16-pretrain-lvd1689m
+    patchify_factor: 2
+    # Offline inference decodes RGB source clips; cached target latents are training-only.
+    use_cached_latents: false
+    vae_time_compression_ratio: 4
+    video_context_time_axis: decoded
+
+runtime:
+  fsdp2:
+    enabled: true
+    meta_init: false
+    mixed_precision: bf16
+    param_dtype: bf16
+    reduce_dtype: fp32
+    reshard_after_forward: true
+    wrap_policy: transformer_block
+  sequence_parallel:
+    axis: temporal
+    enabled: true
+    layout: balanced_blocks
+    size: 1
+  attention_backend:
+    backend: native
+    enabled: false
+  torch_compile:
+    backend: inductor
+    dynamic: false
+    enabled: false
+    fullgraph: false
+    mode: null
+    preserve_precision: false
+  kv_cache:
+    compression: none
+    context:
+      debug_window: false
+      # Bounded sliding window: 18 attendable latent frames plus 6 always-resident sink
+      # frames at the start of the rollout.
+      max_latent_frames: 18
+      sink_latent_frames: 6
+    context_noise_sigma: 0.0
+    context_noise_sigma_sink: null
+    enabled: true
+    # Keep completed chunk-AR latents on CPU; only the active chunk and KV window remain
+    # resident on the execution device.
+    offload_generated_chunks: true
+    quantized: false
+
+data:
+  dataset:
+    name: manifest
+    params:
+      columns:
+        first_frame:
+          condition: image
+          loader: image
+          params:
+            height: 704
+            resize_mode: center_crop
+            value_range: -1,1
+            width: 1280
+          required: true
+        prompt:
+          condition: text
+          loader: text
+          required: true
+        proxy_video:
+          condition: video_context
+          loader: video
+          params:
+            # Match the canonical GameBlocks proxy evaluation: span the full five-second
+            # clip and resize/crop into the 720p training geometry.
+            duration_seconds: 5.0
+            duration_tolerance_seconds: 0.05
+            height: 704
+            num_frames: 121
+            num_threads: 2
+            # The 24 FPS proxies hold exactly 120 frames, one short of the 121 requested
+            # here, so uniform sampling must be allowed to repeat a single interior frame.
+            # The 30 FPS proxies carry 150 frames and are unaffected.
+            pad_short: true
+            sampling: uniform
+            value_range: -1,1
+            width: 1280
+          required: true
+      id_column: id
+      metadata_columns:
+      - proxy_video
+      - first_frame
+      # Point these at your own manifest. The repo ships two runnable proxy recordings:
+      # path=examples/samples/manifest.csv root=examples/samples.
+      path: /path/to/proxy_manifest.csv
+      root: /path/to/proxy_dataset
+  batch_size: 1
+  shuffle: false
+  num_workers: 4
+  pin_memory: true
+  drop_last: false
+  persistent_workers: true
+  prefetch_factor: 1
+
+inference:
+  strategy: chunk_causal
+  outputs:
+  - video
+  checkpoint: /path/to/ckpts/5b_720p/few_step
+  checkpoint_source: ema
+  output_dir: inference/wan22_5b_720p_few_step
+  max_batches: 0
+  num_samples: 1
+  height: 704
+  width: 1280
+  num_frames: 237
+  fps: 24
+  chunk_size: 3
+  pack_first_frame: true
+  num_inference_steps: 4
+  guidance_scale: 1.0
+  negative_prompt: Vibrant colors, overexposed, static, blurry details, subtitles, style, artwork, painting,
+    image, still, overall grayish, worst quality, low quality, JPEG compression residue, ugly, incomplete,
+    extra fingers, poorly drawn hands, poorly drawn face, deformed, disfigured, deformed limbs, fused
+    fingers, three legs
+  use_image_condition: true
+  seed: 42
+  output_type: np
+  save_condition_videos:
+    video_context: proxy
+  # The distilled student samples this fixed four-timestep schedule; num_inference_steps
+  # above must match its length.
+  scheduler:
+    name: flow_euler
+    stochastic_sampling: true
+    timesteps:
+    - 1000
+    - 937.5
+    - 833.3333333333
+    - 625

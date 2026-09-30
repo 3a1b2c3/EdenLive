@@ -17,7 +17,7 @@
 
 </div>
 
-> **占位说明**：标记为 `xxx` 的链接，以及 `eden/configs/models/*.yaml` 里的
+> **占位说明**：标记为 `xxx` 的链接，以及 `eden/configs/*.yaml` 里的
 > `/path/to/...` 路径尚未发布。见[发布前清单](#发布前清单)。
 
 <div align="center">
@@ -88,22 +88,22 @@ examples/samples/
 
 ```bash
 torchrun --nproc_per_node=2 -m eden.scripts.infer \
-  --config eden/configs/inference/wan21_i2v_14b_480p_proxy_dino_to_real/bidir_same.yaml \
+  --config eden/configs/wan21_14b_480p_bidir.yaml \
   data.dataset.params.path=examples/samples/manifest.csv \
   data.dataset.params.root=examples/samples \
   runtime.sequence_parallel.size=2 \
-  inference.checkpoint=/path/to/ckpts/14b_480p/bidir_same
+  inference.checkpoint=/path/to/ckpts/14b_480p/bidir
 ```
 
 **Few-step** —— 分块自回归，每块 4 步，准实时：
 
 ```bash
 torchrun --nproc_per_node=2 -m eden.scripts.infer \
-  --config eden/configs/inference/wan21_i2v_14b_480p_proxy_dino_to_real/sgf.yaml \
+  --config eden/configs/wan21_14b_480p_few_step.yaml \
   data.dataset.params.path=examples/samples/manifest.csv \
   data.dataset.params.root=examples/samples \
   runtime.sequence_parallel.size=2 \
-  inference.checkpoint=/path/to/ckpts/14b_480p/sgf
+  inference.checkpoint=/path/to/ckpts/14b_480p/few_step
 ```
 
 **流式服务** —— 交互式实时推理：
@@ -142,14 +142,25 @@ python -m eden.scripts.infer --config CONFIG.yaml \
 
 ## 配置
 
-配置是 YAML，用轻量的 `defaults:` 组合（不依赖 Hydra），配合命令行 dotlist 覆盖。
-一个配置组合模型组、runtime 组和数据组，然后设置 `inference:` 块：
+`eden/configs/` 下每个配置都是一个自包含的 YAML 文件（无 include、无分组组合），
+配合命令行 dotlist 覆盖。四个块：`model:` 指定 adapter 和权重目录，`runtime:` 指定并行与
+缓存，`data:` 指定 manifest 和抽帧方式，`inference:` 指定采样本身：
 
 ```yaml
-defaults:
-  - models: wan22_5b_proxy_dino_channel_concat
-  - runtime: fsdp2_sp_kv
-  - data: proxy_video_test
+model:
+  adapter: wan22_diffusers
+  model_id: /path/to/Wan2.2-TI2V-5B-Diffusers
+  torch_dtype: bfloat16
+
+runtime:
+  sequence_parallel: {enabled: true, size: 1, axis: temporal, layout: balanced_blocks}
+
+data:
+  dataset:
+    name: manifest
+    params:
+      path: /path/to/proxy_manifest.csv
+      root: /path/to/proxy_dataset
 
 inference:
   strategy: chunk_causal      # 或 diffusion
