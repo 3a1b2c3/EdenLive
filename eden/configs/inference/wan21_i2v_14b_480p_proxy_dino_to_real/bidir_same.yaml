@@ -4,8 +4,8 @@
 # sampled the way it was evaluated during training.
 #
 # `same` keeps the source-video proxy control in *both* CFG branches, so guidance varies
-# text only. The paired `bidir_zero` config is the same model trained with `zero`, where
-# the unconditional branch drops proxy control — they are not interchangeable.
+# text only. A checkpoint trained with `zero` — where the unconditional branch drops proxy
+# control — needs `cfg_unconditional_control: zero` here; the two are not interchangeable.
 #
 # Frame math @16fps: 81 decoded -> 21 latent frames.
 defaults:
