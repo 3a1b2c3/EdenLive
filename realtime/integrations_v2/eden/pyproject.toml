@@ -49,10 +49,7 @@ dev = [
 "cam2v-eden-world-v2-1.3b-causal-fast" = "eden.apps.cam2v.adapter:create_app_v2_1pt3b_causal_fast"
 "cam2v-eden-world-v2-1.3b-causal-fast-taehv-window18-sink6" = "eden.apps.cam2v.adapter:create_app_v2_1pt3b_causal_fast_taehv_window18_sink6"
 "cam2v-eden-world-v2-14b-causal-pretrain" = "eden.apps.cam2v.adapter:create_app_v2_14b_causal_pretrain"
-"game2v-eden-world-v2-1.3b" = "eden.apps.game2v.adapter:create_app"
-"game2v-eden-world-v2-14b" = "eden.apps.game2v.adapter:create_app_v2_14b"
 "game2v-eden-world-v2-14b-taehv" = "eden.apps.game2v.adapter:create_app_v2_14b_taehv"
-"game2v-eden-world-v2-5b" = "eden.apps.game2v.adapter:create_app_v2_5b"
 "game2v-eden-world-v2-5b-taehv" = "eden.apps.game2v.adapter:create_app_v2_5b_taehv"
 
 [tool.setuptools]

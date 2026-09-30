@@ -15,7 +15,6 @@ from eden.apps.game2v.game5b import (
     make_game5b_control_stream,
     resolve_game5b_conditioning,
 )
-from eden.config import PIPELINE_EDEN_WORLD_V2_1PT3B_CAUSAL_FAST
 from eden.game14b_config import (
     PIPELINE_GAME2V_EDEN_WORLD_V2_14B,
     PIPELINE_GAME2V_EDEN_WORLD_V2_14B_TAEHV,
@@ -27,20 +26,10 @@ from eden.game5b_config import (
     PIPELINE_GAME2V_EDEN_WORLD_V2_5B,
     PIPELINE_GAME2V_EDEN_WORLD_V2_5B_TAEHV,
 )
-from eden.impl.conditioning import resolve_eden_conditioning
 
-GAME2V_EDEN_DEFAULTS = dataclasses.replace(Cam2VApplicationDefaults(
-    pipeline_config=derive_config(PIPELINE_EDEN_WORLD_V2_1PT3B_CAUSAL_FAST),
-    input_resolver=resolve_eden_conditioning, total_blocks=20, pixel_width=832,
-    pixel_height=480, first_frame_dtype=torch.bfloat16,
-    first_frame_interpolation="cubic", fps=16, log_model_timing=True,
-    install_hint="Install the Eden integration: pip install flashdreams-eden.",
-    input_defaults={"example_data": False, "example_idx": 0}), fixed_camera=True)
-
-def create_app() -> IApplication:
-    """Create the fixed-camera Eden game-to-video shell."""
-    return Game2VApplication(defaults=GAME2V_EDEN_DEFAULTS)
-
+# Only the two TAEHV applications are shipped. The non-TAEHV pipeline configs
+# and defaults below are not registered as applications; they are the bases the
+# TAEHV variants derive from, so they stay.
 
 # Proxy-DINO conditioned AR 14B: the game's render conditions generation
 # through DINOv3 instead of camera poses, so the first frame, prompt, step
@@ -64,11 +53,6 @@ GAME2V_EDEN_WORLD_V2_14B_DEFAULTS = dataclasses.replace(
     ),
     fixed_camera=True,
 )
-
-
-def create_app_v2_14b() -> IApplication:
-    """Create the proxy-DINO conditioned AR 14B game-to-video shell."""
-    return Game2VApplication(defaults=GAME2V_EDEN_WORLD_V2_14B_DEFAULTS)
 
 
 GAME2V_EDEN_WORLD_V2_14B_TAEHV_DEFAULTS = dataclasses.replace(
@@ -97,11 +81,6 @@ GAME2V_EDEN_WORLD_V2_5B_DEFAULTS = dataclasses.replace(
     generate_step=generate_game5b_step,
     control_stream_factory=make_game5b_control_stream,
 )
-
-
-def create_app_v2_5b() -> IApplication:
-    """Create the proxy-DINO conditioned rollout-DMD 5B game-to-video shell."""
-    return Game2VApplication(defaults=GAME2V_EDEN_WORLD_V2_5B_DEFAULTS)
 
 
 GAME2V_EDEN_WORLD_V2_5B_TAEHV_DEFAULTS = dataclasses.replace(

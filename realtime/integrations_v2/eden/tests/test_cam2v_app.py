@@ -63,11 +63,8 @@ def test_package_registers_the_shared_cam2v_application() -> None:
             f"{target}create_app_v2_14b_causal_pretrain"
         ),
         # Game2V shells live in their own adapter: they drive a vendored game
-        # rather than a camera trace.
-        "game2v-eden-world-v2-1.3b": f"{game2v_target}create_app",
-        "game2v-eden-world-v2-14b": f"{game2v_target}create_app_v2_14b",
+        # rather than a camera trace. Only the two TAEHV variants are shipped.
         "game2v-eden-world-v2-14b-taehv": f"{game2v_target}create_app_v2_14b_taehv",
-        "game2v-eden-world-v2-5b": f"{game2v_target}create_app_v2_5b",
         "game2v-eden-world-v2-5b-taehv": (
             f"{game2v_target}create_app_v2_5b_taehv"
         ),

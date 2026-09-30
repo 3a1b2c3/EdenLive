@@ -303,11 +303,11 @@ def _stub_capture(chunk) -> list[dict]:
 
 
 def test_default_capture_size_matches_model_frame_size():
-    from eden.apps.game2v.adapter import GAME2V_EDEN_DEFAULTS
+    from eden.apps.game2v.adapter import GAME2V_EDEN_WORLD_V2_14B_TAEHV_DEFAULTS
 
     assert (DEFAULT_CAPTURE_WIDTH, DEFAULT_CAPTURE_HEIGHT) == (
-        GAME2V_EDEN_DEFAULTS.pixel_width,
-        GAME2V_EDEN_DEFAULTS.pixel_height,
+        GAME2V_EDEN_WORLD_V2_14B_TAEHV_DEFAULTS.pixel_width,
+        GAME2V_EDEN_WORLD_V2_14B_TAEHV_DEFAULTS.pixel_height,
     )
 
 

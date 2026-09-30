@@ -122,29 +122,27 @@ cd realtime
 uv sync --package flashdreams-eden --extra runners
 
 # HF_HOME must hold the model weights; the script exports HF_HUB_OFFLINE=1.
-bash start.sh eden-game2v-5b            # or eden-game2v-14b
+bash start.sh eden-game2v-5b-taehv      # or eden-game2v-14b-taehv
 ```
 
 Open `http://<host>:8089` and play. `start.sh` maps the model name to an application
 slug, then runs `run.py` under `torchrun --nproc_per_node=8` in `webrtc` mode. Pass `off`
-as the second argument (`bash start.sh eden-game2v-5b off`) to skip transformer
+as the second argument (`bash start.sh eden-game2v-5b-taehv off`) to skip transformer
 compilation when you only care about time-to-first-chunk.
 
 | `start.sh` model | Application slug |
 | --- | --- |
-| `eden-game2v-1.3b` | `game2v-eden-world-v2-1.3b` |
-| `eden-game2v-5b` | `game2v-eden-world-v2-5b` |
 | `eden-game2v-5b-taehv` | `game2v-eden-world-v2-5b-taehv` |
-| `eden-game2v-14b` | `game2v-eden-world-v2-14b` |
 | `eden-game2v-14b-taehv` | `game2v-eden-world-v2-14b-taehv` |
 
-The `-taehv` variants swap in the TAEHV decoder, which trades some fidelity for latency.
+Both decode with the TAEHV decoder rather than the Wan VAE, trading some fidelity for
+latency.
 `EDEN_GAME` selects which game drives the proxy render — the slugs come from
 [`realtime/games/registry.json`](realtime/games/registry.json), and `subway-run` is the
 default:
 
 ```bash
-EDEN_GAME=need-for-speed bash start.sh eden-game2v-5b
+EDEN_GAME=need-for-speed bash start.sh eden-game2v-5b-taehv
 ```
 
 `realtime/` is a separate uv workspace with its own `eden` package (the FlashDreams

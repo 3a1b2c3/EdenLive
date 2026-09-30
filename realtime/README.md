@@ -86,7 +86,7 @@ directly:
 
 ```bash
 uv run --project integrations_v2/eden \
-    flashdreams-run-v2 game2v-eden-world-v2-5b -- --help
+    flashdreams-run-v2 game2v-eden-world-v2-5b-taehv -- --help
 ```
 
 You can also install FlashDreams as a library from PyPI:
@@ -98,7 +98,7 @@ pip install flashdreams
 ### Launch a game session
 
 ```bash
-bash start.sh eden-game2v-5b        # or eden-game2v-14b
+bash start.sh eden-game2v-5b-taehv        # or eden-game2v-14b-taehv
 ```
 
 `start.sh` picks the application slug, then runs `run.py` under
@@ -108,7 +108,7 @@ matters. `EDEN_GAME` selects which game feeds the proxy render; the slugs come
 from [`games/registry.json`](games/registry.json) and default to `subway-run`.
 
 ```bash
-EDEN_GAME=need-for-speed bash start.sh eden-game2v-5b off
+EDEN_GAME=need-for-speed bash start.sh eden-game2v-5b-taehv off
 ```
 
 It expects the weights in `HF_HOME` (default `/root/cache`) and runs with
@@ -124,11 +124,13 @@ framework code they need, nothing else. For the full model gallery, see
 
 | Application slug | Model |
 | --- | --- |
-| `game2v-eden-world-v2-5b` | Eden game2v 5B |
 | `game2v-eden-world-v2-5b-taehv` | Eden game2v 5B, TAEHV decoder |
-| `game2v-eden-world-v2-14b` | Eden game2v 14B |
 | `game2v-eden-world-v2-14b-taehv` | Eden game2v 14B, TAEHV decoder |
-| `game2v-eden-world-v2-1.3b` | Eden game2v 1.3B |
+
+Both decode with LightTAE rather than the Wan VAE. The non-TAEHV pipeline
+configs stay in `game5b_config.py` and `game14b_config.py` because the two
+shipped variants are `derive_config`'d from them, but they are not registered as
+applications and cannot be launched.
 
 The `cam2v-eden-*` slugs in
 [`integrations_v2/eden/pyproject.toml`](integrations_v2/eden/pyproject.toml) are

@@ -65,7 +65,7 @@ uv run flashdreams-run <runner-name> --help
 uv run flashdreams-run --no-instantiate <runner-name>
 uv run --group lint pre-commit run -a
 uv run pytest integrations_v2/eden/tests
-bash start.sh eden-game2v-5b        # or eden-game2v-14b
+bash start.sh eden-game2v-5b-taehv        # or eden-game2v-14b-taehv
 ```
 
 `start.sh` resolves the application slug and runs `run.py` under `torchrun` in

@@ -8,9 +8,9 @@ pip install -e ./integrations_v2/eden
 pip install playwright
 python -m playwright install chromium
 npm install --prefix games --no-save --package-lock=false three@0.161.0
-bash start.sh eden-game2v-1.3b off
-# Select the other game:
-EDEN_GAME=subway-run bash start.sh eden-game2v-1.3b off
+bash start.sh eden-game2v-5b-taehv off
+# Select another game:
+EDEN_GAME=subway-run bash start.sh eden-game2v-5b-taehv off
 ```
 
 Use `EDEN_GAMES_ROOT` for a different resource directory. `EDEN_THREE_MODULE`

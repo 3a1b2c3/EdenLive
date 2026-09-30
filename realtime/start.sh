@@ -2,36 +2,27 @@
 # 用法：bash start.sh <模型> [on|off]
 # 第二个参数控制模型推理优化：on 保持默认 compile/缓存优化，off 关闭
 # transformer compile，适合只关心尽快得到首个 chunk 的调试场景。
-# 模型选择：bash start.sh [eden-game2v-1.3b|eden-game2v-5b|eden-game2v-5b-taehv|eden-game2v-14b|eden-game2v-14b-taehv]
+# 模型选择：bash start.sh [eden-game2v-5b-taehv|eden-game2v-14b-taehv]
 
 # run.py 与 games/ 都在本脚本所在目录下，torchrun 必须从那里启动。
 cd "$(dirname "$(readlink -f "$0")")" || exit 1
 
 # 先校验参数再动手清理，避免拼错名字时把正在跑的会话杀掉。
-MODEL="${1:-eden-game2v-5b}"
+MODEL="${1:-eden-game2v-5b-taehv}"
 OPTIMIZE="${2:-on}"
 case "$OPTIMIZE" in
   on|off) ;;
   *) echo "第二个参数必须是 on 或 off，当前为: ${OPTIMIZE}" >&2; exit 1 ;;
 esac
 case "$MODEL" in
-  eden-game2v-1.3b)
-    APP_SLUG="game2v-eden-world-v2-1.3b"
-    ;;
-  eden-game2v-5b)
-    APP_SLUG="game2v-eden-world-v2-5b"
-    ;;
   eden-game2v-5b-taehv)
     APP_SLUG="game2v-eden-world-v2-5b-taehv"
-    ;;
-  eden-game2v-14b)
-    APP_SLUG="game2v-eden-world-v2-14b"
     ;;
   eden-game2v-14b-taehv)
     APP_SLUG="game2v-eden-world-v2-14b-taehv"
     ;;
   *)
-    echo "未识别的模型: ${MODEL}（支持 eden-game2v-1.3b、eden-game2v-5b、eden-game2v-5b-taehv、eden-game2v-14b、eden-game2v-14b-taehv）" >&2
+    echo "未识别的模型: ${MODEL}（支持 eden-game2v-5b-taehv、eden-game2v-14b-taehv）" >&2
     exit 1
     ;;
 esac
