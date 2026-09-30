@@ -69,6 +69,36 @@ pip install -r requirements/wan22-fa4.txt   # see docs/zh/wan22-fa4.md
 huggingface-cli download xxx --local-dir ./checkpoints
 ```
 
+Each config points `model.pretrained_dir` at a directory holding one subdirectory per
+component, in the Diffusers layout:
+
+```
+eden-wan21-14b-480p/
+  tokenizer/        text_encoder/     vae/        scheduler/
+  transformer/      image_encoder/    image_processor/     # I2V only
+```
+
+Components load one directory at a time with a fixed loader class per component, so no
+`model_index.json` is read and the tree needs nothing beyond the directories above.
+Directories must exist locally — nothing is pulled from the Hub. `transformer_2` (a
+second expert) and the CLIP tower are optional and simply absent when their directory is.
+
+To run a different DiT against the same VAE, T5 and CLIP, override that one component:
+
+```yaml
+model:
+  pretrained_dir: /path/to/eden-wan21-14b-480p
+  components:
+    transformer:
+      path: /path/to/our-dit
+```
+
+`model.pipeline_class` names the pipeline to assemble — `WanImageToVideoPipeline` for the
+14B I2V line, `WanPipeline` for the 5B TI2V line — and `model.boundary_ratio` is the
+dual-expert switchover point, `null` for every single-expert release. Both come from the
+released checkpoint's own `model_index.json`; copy the values rather than guessing, since a
+wrong `boundary_ratio` disables expert switching without an error.
+
 ### Quick start
 
 Two proxy recordings ship with the repo under `examples/samples/`, with a manifest that
@@ -227,7 +257,8 @@ manifest and how frames are sampled, `inference:` the sampling itself.
 ```yaml
 model:
   adapter: wan22_diffusers
-  model_id: /path/to/Wan2.2-TI2V-5B-Diffusers
+  pretrained_dir: /path/to/eden-wan22-5b-720p
+  pipeline_class: WanPipeline
   torch_dtype: bfloat16
   proxy_dino:
     enabled: true
@@ -293,7 +324,7 @@ still need a real inference run.
 
 - [ ] Replace every `xxx` link: project page, paper, model repo, demo, clone URL.
 - [ ] Publish weights and document the download.
-- [ ] Replace the `/path/to/...` placeholders in `eden/configs/` — `model.model_id`,
+- [ ] Replace the `/path/to/...` placeholders in `eden/configs/` — `model.pretrained_dir`,
       `model.proxy_dino.*`, `inference.checkpoint`, and the manifest paths — with the
       published locations.
 - [ ] Add more example results alongside `docs/assets/generated.mp4`.

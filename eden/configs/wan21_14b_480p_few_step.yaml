@@ -13,10 +13,20 @@ model:
   # channel concat [noisy (16) | first-frame mask (4) | condition (16)] = 36 channels with
   # a *scalar* timestep, and cross-attention additionally takes CLIP image tokens. See
   # eden/models/adapters/wan22_diffusers/i2v_condition.py.
-  model_id: /path/to/Wan2.1-I2V-14B-480P-Diffusers
-  variant: 14b
+  #
+  # A directory holding one subdirectory per component, Diffusers-style:
+  #   vae/ text_encoder/ tokenizer/ scheduler/ transformer/ image_encoder/ image_processor/
+  # No model_index.json is read; each component's loader class is fixed by the adapter.
+  pretrained_dir: /path/to/eden-wan21-14b-480p
+  # Point any single component somewhere else — this is how the DiT is swapped without
+  # restaging the rest of the tree:
+  #   components:
+  #     transformer:
+  #       path: /path/to/our-dit
+  pipeline_class: WanImageToVideoPipeline
+  # Single-expert release: no transformer_2, so no dual-expert switchover.
+  boundary_ratio: null
   torch_dtype: bfloat16
-  local_files_only: true
   gradient_checkpointing: false
   max_sequence_length: 512
   # Official Wan2.1 I2V negative prompt (wan/configs/wan_i2v_14B.py prepends 镜头晃动).

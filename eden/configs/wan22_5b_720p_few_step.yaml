@@ -14,9 +14,23 @@
 
 model:
   adapter: wan22_diffusers
-  model_id: Wan-AI/Wan2.2-TI2V-5B-Diffusers
+  # A directory holding one subdirectory per component, Diffusers-style:
+  #   vae/ text_encoder/ tokenizer/ scheduler/ transformer/
+  # No model_index.json is read; each component's loader class is fixed by the adapter.
+  pretrained_dir: /path/to/eden-wan22-5b-720p
+  # Point any single component somewhere else — this is how the DiT is swapped without
+  # restaging the rest of the tree:
+  #   components:
+  #     transformer:
+  #       path: /path/to/our-dit
+  pipeline_class: WanPipeline
+  # Single-expert release: no transformer_2, so no dual-expert switchover.
+  boundary_ratio: null
+  # TI2V-5B overwrites latent frame 0 with the image latent and runs those tokens at
+  # timestep 0. Eden builds the per-token timesteps itself (wan_ops), so this only mirrors
+  # the released pipeline's own config value.
+  expand_timesteps: true
   torch_dtype: bfloat16
-  local_files_only: true
   gradient_checkpointing: false
   max_sequence_length: 512
   proxy_dino:

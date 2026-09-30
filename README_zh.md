@@ -149,7 +149,9 @@ python -m eden.scripts.infer --config CONFIG.yaml \
 ```yaml
 model:
   adapter: wan22_diffusers
-  model_id: /path/to/Wan2.2-TI2V-5B-Diffusers
+  # Diffusers 风格的组件目录根：vae/ text_encoder/ tokenizer/ scheduler/ transformer/
+  pretrained_dir: /path/to/eden-wan22-5b-720p
+  pipeline_class: WanPipeline
   torch_dtype: bfloat16
 
 runtime:

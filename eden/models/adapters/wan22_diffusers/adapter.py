@@ -132,11 +132,23 @@ class Wan22DiffusersAdapter(ModelAdapter):
     class Config:
         adapter: str = "wan22_diffusers"
         name: str | None = None
-        model_id: str = "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
-        variant: str = "5b"
-        cache_dir: str | None = None
+        # Root of a Diffusers-style component tree: vae/ text_encoder/ tokenizer/
+        # scheduler/ transformer/ and, for I2V, image_encoder/ image_processor/.
+        pretrained_dir: str = ""
+        # Per-component directory overrides: {"transformer": {"path": "/path/to/dit"}}.
+        # Anything not named here falls back to ``pretrained_dir/<component>``.
+        components: dict[str, Any] = field(default_factory=dict)
+        # Concrete Diffusers pipeline class to assemble, instead of reading
+        # model_index.json: WanPipeline (T2V/TI2V) or WanImageToVideoPipeline (I2V).
+        pipeline_class: str = "WanPipeline"
+        # Dual-expert switchover point, from the checkpoint's own model_index.json.
+        # ``None`` — every single-expert Wan release — always uses ``transformer``.
+        boundary_ratio: float | None = None
+        # Recorded on the pipeline config for fidelity with the released pipelines.
+        # Eden expands timesteps itself (see wan_ops._expand_timesteps_to_tokens) and
+        # never reads this back.
+        expand_timesteps: bool = False
         torch_dtype: str = "bfloat16"
-        local_files_only: bool = True
         gradient_checkpointing: bool = True
         max_sequence_length: int = 512
         default_chunk_size: int = 3
@@ -153,8 +165,6 @@ class Wan22DiffusersAdapter(ModelAdapter):
         typed_config = build_config(self.Config, config)
         super().__init__(typed_config)
         validate_backend_name(self.config.teacher_forcing_attention_backend)
-        self.model_id = self.config.model_id
-        self.variant = self.config.variant
         self.components: dict[str, Any] = {}
         self._native_scheduler = None
         self._scheduler = FlowMatchingScheduler(self._scheduler_config())
@@ -270,7 +280,6 @@ class Wan22DiffusersAdapter(ModelAdapter):
             return
         try:
             import torch
-            from diffusers import DiffusionPipeline
         except ImportError as exc:  # pragma: no cover
             raise RuntimeError(
                 "Wan22DiffusersAdapter requires torch and diffusers."
@@ -287,23 +296,12 @@ class Wan22DiffusersAdapter(ModelAdapter):
             validate_flash4_environment(device, dtype)
         meta_init = bool(runtime_context and runtime_context.extras.get("fsdp2_meta_init", False))
         rank = self._distributed_rank()
-        load_kwargs = dict(
-            torch_dtype=dtype,
-            local_files_only=bool(self.config.local_files_only),
-            cache_dir=self.config.cache_dir,
-        )
 
         all_meta = bool(runtime_context and runtime_context.extras.get("fsdp2_meta_init_all_meta", False))
-        pipeline_overrides = self._pipeline_component_overrides(
-            load_kwargs,
-            runtime_context,
+        pipe = self._assemble_pipeline(
+            dtype=dtype,
+            runtime_context=runtime_context,
             use_meta_transformers=bool(meta_init and (rank != 0 or all_meta)),
-        )
-        pipeline_cls = self._pipeline_loader_class(DiffusionPipeline)
-        pipe = pipeline_cls.from_pretrained(
-            self.model_id,
-            **load_kwargs,
-            **pipeline_overrides,
         )
 
         if not meta_init:
@@ -411,6 +409,147 @@ class Wan22DiffusersAdapter(ModelAdapter):
         }
         return _deep_merge_dict(cfg, self.config.scheduler)
 
+    # Diffusers-style subdirectory layout under ``model.pretrained_dir``. The loader
+    # class is fixed per component rather than inferred from model_index.json, so a
+    # tree only needs the directories below — no snapshot metadata — and the DiT can be
+    # swapped by pointing ``model.components.transformer.path`` elsewhere.
+    _COMPONENT_LOADERS: tuple[tuple[str, str, str, bool], ...] = (
+        ("tokenizer", "transformers", "AutoTokenizer", True),
+        ("text_encoder", "transformers", "UMT5EncoderModel", True),
+        ("vae", "diffusers", "AutoencoderKLWan", True),
+        ("scheduler", "diffusers", "FlowMatchEulerDiscreteScheduler", True),
+        ("transformer", "diffusers", "WanTransformer3DModel", True),
+        ("transformer_2", "diffusers", "WanTransformer3DModel", False),
+        ("image_encoder", "transformers", "CLIPVisionModel", False),
+        ("image_processor", "transformers", "CLIPImageProcessor", False),
+    )
+
+    _PIPELINE_CLASSES = ("WanPipeline", "WanImageToVideoPipeline")
+
+    def _component_dir(self, name: str):
+        """Resolve one component's directory.
+
+        ``model.components.<name>.path`` wins; otherwise the component is the
+        like-named subdirectory of ``model.pretrained_dir``.
+        """
+
+        from pathlib import Path
+
+        override = self.config.components.get(name)
+        if isinstance(override, str):
+            override = {"path": override}
+        if isinstance(override, dict) and override.get("path"):
+            return Path(str(override["path"])).expanduser()
+        root = str(self.config.pretrained_dir or "")
+        if not root:
+            raise ValueError(
+                "model.pretrained_dir is required (a Diffusers-style directory holding "
+                f"{', '.join(name for name, *_ in self._COMPONENT_LOADERS)}/), or set "
+                f"model.components.{name}.path for every component individually"
+            )
+        return Path(root).expanduser() / name
+
+    def _resolve_component_dirs(self, names: tuple[str, ...]) -> dict[str, Any]:
+        """Return the existing directory per requested component.
+
+        Required components must exist; optional ones are simply absent from the
+        result when their directory is missing, which is how a T2V tree without an
+        image encoder or a single-expert checkpoint without ``transformer_2`` loads.
+        """
+
+        required = {name: req for name, _, _, req in self._COMPONENT_LOADERS}
+        out: dict[str, Any] = {}
+        for name in names:
+            path = self._component_dir(name)
+            if path.is_dir():
+                out[name] = path
+                continue
+            if required.get(name, False):
+                raise FileNotFoundError(
+                    f"model.components.{name} resolves to\n  {path}\nwhich does not exist. "
+                    "Expected a Diffusers-style component directory. Set "
+                    f"model.components.{name}.path to override, or point model.pretrained_dir "
+                    "at a tree that contains it."
+                )
+        return out
+
+    def _pipeline_class(self) -> Any:
+        name = str(self.config.pipeline_class)
+        if name not in self._PIPELINE_CLASSES:
+            raise ValueError(
+                f"model.pipeline_class must be one of {self._PIPELINE_CLASSES}, got {name!r}"
+            )
+        import diffusers
+
+        return getattr(diffusers, name)
+
+    def _load_component(self, name: str, path: Any, *, dtype: Any) -> Any:
+        """Load one component from its own directory with a fixed loader class."""
+
+        import importlib
+
+        module_name, class_name, _ = next(
+            (mod, cls, req) for comp, mod, cls, req in self._COMPONENT_LOADERS if comp == name
+        )
+        loader = getattr(importlib.import_module(module_name), class_name)
+        # Schedulers, tokenizers and image processors carry no weights, so they take
+        # no dtype; the weight-bearing modules load directly in the compute dtype.
+        if name in ("tokenizer", "image_processor", "scheduler"):
+            return loader.from_pretrained(str(path))
+        return loader.from_pretrained(str(path), torch_dtype=dtype)
+
+    def _assemble_pipeline(
+        self,
+        *,
+        dtype: Any,
+        runtime_context: RuntimeContext | None,
+        use_meta_transformers: bool,
+    ) -> Any:
+        """Load each component from its directory, then build the pipeline object.
+
+        The pipeline is constructed rather than loaded with ``from_pretrained``: Eden
+        uses it only for ``encode_prompt``, the VAE scale factors it derives in
+        ``__init__``, and ``config.boundary_ratio``, and constructing it means no
+        ``model_index.json`` and no complete released snapshot is required.
+        """
+
+        pipeline_cls = self._pipeline_class()
+        wanted = tuple(name for name, *_ in self._COMPONENT_LOADERS)
+        # A T2V/TI2V pipeline takes no CLIP image tower.
+        if pipeline_cls.__name__ == "WanPipeline":
+            wanted = tuple(n for n in wanted if n not in ("image_encoder", "image_processor"))
+        transformer_names = tuple(dict.fromkeys(self._transformer_components_to_load(runtime_context)))
+        unknown = set(transformer_names) - {"transformer", "transformer_2"}
+        if unknown:
+            raise ValueError(f"Unsupported Wan transformer components: {sorted(unknown)}")
+        # Skipping an inactive expert means never reading its weights at all.
+        wanted = tuple(
+            n for n in wanted if n not in ("transformer", "transformer_2") or n in transformer_names
+        )
+
+        dirs = self._resolve_component_dirs(wanted)
+        kwargs: dict[str, Any] = {}
+        for name in wanted:
+            path = dirs.get(name)
+            if path is None:
+                continue
+            if name in ("transformer", "transformer_2") and use_meta_transformers:
+                continue
+            kwargs[name] = self._load_component(name, path, dtype=dtype)
+        if use_meta_transformers:
+            kwargs.update(
+                self._build_meta_transformers(
+                    dirs,
+                    transformer_names=tuple(n for n in transformer_names if n in dirs),
+                    required_transformer_names=self._required_transformer_components(runtime_context),
+                )
+            )
+        return pipeline_cls(
+            boundary_ratio=self.config.boundary_ratio,
+            expand_timesteps=bool(self.config.expand_timesteps),
+            **kwargs,
+        )
+
     def _transformer_components_to_load(
         self,
         runtime_context: RuntimeContext | None = None,
@@ -419,22 +558,11 @@ class Wan22DiffusersAdapter(ModelAdapter):
 
         The generic Wan adapter preserves the checkpoint's complete transformer
         set. Multi-expert adapters may narrow this list for a training run so
-        ``DiffusionPipeline.from_pretrained`` never reads inactive weights.
+        inactive expert weights are never read.
         """
 
         del runtime_context
         return ("transformer", "transformer_2")
-
-    def _pipeline_loader_class(self, default_class: Any) -> Any:
-        """Return the concrete Diffusers pipeline class used for loading.
-
-        Calling ``DiffusionPipeline.from_pretrained`` on the base class loses
-        optional-component overrides because its own ``_optional_components``
-        list is empty. Multi-expert adapters can return the concrete pipeline
-        class so ``None`` overrides for inactive experts are honored.
-        """
-
-        return default_class
 
     def _required_transformer_components(
         self,
@@ -447,47 +575,20 @@ class Wan22DiffusersAdapter(ModelAdapter):
         # ``transformer_2`` is genuinely absent and remains optional.
         return ("transformer",)
 
-    def _pipeline_component_overrides(
-        self,
-        load_kwargs: dict[str, Any],
-        runtime_context: RuntimeContext | None,
-        *,
-        use_meta_transformers: bool,
-    ) -> dict[str, Any]:
-        """Build component overrides passed to ``from_pretrained``.
-
-        Passing ``None`` for an optional Diffusers component prevents its
-        checkpoint subfolder from being loaded. Active transformers are built
-        on the meta device on non-source FSDP2 ranks (and for checkpoint-based
-        all-meta initialization), as before.
-        """
-
-        transformer_names = tuple(dict.fromkeys(self._transformer_components_to_load(runtime_context)))
-        supported_names = ("transformer", "transformer_2")
-        unknown_names = set(transformer_names) - set(supported_names)
-        if unknown_names:
-            raise ValueError(f"Unsupported Wan transformer components: {sorted(unknown_names)}")
-
-        overrides: dict[str, Any] = {
-            name: None for name in supported_names if name not in transformer_names
-        }
-        if use_meta_transformers:
-            overrides.update(
-                self._build_meta_transformers(
-                    load_kwargs,
-                    transformer_names=transformer_names,
-                    required_transformer_names=self._required_transformer_components(runtime_context),
-                )
-            )
-        return overrides
-
     def _build_meta_transformers(
         self,
-        load_kwargs: dict[str, Any],
+        dirs: dict[str, Any],
         *,
         transformer_names: tuple[str, ...] = ("transformer", "transformer_2"),
         required_transformer_names: tuple[str, ...] = ("transformer",),
     ) -> dict[str, Any]:
+        """Build weightless transformer shells on the meta device.
+
+        FSDP2 meta-init has non-source ranks construct the module from its
+        ``config.json`` alone and receive parameters by broadcast, so no rank but
+        zero reads the shards.
+        """
+
         import torch
 
         try:
@@ -496,18 +597,18 @@ class Wan22DiffusersAdapter(ModelAdapter):
             from diffusers.models import WanTransformer3DModel
 
         transformers: dict[str, Any] = {}
-        for subfolder in transformer_names:
+        for name in transformer_names:
+            path = dirs.get(name)
+            if path is None:
+                if name in required_transformer_names:
+                    raise FileNotFoundError(f"model.components.{name} is required for meta init")
+                continue
             try:
-                cfg = WanTransformer3DModel.load_config(
-                    self.model_id,
-                    subfolder=subfolder,
-                    local_files_only=load_kwargs.get("local_files_only", True),
-                    cache_dir=load_kwargs.get("cache_dir"),
-                )
+                cfg = WanTransformer3DModel.load_config(str(path))
                 with torch.device("meta"):
-                    transformers[subfolder] = WanTransformer3DModel.from_config(cfg)
+                    transformers[name] = WanTransformer3DModel.from_config(cfg)
             except Exception:
-                if subfolder in required_transformer_names:
+                if name in required_transformer_names:
                     raise
         return transformers
 
@@ -1408,7 +1509,7 @@ class Wan22DiffusersAdapter(ModelAdapter):
             checkpoint_path,
             projection_dim=self._proxy_dino_control_dim(),
             patchify_factor=int(cfg.get("patchify_factor", 2)),
-            local_files_only=bool(cfg.get("local_files_only", self.config.local_files_only)),
+            local_files_only=bool(cfg.get("local_files_only", True)),
         )
         if int(encoder.feature_dim) != self._proxy_dino_control_dim():
             raise ValueError(
