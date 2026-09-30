@@ -1,0 +1,68 @@
+# Inference-only config. The training recipe's model and runtime settings are
+# inlined here so this file stands alone.
+defaults:
+- models: wan22_5b_proxy_dino_channel_concat
+- runtime: fsdp2_sp
+- data: proxy_video_test
+- runtime: fsdp2_sp_kv
+model:
+  proxy_dino:
+    cfg_unconditional_control: zero
+    checkpoint_path: /path/to/proxy-dino/best.pt
+    use_cached_latents: false
+    video_context_time_axis: decoded
+  gradient_checkpointing: false
+runtime:
+  sequence_parallel:
+    enabled: true
+    size: 1
+    axis: temporal
+    layout: balanced_blocks
+  kv_cache:
+    enabled: true
+    context:
+      max_latent_frames: 18
+      sink_latent_frames: 6
+      debug_window: false
+    quantized: false
+    compression: none
+    context_noise_sigma: 0.0
+    context_noise_sigma_sink: null
+    offload_generated_chunks: true
+  fsdp2:
+    enabled: true
+    meta_init: false
+inference:
+  strategy: chunk_causal
+  outputs:
+  - video
+  checkpoint: /path/to/ckpts/5b_720p/rollout_dmd
+  checkpoint_source: ema
+  output_dir: inference/wan22_5b_720p_rollout_dmd
+  max_batches: 0
+  num_samples: 1
+  height: 704
+  width: 1280
+  num_frames: 237
+  chunk_size: 3
+  pack_first_frame: true
+  num_inference_steps: 4
+  guidance_scale: 1.0
+  negative_prompt: Vibrant colors, overexposed, static, blurry details, subtitles, style, artwork, painting,
+    image, still, overall grayish, worst quality, low quality, JPEG compression residue, ugly, incomplete,
+    extra fingers, poorly drawn hands, poorly drawn face, deformed, disfigured, deformed limbs, fused
+    fingers, three legs
+  seed: 42
+  fps: 24
+  output_type: np
+  use_image_condition: true
+  save_condition_videos:
+    video_context: proxy
+  scheduler:
+    name: flow_euler
+    stochastic_sampling: true
+    timesteps:
+    - 1000
+    - 937.5
+    - 833.3333333333
+    - 625

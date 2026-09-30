@@ -81,13 +81,24 @@ examples/samples/
   dead-rush/            same five files
 ```
 
-Both recordings are 1280x704 and long enough for the shipped 81-frame configs. The
+Both recordings are 1280x704 and long enough for the shipped 81-frame 14B configs. The
 commands below read them; point `data.dataset.params.*` at your own manifest to run your
 own data.
 
 `prompts.json` carries the full recording metadata — the `staticPrompt` used in the
 manifest plus timed `dynamicPrompts` for the events in the clip. `prompts.txt` is the
 same content, readable.
+
+Two models ship, each in the same three inference modes:
+
+| Mode | Wan2.1-I2V-14B @ 480p | Wan2.2-TI2V-5B @ 720p |
+| --- | --- | --- |
+| Bidirectional | `wan21_i2v_14b_480p_proxy_dino_to_real/bidir_same.yaml` | `wan22_5b_proxy_dino_to_real/proxy_dino-video-tiv2v-bidir.yaml` |
+| Teacher forcing | `wan21_i2v_14b_480p_proxy_dino_to_real/tf_v2.yaml` | `wan22_5b_proxy_dino_to_real/proxy_dino-video-tiv2v-tf_chunkar.yaml` |
+| Few-step | `wan21_i2v_14b_480p_proxy_dino_to_real/sgf.yaml` | `wan22_5b_proxy_dino_to_real/proxy_dino-video-tiv2v-rollout_dmd_chunkar.yaml` |
+
+All paths are relative to `eden/configs/inference/`. The 14B commands below run the
+shipped recordings as-is; swap the `--config` for the 5B column to run that model.
 
 **Bidirectional** — all frames denoise jointly, highest quality:
 
@@ -100,6 +111,17 @@ torchrun --nproc_per_node=2 -m eden.scripts.infer \
   inference.checkpoint=/path/to/ckpts/14b_480p/bidir_same
 ```
 
+**Teacher forcing** — chunk-autoregressive with unbounded KV context, 30 steps per chunk:
+
+```bash
+torchrun --nproc_per_node=2 -m eden.scripts.infer \
+  --config eden/configs/inference/wan21_i2v_14b_480p_proxy_dino_to_real/tf_v2.yaml \
+  data.dataset.params.path=examples/samples/manifest.csv \
+  data.dataset.params.root=examples/samples \
+  runtime.sequence_parallel.size=2 \
+  inference.checkpoint=/path/to/ckpts/14b_480p/tf_v2
+```
+
 **Few-step** — chunk-autoregressive, 4 steps per chunk, near real time:
 
 ```bash
@@ -109,6 +131,22 @@ torchrun --nproc_per_node=2 -m eden.scripts.infer \
   data.dataset.params.root=examples/samples \
   runtime.sequence_parallel.size=2 \
   inference.checkpoint=/path/to/ckpts/14b_480p/sgf
+```
+
+The 5B configs generate at 1280x704 — 121 frames bidirectional, 117 teacher forcing, 237
+few-step. They inherit `proxy_video_test`, which asserts the proxy clip is **exactly 5.0s
+±0.05** (`data.dataset.params.columns.proxy_video.params.duration_seconds`), so the two
+shipped recordings (12.1s and 18.4s) are rejected by the loader. Point them at a 5-second
+proxy, or override that check:
+
+```bash
+torchrun --nproc_per_node=2 -m eden.scripts.infer \
+  --config eden/configs/inference/wan22_5b_proxy_dino_to_real/proxy_dino-video-tiv2v-bidir.yaml \
+  data.dataset.params.path=examples/samples/manifest.csv \
+  data.dataset.params.root=examples/samples \
+  data.dataset.params.columns.proxy_video.params.duration_seconds=null \
+  runtime.sequence_parallel.size=2 \
+  inference.checkpoint=/path/to/ckpts/5b_720p/bidir
 ```
 
 **Streaming service** — interactive real-time inference. The proxy comes from a game
