@@ -352,8 +352,7 @@ class Wan22DiffusersAdapter(ModelAdapter):
                             norm.to(dtype=torch.float32)
                         else:
                             norm.to(device=device, dtype=torch.float32)
-                module.train()
-                module.requires_grad_(True)
+                module.requires_grad_(False).eval()
                 if self.config.gradient_checkpointing and hasattr(module, "enable_gradient_checkpointing"):
                     module.enable_gradient_checkpointing()
         self.components = {
