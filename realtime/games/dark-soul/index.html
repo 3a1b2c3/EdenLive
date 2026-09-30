@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ashen Wilds</title>
+<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="/shared/recorder/recorder.css">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head><body>
+<div id="view-big">
+  <div id="app"></div>
+  <div id="overlay-big" role="dialog" aria-modal="true" aria-labelledby="big-result-title" hidden><div class="result"><span id="big-result-kicker"></span><h1 id="big-result-title"></h1><p id="big-result-text"></p><div id="big-result-stats" class="result-stats"></div><button id="big-resume" hidden>BACK TO THE MEADOW</button><button id="big-restart">PLAY AGAIN <span>↗</span></button><small id="big-result-hint">PRESS R TO RESTART</small></div></div>
+</div>
+<aside id="right">
+  <section id="desc-panel">
+    <p class="desc-fixed"></p>
+    <div class="desc-dynamic" role="status" aria-live="polite"></div>
+  </section>
+  <div id="record-bar">
+    <button id="record-btn" type="button"><span class="record-dot" aria-hidden="true"></span><span class="record-label">Start recording</span></button>
+    <span id="record-status">Main-view recording · auto-saves a ZIP on stop</span>
+  </div>
+  <div id="view-small"><div id="small-stage"><canvas id="small-canvas" aria-hidden="true"></canvas><div id="hud">
+    <header>
+      <div class="brand"><span>ASHEN WILDS</span><strong>HIGHLAND OATH</strong></div>
+      <div class="chapter"><span>THE MEADOW</span><b>STONE CIRCLE</b></div>
+      <button id="pause" title="Pause (P)" aria-label="Pause game">Ⅱ</button>
+    </header>
+    <section class="status">
+      <div class="health-head"><b>KNIGHT</b><span id="hp-text">6 / 6</span></div>
+      <div class="health-track"><i id="hp-fill"></i></div>
+      <div class="status-foot"><span>STAMINA</span><span id="stamina-text">100</span></div>
+      <div class="stamina-track"><i id="stamina-fill"></i></div>
+    </section>
+    <section class="objective">
+      <span class="label" id="objective-label">THE PATH</span>
+      <strong id="objective">Cross the meadow. Defeat the Stone Warden.</strong>
+      <div id="goat-hud" class="seals"><span>GOAT</span><b id="goat-text">3 / 3</b></div>
+      <div class="health-track goat-track"><i id="goat-fill"></i></div>
+    </section>
+    <div id="boss-hud" hidden><div><span>FINAL ENCOUNTER</span><strong>STONE WARDEN</strong><b id="boss-percent">100%</b></div><div class="boss-track"><i id="boss-fill"></i></div></div>
+    <div id="lock-label">NO LOCK</div>
+    <div id="alert"></div>
+    <div id="vignette"></div>
+    <footer>
+      <div class="controls">
+        <span><kbd>WASD</kbd> MOVE</span>
+        <span><kbd>SHIFT</kbd> SPRINT</span>
+        <span><kbd>J</kbd> STRIKE</span>
+        <span><kbd>SPACE</kbd> ROLL</span>
+        <span><kbd>Q</kbd> LOCK</span>
+        <span><kbd>ARROWS</kbd> LOOK</span>
+        <span><kbd>P</kbd> PAUSE</span>
+      </div>
+      <div class="abilities"><span id="dodge-ready">ROLL READY</span></div>
+    </footer>
+    <div id="overlay" role="dialog" aria-modal="true" aria-labelledby="result-title" hidden><div class="result"><span id="result-kicker"></span><h1 id="result-title"></h1><p id="result-text"></p><div id="result-stats" class="result-stats"></div><button id="resume" hidden>BACK TO THE MEADOW</button><button id="restart">PLAY AGAIN <span>↗</span></button><small id="result-hint">PRESS R TO RESTART</small></div></div>
+    <div class="touch" aria-label="Touch controls">
+      <div class="dpad">
+        <button data-action="forward" data-hold="1" class="up" aria-label="Move forward">↑</button>
+        <button data-action="left" data-hold="1" class="left" aria-label="Move left">←</button>
+        <button data-action="back" data-hold="1" class="down" aria-label="Move back">↓</button>
+        <button data-action="right" data-hold="1" class="right" aria-label="Move right">→</button>
+      </div>
+      <div class="touch-actions">
+        <button data-action="sprint" data-hold="1" aria-label="Sprint">RUN</button>
+        <button data-action="lock" aria-label="Lock on">LOCK</button>
+        <button data-action="dodge" aria-label="Roll">ROLL</button>
+        <button data-action="attack" aria-label="Strike" class="strike">HIT</button>
+      </div>
+    </div>
+  </div></div></div>
+</aside>
+<div id="fatal" role="alert" style="display:none"></div>
+<script type="module" src="/shared/host/play-page.js"></script>
+</body></html>

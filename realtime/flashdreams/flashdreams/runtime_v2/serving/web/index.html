@@ -1,0 +1,103 @@
+<!doctype html>
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FlashDreams WebRTC</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: auto;
+        background: #111;
+        color: #eee;
+        font: 16px system-ui, sans-serif;
+      }
+
+      body { padding: clamp(.5rem, 1.5vw, 1.5rem); box-sizing: border-box; }
+      /* Every track is sized from the viewport rather than its contents so a
+         prompt refresh cannot move the panel edges. */
+      .layout { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(20rem, 1fr); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: .75rem; width: 100%; height: calc(100vh - 2 * clamp(.5rem, 1.5vw, 1.5rem)); min-height: 30rem; }
+      .panel { background: #1b1b1b; border: 1px solid #333; border-radius: .5rem; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+      .model { grid-row: 1 / span 3; }
+      .panel-title { flex: 0 0 auto; padding: .5rem .75rem; color: #aaa; font-size: .8rem; text-transform: uppercase; }
+      .model-stage { position: relative; flex: 1 1 auto; min-height: 0; }
+      #video,
+      #game-video {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      #game-video { flex: 1 1 auto; min-height: 0; }
+      #game-overlay {
+        position: absolute;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      #game-overlay button,
+      #game-overlay [data-game-action] {
+        pointer-events: auto;
+      }
+      /* The body fills whatever the panel got and scrolls inside it, and the
+         scrollbar gutter is always reserved so gaining or losing a scrollbar
+         cannot reflow the text either. */
+      #prompt, #events, #game {
+        flex: 1 1 auto;
+        min-height: 0;
+        padding: 1rem;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+        scrollbar-color: #555 transparent;
+      }
+      #prompt::-webkit-scrollbar, #events::-webkit-scrollbar, #game::-webkit-scrollbar { width: .5rem; }
+      #prompt::-webkit-scrollbar-thumb, #events::-webkit-scrollbar-thumb, #game::-webkit-scrollbar-thumb { background: #555; border-radius: .25rem; }
+      #events:empty::before { content: "No events in this chunk."; color: #777; }
+      /* Stacked layout: the text rows get a fixed height rather than `1fr`,
+         which against an auto-height grid would still track their contents. */
+      @media (max-width: 700px) { .layout { grid-template-columns: 1fr; grid-template-rows: minmax(16rem, 55vh) repeat(3, 11rem); height: auto; min-height: 0; } .model { grid-row: auto; } }
+
+      #status {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        box-sizing: border-box;
+        padding: 2rem;
+        text-align: center;
+        white-space: pre-wrap;
+        pointer-events: none;
+      }
+
+      #status[hidden] {
+        display: none;
+      }
+
+      #status.error {
+        color: #ff8a8a;
+      }
+
+    </style>
+  </head>
+  <body>
+    <main class="layout">
+      <section class="panel model"><div class="panel-title">Generated model video</div><div class="model-stage"><video id="video" autoplay muted playsinline></video><div id="game-overlay" hidden></div></div></section>
+      <section class="panel"><div class="panel-title">Scene prompt</div><div id="prompt">Waiting for backend prompt…</div></section>
+      <section class="panel"><div class="panel-title">Chunk events</div><div id="events"></div></section>
+      <section class="panel"><div class="panel-title">Game render</div><video id="game-video" autoplay muted playsinline></video></section>
+    </main>
+    <div id="status" role="status" aria-live="polite">Waiting for the server…</div>
+    <script src="/app.js"></script>
+  </body>
+</html>

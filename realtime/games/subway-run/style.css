@@ -1,0 +1,51 @@
+
+    :root{color-scheme:dark;font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:#e9f5ff;background:#102139}
+    *{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden}#app{position:absolute;inset:0}canvas{display:block}
+    button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #fff;outline-offset:4px}
+    #hud{position:absolute;inset:0;z-index:5;pointer-events:none;background:linear-gradient(#07182aaa,transparent 28%,transparent 75%,#07182a99)}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;padding:26px 30px;gap:16px}
+    .eyebrow{font-size:10px;letter-spacing:3px;color:#5ce5d3;font-weight:750}.brand{font-size:23px;letter-spacing:1px;font-weight:850;margin-top:5px}.sub{font-size:11px;color:#acc1d4;margin-top:5px}
+    .scorebox{width:205px;padding:13px 17px;border:1px solid #bbd4e327;background:#0e263acc;border-radius:14px;backdrop-filter:blur(10px)}
+    .scoreline{display:flex;align-items:center;gap:9px}.coin{color:#ffd372;font-size:25px}.score{font-variant-numeric:tabular-nums;font-size:29px;font-weight:800}.denom{color:#8fa9bf;font-size:12px}.goal{font-size:10px;letter-spacing:1px;color:#b0c7d8}
+    .meter{height:4px;background:#ffffff18;margin-top:8px;border-radius:4px;overflow:hidden}#progress{height:100%;background:#ffce67;transition:width .12s}
+    .meta{display:flex;justify-content:space-between;color:#91aec2;font-size:10px;margin-top:8px;font-variant-numeric:tabular-nums}
+    #toast{position:absolute;top:27%;left:50%;transform:translate(-50%,8px);font-size:17px;color:#ffe38f;font-weight:800;opacity:0;transition:opacity .15s,transform .15s;text-shadow:0 2px 10px #000}#toast.show{opacity:1;transform:translate(-50%,0)}
+    .bottom{position:absolute;bottom:24px;left:24px;right:24px;text-align:center}#cue{display:inline-block;padding:8px 20px;background:#0c293de8;border:1px solid #55e5d765;border-radius:99px;color:#8cf6e6;font-size:17px;font-weight:800}
+    [data-cue="train-jump"] #cue,[data-cue="barrier-slide"] #cue{color:#ffe5a1;border-color:#ffe09c;background:#574521ed}#hint{font-size:11px;color:#b9d3e6;margin-top:7px;text-shadow:0 1px 5px #001}
+    .controls{display:flex;justify-content:center;gap:18px;font-size:11px;color:#b6c8d9;margin-top:16px}.controls kbd{font:10px inherit;background:#bdd4e61c;border:1px solid #c6e8ff2b;border-radius:4px;padding:3px 6px;margin-right:4px}
+    #result,.result{position:absolute;z-index:10;inset:0;display:grid;place-items:center;background:#07132270;backdrop-filter:blur(4px)}#result[hidden],.result[hidden]{display:none}
+    .card{width:min(440px,88vw);padding:34px;background:#102a3cf5;border:1px solid #6ce2d349;border-radius:23px;text-align:center;box-shadow:0 25px 80px #0005}.badge{font-size:10px;letter-spacing:4px;color:#80e5d2}.card h1{font-size:38px;margin:14px 0;color:#ffdf92}#result-reason,.result-reason{color:#aec6d9;font-size:14px;line-height:1.8;margin:0 0 24px}.restart{background:#5bdfc9;border:0;border-radius:10px;color:#123840;padding:12px 24px;font-size:14px;font-weight:800}.small{font-size:11px;color:#779aaa;margin-top:15px}
+    .touch{display:none;position:absolute;bottom:12px;left:12px;right:12px;gap:10px;z-index:8;justify-content:center}.touch button{background:#143348de;color:white;border:1px solid #7bb2c966;border-radius:10px;min-width:55px;padding:12px;touch-action:manipulation}
+    #fatal{display:none;position:absolute;z-index:20;inset:auto 12px 12px;padding:15px;color:#ffd9d9;background:#761b1be8;white-space:pre-wrap}
+    @media(max-width:600px){.top{padding:18px 16px}.brand{font-size:18px}.scorebox{width:162px;padding:10px 12px}.score{font-size:24px}.controls{gap:8px;font-size:10px}.bottom{bottom:28px;left:8px;right:8px}#cue{font-size:14px}.sub{max-width:145px}}
+    @media(pointer:coarse){.touch{display:flex}.bottom{bottom:82px}.controls{display:none}}
+  
+/* Vault page and small-stage HUD. */
+/* ---- base & layout (dual-view transform) ---- */
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101e42;color:#eef2ff;font-family:Arial,"Noto Sans CJK SC","Microsoft YaHei",sans-serif}
+button{font:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid #7ef4ff;outline-offset:3px}
+[hidden]{display:none!important}
+body{display:grid;grid-template-columns:1280px clamp(280px,26vw,400px);grid-template-rows:100vh}
+
+/* Big no-UI view (top-left): WebGL canvas + the end-state dialog alone. */
+#view-big{position:relative;width:1280px;height:704px;overflow:hidden;background:#0a1530;min-width:0}
+#app{position:absolute;inset:0}
+#app canvas{display:block}
+
+/* Right column: text box on top, small UI-mirror window below. */
+#right{display:flex;flex-direction:column;gap:10px;padding:12px;overflow:hidden;background:#070f22;min-width:0}
+#desc-panel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:10px;padding:16px 16px 14px;border:1px solid #a8caff26;background:#0c1931;border-radius:16px;overflow:auto}
+#desc-panel .desc-label{color:#ffdb75;font:700 10px/1 Arial,sans-serif;letter-spacing:.16em}
+.desc-fixed{margin:0;font-size:13px;line-height:1.7;color:#d7e2f4}
+.desc-dynamic{margin-top:6px;min-height:120px;border:1px dashed #a8caff33;border-radius:14px;padding:10px;font-size:12.5px;line-height:1.55;color:#bfe6ff;white-space:pre-wrap;overflow:auto}
+.desc-label-live{margin-top:auto;color:#7fd4d4}
+#view-small{flex:0 0 auto;align-self:flex-end;position:relative;overflow:hidden;border:1px solid rgba(126,244,255,.35);border-radius:16px;background:#060f22;box-shadow:0 15px 40px #000a}
+#small-stage{position:absolute;top:0;left:0;transform-origin:0 0;overflow:hidden}
+#small-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+/* Win / loss card on the main (no-HUD) view. Hidden at boot so the cover still is clean. */
+#overlay-big{position:absolute;inset:0;z-index:12;background:#07132270;backdrop-filter:blur(4px);display:grid;place-items:center;pointer-events:auto}
+#overlay-big[hidden]{display:none!important}
+

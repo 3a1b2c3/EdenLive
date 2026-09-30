@@ -111,11 +111,45 @@ torchrun --nproc_per_node=2 -m eden.scripts.infer \
   inference.checkpoint=/path/to/ckpts/14b_480p/sgf
 ```
 
-**Streaming service** — interactive real-time inference:
+**Streaming service** — interactive real-time inference. The proxy comes from a game
+running in the browser instead of a recorded file, and frames are served over WebRTC as
+they are generated. This path lives in [`realtime/`](realtime/), a trimmed fork of
+[NVIDIA FlashDreams](https://github.com/NVIDIA/flashdreams) carrying only the Eden
+`game2v` deployment:
 
 ```bash
-# TODO
+cd realtime
+uv sync --package flashdreams-eden --extra runners
+
+# HF_HOME must hold the model weights; the script exports HF_HUB_OFFLINE=1.
+bash start.sh eden-game2v-5b            # or eden-game2v-14b
 ```
+
+Open `http://<host>:8089` and play. `start.sh` maps the model name to an application
+slug, then runs `run.py` under `torchrun --nproc_per_node=8` in `webrtc` mode. Pass `off`
+as the second argument (`bash start.sh eden-game2v-5b off`) to skip transformer
+compilation when you only care about time-to-first-chunk.
+
+| `start.sh` model | Application slug |
+| --- | --- |
+| `eden-game2v-1.3b` | `game2v-eden-world-v2-1.3b` |
+| `eden-game2v-5b` | `game2v-eden-world-v2-5b` |
+| `eden-game2v-5b-taehv` | `game2v-eden-world-v2-5b-taehv` |
+| `eden-game2v-14b` | `game2v-eden-world-v2-14b` |
+| `eden-game2v-14b-taehv` | `game2v-eden-world-v2-14b-taehv` |
+
+The `-taehv` variants swap in the TAEHV decoder, which trades some fidelity for latency.
+`EDEN_GAME` selects which game drives the proxy render — the slugs come from
+[`realtime/games/registry.json`](realtime/games/registry.json), and `subway-run` is the
+default:
+
+```bash
+EDEN_GAME=need-for-speed bash start.sh eden-game2v-5b
+```
+
+`realtime/` is a separate uv workspace with its own `eden` package (the FlashDreams
+integration, unrelated to the `eden/` package at the repo root) — see
+[`realtime/README.md`](realtime/README.md) for its architecture and developer guides.
 
 Videos and the conditions used to produce them are written to
 `<output_dir>/save/inference/<step>/`: the generated `.mp4`, the proxy control video, the

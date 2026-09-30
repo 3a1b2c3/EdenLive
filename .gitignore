@@ -163,3 +163,6 @@ nsysoutput/
 # project
 /data
 outputs/
+
+# the realtime game UIs ship their own config.json; the rule above is for checkpoints
+!realtime/games/*/ui/config.json

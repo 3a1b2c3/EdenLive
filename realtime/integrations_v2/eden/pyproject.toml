@@ -1,0 +1,76 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flashdreams-eden"
+version = "0.1.0"
+description = "Eden World Cam2V integration for FlashDreams v2."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "flashdreams",
+    "flashdreams-cam2v",
+    "flashdreams-flashvsr",
+]
+
+[tool.uv.sources]
+flashdreams = { workspace = true }
+flashdreams-cam2v = { workspace = true }
+flashdreams-flashvsr = { workspace = true }
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[project.entry-points."flashdreams.applications_v2"]
+"cam2v-eden" = "eden.apps.cam2v.adapter:create_app"
+"cam2v-eden-world-fast" = "eden.apps.cam2v.adapter:create_app_fast"
+"cam2v-eden-world-fast-taehv-window15-sink3" = "eden.apps.cam2v.adapter:create_app_fast_taehv_window15_sink3"
+"cam2v-eden-world-v2-14b-causal-fast" = "eden.apps.cam2v.adapter:create_app_v2_14b_causal_fast"
+"cam2v-eden-world-v2-14b-causal-fast-taehv-window18-sink6" = "eden.apps.cam2v.adapter:create_app_v2_14b_causal_fast_taehv_window18_sink6"
+"cam2v-eden-world-v2-1.3b-causal-fast" = "eden.apps.cam2v.adapter:create_app_v2_1pt3b_causal_fast"
+"cam2v-eden-world-v2-1.3b-causal-fast-taehv-window18-sink6" = "eden.apps.cam2v.adapter:create_app_v2_1pt3b_causal_fast_taehv_window18_sink6"
+"cam2v-eden-world-v2-14b-causal-pretrain" = "eden.apps.cam2v.adapter:create_app_v2_14b_causal_pretrain"
+"game2v-eden-world-v2-1.3b" = "eden.apps.game2v.adapter:create_app"
+"game2v-eden-world-v2-14b" = "eden.apps.game2v.adapter:create_app_v2_14b"
+"game2v-eden-world-v2-14b-taehv" = "eden.apps.game2v.adapter:create_app_v2_14b_taehv"
+"game2v-eden-world-v2-5b" = "eden.apps.game2v.adapter:create_app_v2_5b"
+"game2v-eden-world-v2-5b-taehv" = "eden.apps.game2v.adapter:create_app_v2_5b_taehv"
+
+[tool.setuptools]
+packages = [
+    "eden",
+    "eden.apps",
+    "eden.apps.cam2v",
+    "eden.apps.game2v",
+    "eden.impl",
+    "eden.impl.encoder",
+    "eden.impl.game14b",
+    "eden.impl.game5b",
+    "eden.impl.transformer",
+    "eden.impl.transformer.impl",
+]
+
+[tool.setuptools.package-dir]
+eden = "."
+
+[tool.uv]
+managed = true

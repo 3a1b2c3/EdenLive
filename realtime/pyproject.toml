@@ -1,0 +1,172 @@
+[tool.uv.workspace]
+members = [
+    "flashdreams",
+    # Each populated subdir under ``integrations_v2/`` is a standalone
+    # external integration repo (e.g. ``causal_forcing`` / ``self_forcing``
+    # plugins, ``omnidreams`` / ``lingbot`` integrations).
+    "integrations_v2/*",
+    "apps/*",
+    # Nested sub-packages that the integration globs do not reach.
+]
+exclude = [
+    "apps/__init__.py",
+]
+
+# Override nvidia-cublas to >=13.4 because transformer-engine-cu13 2.14.0 was
+# compiled against cuBLAS 13.4.x, while torch 2.11 pins nvidia-cublas 13.1.0.3.
+# cuBLAS 13.4 is backwards compatible with 13.1.
+[tool.uv]
+managed = true
+required-version = ">=0.11.8"
+override-dependencies = [
+    "nvidia-cublas>=13.4",
+    # Temporary cap for mediapy 1.2.6: numpy 2.5 makes npt.NDArray a PEP 695
+    # TypeAliasType that mediapy subclasses during import.
+    # https://github.com/NVIDIA/flashdreams/issues/355
+    "numpy>=1.24,<2.5",
+    # Keep transitive HTTP clients off urllib3 versions with sensitive-header
+    # redirect handling vulnerabilities.
+    "urllib3>=2.7.0",
+    # Keep protobuf off the 6.33.x line flagged by BDSA for the ParseDict
+    # recursion-depth follow-up.
+    "protobuf>=7.35.0,<8",
+]
+
+# `transformer-engine-torch` has no prebuilt wheel and must be built against
+# the project's PyTorch + system CUDA. uv's default per-package build isolation
+# spins up a clean venv with a fresh CPU-only torch (no numpy, no CUDA), so
+# TE's `parse(torch.version.cuda)` crashes with `TypeError: ... got 'NoneType'`.
+# This is the upstream-acknowledged workaround tracked in
+# https://github.com/NVIDIA/TransformerEngine/issues/1323 — disable isolation
+# so TE builds against the resolved torch from the project venv.
+no-build-isolation-package = ["transformer-engine-torch"]
+
+[tool.pyright]
+exclude = ["flashdreams/flashdreams/accelerated/multi_head_attention/triton/**", "flashdreams/flashdreams/accelerated/quantization/triton.py"]
+ignore = ["flashdreams/flashdreams/accelerated/multi_head_attention/triton/**", "flashdreams/flashdreams/accelerated/quantization/triton.py"]
+extraPaths = [
+    "flashdreams",
+    "apps",
+    "apps/cam2v",
+    "apps/v2v",
+    "integrations_v2",
+    "integrations_v2/flashvsr",
+    "integrations_v2/eden",
+]
+# For pyright to pickup the correct python.
+venvPath = "."
+venv = ".venv"
+# Mirror the ty rule `invalid-method-override = "ignore"` below.
+reportIncompatibleMethodOverride = "none"
+reportIncompatibleVariableOverride = "none"
+
+[tool.ty.environment]
+python-version = "3.10"
+extra-paths = [
+    "flashdreams",
+    "apps",
+    "apps/cam2v",
+    "apps/v2v",
+    "integrations_v2",
+    "integrations_v2/flashvsr",
+    "integrations_v2/eden",
+]
+
+[tool.ty.src]
+# Auto-generated protobuf stubs trigger `conflicting-metaclass` errors due to
+# protobuf's EnumTypeWrapper pattern (known ty limitation).
+# Interactive Drive's imported scene/simulation support has known-untyped
+# flashdreams / slangpy / numpy interop areas; keep it out of workspace ``ty``.
+# (The pre-fold sample's pyright config had a similar exclude list.)
+exclude = [
+    "**/protos/*pb2*",
+    "apps/interactive_drive/interactive_drive/**",
+    # Same files as above; tests live beside the package, not inside it.
+    "apps/interactive_drive/tests/**",
+    # These map/archive parsers and numerical PhysX adapters intentionally
+    # accept dynamically shaped YAML, Arrow, and NumPy values. Keep the new
+    # V2 application, session, engine contracts, rollout, input, and renderer
+    # boundaries type-checked while isolating that data-oriented edge code.
+    "apps/omnidreams_game_engine/omnidreams_game_engine/game_map/**",
+    # Bench / parity-debugging scaffolding for the hy_worldplay integration;
+    # not shipped product, mirrors the interactive_drive precedent above.
+    "integrations_v2/hy_worldplay/tests/parity_check/**",
+]
+
+[tool.ty.rules]
+# Intentional pattern: integration subclasses override base methods with more specific
+# signatures (violates Liskov but is the established design in this codebase).
+invalid-method-override = "ignore"
+
+[tool.ty.analysis]
+# These packages have no useful type stubs (Triton kernels rewrite their
+# call signatures via ``@triton.jit``) or are unavailable in CI; treat
+# imports as Any.
+replace-imports-with-any = ["flash_attn.**", "transformer_engine.**", "triton.**"]
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib -p flashdreams._pytest_plugins.marker_enforcement"
+norecursedirs = [
+    "parity_check",
+    "parity_check_v2",
+    "baseline_fastvideo",
+    "baseline_lightx2v",
+    "3rdparty",
+]
+markers = [
+    "ci_cpu: CPU-safe test, runs on the CPU CI runner",
+    "ci_gpu: requires GPU or libGL (cv2), runs on the GPU CI runner",
+    "manual: heavy or environment-specific test, opt-in only",
+]
+
+[dependency-groups]
+# Test-specific dependencies shared across workspace members. Listed here so
+# that the type checker (ty) can resolve imports in test files and in
+# flashdreams/_pytest_plugins.
+test = [
+    "pytest>=8.0",
+    "pytest-benchmark>=5.1",
+    "pytest-asyncio>=0.23",
+    "pytest-manual-marker>=2.0",
+    "tomli>=2.0",
+    "imageio-ffmpeg>=0.5",
+]
+lint = [
+    "pre-commit>=4.3.0",
+    "ruff==0.12.7",
+    "sphinx>=7.0",
+    "ty>=0.0.39",
+    {include-group = "test"},
+]
+
+# Sphinx toolchain for building docs locally (`uv run --group docs sphinx-build ...`).
+docs = [
+    "pydata-sphinx-theme>=0.18",
+    "sphinx>=7.0",
+    "sphinx-autobuild>=2024.0",
+    "sphinx-copybutton>=0.5",
+    "sphinx-design>=0.5",
+    "myst-parser>=4.0",
+]
+
+# CPU-only runtime deps needed by autodoc to import flashdreams on CI.
+# Heavy GPU packages (transformer-engine, pynvml, boto3, mediapy, cv2,
+# torch, torchvision) are mocked via `autodoc_mock_imports` in
+# docs/source/conf.py rather than installed. torch is mocked rather than
+# installed because the lock has three torch candidates (PyPI / +cu128 /
+# +cu130) that uv can't disambiguate when only docs / docs-ci are active.
+# CI installs: `uv sync --only-group docs --only-group docs-ci`
+# then `uv pip install --no-deps ./flashdreams` to make the package importable.
+docs-ci = [
+    "einops>=0.7",
+    "ftfy>=6.0",
+    "huggingface-hub>=0.33",
+    "loguru>=0.7",
+    "numpy>=1.24",
+    "safetensors>=0.4",
+    "tqdm>=4.60",
+    "transformers>=5.0,<6",
+]
+dev = [
+    "python-dotenv>=1.2.2",
+]

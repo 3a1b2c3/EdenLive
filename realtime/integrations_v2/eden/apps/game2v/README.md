@@ -1,0 +1,130 @@
+# Eden Game2V backend games
+
+The registered games live in `games/registry.json` at the checkout root.
+Run installation commands in the same Python environment used by `torchrun`:
+
+```bash
+pip install -e ./integrations_v2/eden
+pip install playwright
+python -m playwright install chromium
+npm install --prefix games --no-save --package-lock=false three@0.161.0
+bash start.sh eden-game2v-1.3b off
+# Select the other game:
+EDEN_GAME=subway-run bash start.sh eden-game2v-1.3b off
+```
+
+Use `EDEN_GAMES_ROOT` for a different resource directory. `EDEN_THREE_MODULE`
+can point to an existing Three.js 0.161.0 `build/three.module.js` instead of npm
+installation. Games are checkout resources, not included in the Eden wheel.
+Playwright is loaded lazily only by Eden's rank-zero model loop.
+
+Simulation advances at fixed 1/60-second steps. Captured frames are the
+model's own `frames_per_second_for_step` (Eden default 16, overridable with
+`--fps`): a 12-frame chunk at 16 fps covers 0.75 s = 45 ticks, at 24 fps
+0.5 s = 30 ticks. The page passes that tick delta into `runtime.render`, so
+visual interpolation follows the model instead of a hardcoded 24 fps.
+Keyboard and HUD clicks arrive at any wall-clock time, mutate the live
+Chromium game, and are sampled into the next captured model frame. There is
+no 2 fps hold-last sampler and no chunk-start freeze of `input_events`.
+
+A single Chromium page renders every model frame, and that one render serves
+both consumers:
+
+* every frame streams to the client's small game window (`ui_frame`), and
+* the latent-aligned subset `0, 4, 8, 12, ...` conditions the model
+  (`condition_frame`, which references the same render as `ui_frame`).
+
+There is no second page for the sparse condition frames, so the model and the
+client see one rasterization rather than two independent ones.
+
+The render is pipelined one chunk ahead of generation and stretched to the
+last `generate_step` duration. Each step collects the chunk begun during the
+previous step, submits the next chunk (paced so its wall time ≈ last
+generate; the first successor uses 0.4 s until a generate has been timed), then runs `generate_step`. The Playwright worker drains a dedicated
+EventBuffer reader (`GAME_EVENT_READER_ID = 2`) between frames, so keys that
+arrive during generate N land in in-flight chunk N+1. Rank zero owns the
+browser; other ranks only advance the tick timeline.
+
+With `T_sim ≈ T_gen ≈ T_play`, press-to-visible-frame is a stable ~2 chunk
+delay (the matching streamed frame, including playback). The first step of a
+rollout has no predecessor, so it bursts with `duration_s=0`. The last step
+does not submit a successor.
+
+The HUD is not pixels: the page also emits a HUD snapshot per frame (from the
+game's transport module) that the WebRTC client draws as HTML over the
+generated video; the streamed JPEG is the raw scene canvas. Frames are encoded
+at the model's own size (832x480 by default, `DEFAULT_CAPTURE_WIDTH`/`HEIGHT`).
+Each model frame is its own `advanceToFrame` round-trip so live keys can land
+between frames.
+
+`GameCaptureWorker` owns one Chromium on one dedicated thread
+(`game2v-render`). Rendering a full 12-frame chunk is ~100–123 ms of work on
+GPU, stretched across ~430 ms of generate so the leftover idle tail also eats
+keys. One GL context costs about 40 MiB on the rank-zero GPU.
+
+`Game2VModelState.last_game_chunk.frames` retains those CPU RGB uint8 arrays,
+frame IDs and simulation timestamps after `generate_step`. The current LingBot
+adapter still consumes fixed camera poses; it does not consume game conditions.
+Only rank zero renders. A future distributed conditioning adapter must distribute
+conditions to its participating ranks explicitly.
+
+Presentation consumes model/game channels together and WebRTC drops queued pairs
+as a unit with matching timestamps. The second native browser video receives the
+game image. This provides source-frame pairing, not a guarantee of pixel-exact
+simultaneous display across two browser video elements. Postprocessing is
+currently rejected explicitly to avoid mispairing frames when a processor buffers
+or changes cadence.
+
+The Cam2V AR log reports the residual render wait and generation:
+
+```
+Cam2V AR 44 [steady] | 12 frames | capture 0.4 ms (eval 110.0, decode 12.0) | generate 430.5 ms | 27.87 fps
+```
+
+`generate` and the reported `fps` are model-only. `capture` is the leftover
+wait for the chunk begun during the previous step — ~0 in steady state because
+the paced render hides behind generate; `eval`/`decode` are that render's own
+Playwright and JPEG times even when the wait is ~0. Metrics:
+`game_capture_wall_s`, `generate_wall_s`.
+
+On the 8x L20Z pod, a full 12-frame 832x480 chunk's raster+JPEG work is about
+100–123 ms, then sleeps fill the rest of generate so the sim stays live for
+keys. JPEG encoding dominates; the WebGL render itself is under 5 ms. See
+`report.game2v-capture-breakdown.md` and `report.game2v-chromium-gpu.md` at
+the repo root for the per-phase numbers.
+
+`GameRenderer` registers NVIDIA's EGL library for Chromium at launch. GPU
+containers ship `libEGL_nvidia.so.0` but register it only when
+`NVIDIA_DRIVER_CAPABILITIES` includes `graphics`; without the vendor JSON, GLVND
+reports Mesa alone, Mesa has no DRI node, and Chromium silently falls back to
+SwiftShader, where the `toDataURL` read-back costs about 4x more (87.4 vs
+32.5 ms per chunk on boxed-in). The renderer writes its own vendor JSON to a
+temporary directory and passes `__EGL_VENDOR_LIBRARY_FILENAMES` plus
+`--use-angle=gl-egl`, so no system directory is touched and the pod needs no
+change. The variable replaces the vendor list rather than extending it, so Mesa
+is named explicitly to stay available. A missing or unusable library makes the
+loader degrade to software instead of failing, which is why this is applied
+unconditionally; set `EDEN_GAME_GPU=0` to skip it. The chosen renderer is logged
+once per session, so a silent fallback to software is visible:
+
+```
+Game2V capture WebGL renderer: ANGLE (NVIDIA Corporation, NVIDIA L20Z/PCIe/SSE2, OpenGL ES 3.2)
+```
+
+Switching rasterizers changes antialiasing and shadow sampling slightly, so
+condition frames are not pixel-comparable with earlier software-rendered runs.
+The single GL context costs about 40 MiB on the rank-zero GPU and, being a
+graphics rather than compute context, does not appear in
+`nvidia-smi --query-compute-apps`.
+
+Validation without model loading:
+
+```bash
+python integrations_v2/eden/tests/check_game_backend.py
+python integrations_v2/eden/tests/check_game_backend.py --render
+```
+
+`--render` exercises the worker. It renders every frame of each chunk, with
+`ui_frame` set on all frames and `condition_frame` additionally on the
+latent-aligned subset. Burst `duration_s=0` so the check stays a capture
+timing probe rather than a paced generate stand-in.

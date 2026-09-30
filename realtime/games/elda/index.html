@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wilds of Elda</title>
+<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="/shared/recorder/recorder.css">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head><body>
+<div id="view-big">
+  <div id="app"></div>
+  <div id="overlay-big" role="dialog" aria-modal="true" aria-labelledby="big-result-title" hidden>
+    <div class="card">
+      <div class="eyebrow" id="big-result-eyebrow"></div>
+      <h2 id="big-result-title"></h2>
+      <div class="msg" id="big-result-msg"></div>
+      <div class="stats">
+        <div class="stat"><b id="big-stat-time">0</b><span>seconds</span></div>
+        <div class="stat"><b id="big-stat-hearts">0</b><span>hearts left</span></div>
+        <div class="stat"><b id="big-stat-acc">0%</b><span>accuracy</span></div>
+      </div>
+      <button type="button" id="big-resume" hidden>Resume</button>
+      <button type="button" id="big-restart">Play again</button>
+      <div class="keyhint" id="big-result-hint">Press R to restart</div>
+    </div>
+  </div>
+</div>
+<aside id="right">
+  <section id="desc-panel">
+    <p class="desc-fixed"></p>
+    <div class="desc-dynamic" role="status" aria-live="polite"></div>
+  </section>
+  <div id="record-bar">
+    <button id="record-btn" type="button"><span class="record-dot" aria-hidden="true"></span><span class="record-label">Start recording</span></button>
+    <span id="record-status">Main-view recording · auto-saves a ZIP on stop</span>
+  </div>
+  <div id="view-small"><div id="small-stage"><canvas id="small-canvas" aria-hidden="true"></canvas><div id="hud">
+    <div id="hud-hearts" aria-label="hearts"></div>
+    <div id="compass">Shrine <b id="shrine-dist">--</b> m</div>
+    <div id="hud-monsters"><div class="label">Shrine guards</div><div class="count" id="monster-count">3 / 3</div><div class="pips" id="monster-pips"></div></div>
+    <div id="reticle" aria-hidden="true"></div>
+    <div id="charge" aria-hidden="true"></div>
+    <div id="lock-label">LOCKED</div>
+    <div id="damage" aria-hidden="true"></div>
+    <div id="banner"><div class="title">Wilds of Elda</div><div class="sub">Defeat the monsters guarding the shrine</div></div>
+    <div id="hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>Shift</kbd> sprint · <kbd>I</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd> camera · hold <kbd>B</kbd> draw, release to shoot</div>
+    <div id="overlay" role="dialog" aria-modal="true" aria-labelledby="result-title" hidden>
+      <div class="card">
+        <div class="eyebrow" id="result-eyebrow"></div>
+        <h2 id="result-title"></h2>
+        <div class="msg" id="result-msg"></div>
+        <div class="stats">
+          <div class="stat"><b id="stat-time">0</b><span>seconds</span></div>
+          <div class="stat"><b id="stat-hearts">0</b><span>hearts left</span></div>
+          <div class="stat"><b id="stat-acc">0%</b><span>accuracy</span></div>
+        </div>
+        <button type="button" id="resume" hidden>Resume</button>
+        <button type="button" id="restart">Play again</button>
+        <div class="keyhint" id="result-hint">Press R to restart</div>
+      </div>
+    </div>
+    <div class="touch" aria-label="Touch controls">
+      <div class="dpad">
+        <button data-action="forward" data-hold="1" class="up" aria-label="Move forward">↑</button>
+        <button data-action="left" data-hold="1" class="left" aria-label="Move left">←</button>
+        <button data-action="backward" data-hold="1" class="down" aria-label="Move back">↓</button>
+        <button data-action="right" data-hold="1" class="right" aria-label="Move right">→</button>
+      </div>
+      <div class="touch-cam">
+        <button data-action="camUp" data-hold="1" class="cam-up" aria-label="Look up">▲</button>
+        <button data-action="camLeft" data-hold="1" class="cam-left" aria-label="Look left">◀</button>
+        <button data-action="camDown" data-hold="1" class="cam-down" aria-label="Look down">▼</button>
+        <button data-action="camRight" data-hold="1" class="cam-right" aria-label="Look right">▶</button>
+      </div>
+      <div class="touch-actions">
+        <button data-action="sprint" data-hold="1" aria-label="Sprint">RUN</button>
+        <button data-action="draw" data-hold="1" aria-label="Draw and shoot the bow" class="shoot">BOW</button>
+      </div>
+      <button data-action="pause" class="touch-pause" aria-label="Pause game">Ⅱ</button>
+    </div>
+  </div></div></div>
+</aside>
+<div id="fatal" role="alert" style="display:none"></div>
+<script type="module" src="/shared/host/play-page.js"></script>
+</body></html>
