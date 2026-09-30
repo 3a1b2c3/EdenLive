@@ -1,0 +1,48 @@
+# Wan2.1-I2V-14B (480P release) with Proxy-DINO channel-concat control, for inference.
+#
+# Unlike Wan2.2 TI2V-5B, the Wan I2V transformers do not overwrite latent frame 0. The
+# DiT input is a channel concat ``[noisy (16) | first-frame mask (4) | condition (16)]``
+# = 36 channels with a *scalar* timestep, and the cross-attention additionally takes
+# CLIP image tokens. See ``eden/models/adapters/wan22_diffusers/i2v_condition.py``.
+#
+# The 480P release's shipped scheduler_config carries flow_shift 3.0 (the 720P one uses
+# 5.0) and the official generate.py samples 832x480 at 3.0. This config follows the
+# release rather than the 720p recipe.
+model:
+  adapter: wan22_diffusers
+  # TODO: point at a local Wan2.1-I2V-14B-480P-Diffusers snapshot, or set
+  # local_files_only: false to pull Wan-AI/Wan2.1-I2V-14B-480P-Diffusers from the Hub.
+  model_id: /path/to/Wan2.1-I2V-14B-480P-Diffusers
+  variant: 14b
+  torch_dtype: bfloat16
+  local_files_only: true
+  gradient_checkpointing: false
+  max_sequence_length: 512
+  # Official Wan2.1 I2V negative prompt (wan/configs/wan_i2v_14B.py prepends 镜头晃动).
+  negative_prompt: "镜头晃动，色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
+  image_condition:
+    mode: mask_channel_concat
+    # The released encoding: VAE-encode [first frame, zeros x (F-1)] and mask it.
+    first_frame_encoding: masked_video
+    # image_dim 1280 + the shipped image_encoder -> auto resolves to true.
+    clip_embeds: auto
+  proxy_dino:
+    enabled: true
+    # TODO: local DINOv3 backbone and the finetuned proxy checkpoint.
+    model_path: /path/to/dinov3-vitl16-pretrain-lvd1689m
+    checkpoint_path: /path/to/proxy-dino/best.pt
+    control_dim: 1024
+    # The newly added control slice of the patch embedding starts at zero so the model
+    # is numerically the released I2V model before finetuning.
+    channel_concat_zero_init: true
+    patchify_factor: 2
+    # The frozen patch projection was finetuned at this size; the adapter resamples
+    # control to the latent grid.
+    image_size: [288, 512]
+    vae_time_compression_ratio: 4
+    # Offline inference decodes RGB source clips; cached target latents are a
+    # training-only representation.
+    use_cached_latents: false
+    video_context_time_axis: decoded
+    local_files_only: true
+    cfg_unconditional_control: same

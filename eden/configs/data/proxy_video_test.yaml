@@ -1,0 +1,52 @@
+data:
+  _replace_: true
+  dataset:
+    name: manifest
+    params:
+      # Point these at your own manifest. The repo ships two runnable proxy
+      # recordings: path=examples/samples/manifest.csv root=examples/samples.
+      path: /path/to/proxy_manifest.csv
+      root: /path/to/proxy_dataset
+      id_column: id
+      metadata_columns: [proxy_video, first_frame]
+      columns:
+        prompt:
+          condition: text
+          loader: text
+          required: true
+        proxy_video:
+          condition: video_context
+          loader: video
+          required: true
+          params:
+            # Match the canonical GameBlocks proxy evaluation: span the full
+            # five-second clip and resize/crop into the 720p training geometry.
+            sampling: uniform
+            num_frames: 121
+            # The 24 FPS proxies hold exactly 120 frames, one short of the 121
+            # requested here, so uniform sampling must be allowed to repeat a
+            # single interior frame. The 30 FPS proxies carry 150 frames and are
+            # unaffected.
+            pad_short: true
+            duration_seconds: 5.0
+            duration_tolerance_seconds: 0.05
+            height: 704
+            width: 1280
+            value_range: -1,1
+            num_threads: 2
+        first_frame:
+          condition: image
+          loader: image
+          required: true
+          params:
+            resize_mode: center_crop
+            height: 704
+            width: 1280
+            value_range: -1,1
+  batch_size: 1
+  shuffle: false
+  num_workers: 4
+  pin_memory: true
+  drop_last: false
+  persistent_workers: true
+  prefetch_factor: 1

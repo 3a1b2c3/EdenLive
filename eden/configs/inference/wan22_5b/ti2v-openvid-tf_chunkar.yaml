@@ -1,0 +1,61 @@
+defaults:
+  - models: wan22_5b_diffusers
+
+model:
+  gradient_checkpointing: false
+
+runtime:
+  sequence_parallel:
+    enabled: true
+    size: 1
+    axis: temporal
+    layout: balanced_blocks
+  kv_cache:
+    enabled: true
+    context:
+      max_latent_frames: null
+      sink_latent_frames: 0
+      debug_window: false
+    quantized: false
+    compression: none
+
+# Manifest-driven TI2V: each row provides a text prompt and a first-frame image.
+# The chunk_causal strategy encodes the image to a 1-frame condition latent, commits
+# it clean, and autoregressively generates the rest (independent-first-frame rollout).
+data:
+  dataset:
+    name: manifest
+    params:
+      path: data/examples/synthetic_ego/manifest.csv
+      root: data/examples/synthetic_ego
+      columns:
+        text: { condition: text, loader: text, required: true }
+        image:
+          condition: image
+          loader: image
+          required: true
+          params:
+            size: [832, 480]      # PIL resize is (width, height)
+            value_range: "-1,1"
+  batch_size: 1
+  shuffle: false
+  num_workers: 2
+
+inference:
+  strategy: chunk_causal
+  negative_prompt: "Vibrant colors, overexposed, static, blurry details, subtitles, style, artwork, painting, image, still, overall grayish, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn face, deformed, disfigured, deformed limbs, fused fingers, three legs"
+  outputs: [video]
+  output_dir: wan22_5b_ti2v_openvid_tf_chunkar
+  max_batches: 0
+  num_samples: 1
+  height: 480
+  width: 832
+  num_frames: 121
+  chunk_size: 3
+  num_inference_steps: 30
+  guidance_scale: 3.0
+  seed: 1234
+  output_type: np
+  scheduler:
+    name: native
+    shift: 5.0

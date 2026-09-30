@@ -1,0 +1,18 @@
+defaults:
+  - data: proxy_video_test
+
+# Stage2 packed chunk-causal validation needs the decoded Proxy-DINO timeline
+# to match the training window: 117 frames from the start at 24 FPS.  Do not
+# inherit the canonical test set's uniform full-five-second sampling here;
+# that would time-compress a five-second source into the shorter 117-frame
+# generation horizon.  Keep the shared 121-frame test config unchanged.
+data:
+  dataset:
+    params:
+      columns:
+        proxy_video:
+          params:
+            sampling: fps
+            fps: 24
+            clip_position: start
+            num_frames: 117

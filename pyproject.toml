@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eden"
+version = "0.1.0"
+description = "Eden: proxy-guided video world models. Turn coarse 3D previews into photorealistic video."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "Vast AI" },
+]
+keywords = [
+  "video-generation",
+  "world-model",
+  "diffusion",
+  "flow-matching",
+  "autoregressive",
+  "sequence-parallel",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "accelerate>=1.0",
+  "diffusers>=0.38",
+  "huggingface-hub>=0.30",
+  "imageio>=2.30",
+  "imageio-ffmpeg>=0.5",
+  "numpy>=1.24,<3",
+  "pillow>=10",
+  "PyYAML>=6",
+  "safetensors>=0.4",
+  "torch>=2.6",
+  "transformers>=4.50",
+]
+
+[project.optional-dependencies]
+# Manifest-driven inference reads source clips and first frames off disk or object
+# storage: decord decodes video, pandas reads parquet/csv manifests.
+data = [
+  "decord>=0.6",
+  "pandas>=2",
+  "pyarrow>=14",
+]
+all = [
+  "eden[data]",
+]
+
+[project.scripts]
+eden-infer = "eden.scripts.infer:main"
+eden-check = "eden.scripts.check:main"
+
+# TODO: add [project.urls] once the project page, repository, and weights are
+# public. Left out rather than filled with placeholders, which would ship as
+# broken links in the installed package metadata.
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["eden*", "extern.proxy_dino*"]
+
+[tool.setuptools.package-data]
+eden = ["configs/**/*.yaml"]

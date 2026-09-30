@@ -1,0 +1,7 @@
+model:
+  adapter: wan22_diffusers
+  model_id: Wan-AI/Wan2.2-TI2V-5B-Diffusers
+  torch_dtype: bfloat16
+  local_files_only: true
+  gradient_checkpointing: true
+  max_sequence_length: 512

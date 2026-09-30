@@ -1,0 +1,15 @@
+Game: dead-rush
+Recorded at: 2026-09-19T03:28:19.985Z
+Duration: 18.53s (18526 ms)
+
+STATIC PROMPT
+Bright midday sunlight over a real city block, seen from an elevated chase camera above a dark yellow sports coupe on a grid of sunlit streets. Grey asphalt roads marked with yellow centre dashes and white crosswalk bars run between low flat-roofed concrete shops with painted signs and awnings, kerbs, pavements and street lamps along both sides; pedestrians in everyday clothes and work uniforms stand along the walkways, each over a faint coloured ring painted on the ground. Clear blue sky, crisp shadows, sharp daylight on grey asphalt.
+
+DYNAMIC PROMPTS (7)
+[  4262 -   5262 ms] The coupe slams into a mage and sends them flying across the street.
+[  9387 -  10387 ms] The coupe slams into a firefighter and sends them flying across the street.
+[ 10845 -  11845 ms] The coupe slams into a worker and sends them flying across the street.
+[ 12995 -  13995 ms] The coupe slams into a nurse and sends them flying across the street.
+[ 16345 -  17345 ms] The coupe slams into a firefighter and sends them flying across the street.
+[ 18503 -  18526 ms] Struck a second time, the firefighter lies dead on the asphalt.
+[ 18503 -  18526 ms] Victory — the streets are clear and the round comes to an end.

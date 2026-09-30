@@ -1,0 +1,55 @@
+defaults:
+  - models: wan22_5b_diffusers
+
+model:
+  gradient_checkpointing: false
+
+runtime:
+  sequence_parallel:
+    enabled: true
+    size: 1
+    axis: temporal
+    layout: balanced_blocks
+  kv_cache:
+    enabled: false
+
+inference:
+  strategy: diffusion
+  prompt:
+    - "A cinematic shot of a small robot walking through a rainy neon city street, detailed reflections, smooth camera motion"
+    - "A golden retriever running across a misty mountain meadow at sunrise, shallow depth of field"
+    - "A close-up of a glass teapot pouring steaming tea on a wooden table, warm morning light"
+    - "A futuristic train gliding through a snowy cyberpunk station, volumetric lighting"
+    - "Aerial view of ocean waves crashing against black volcanic rocks, dramatic clouds"
+    - "A chef tossing vegetables in a wok in a busy night market, sparks and steam"
+    - "A red sports car driving along a coastal highway at sunset, smooth tracking shot"
+    - "A tiny astronaut floating inside a colorful jellyfish-like nebula, whimsical cinematic style"
+    - "A macro shot of raindrops sliding down a green leaf, soft natural light"
+    - "A medieval castle courtyard with banners waving in strong wind, epic fantasy atmosphere"
+    - "A dancer performing contemporary dance in an empty warehouse with shafts of sunlight"
+    - "A white sailboat moving across a calm blue lake with mountains in the background"
+    - "A busy Tokyo crosswalk at night with neon signs and umbrellas, realistic handheld camera"
+    - "A ceramic vase being shaped on a pottery wheel, clay texture and spinning motion"
+    - "A flock of birds flying over a golden wheat field, low angle cinematic shot"
+    - "A cozy library with floating dust motes and a fireplace, slow dolly movement"
+    - "A waterfall in a dense tropical jungle, lush plants and drifting mist"
+    - "A basketball player making a slow-motion dunk in an indoor court, dramatic lighting"
+    - "A drone shot flying through a futuristic greenhouse full of glowing plants"
+    - "A vintage steam locomotive passing through an autumn forest, smoke trailing behind"
+  negative_prompt: "Vibrant colors, overexposed, static, blurry details, subtitles, style, artwork, painting, image, still, overall grayish, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn face, deformed, disfigured, deformed limbs, fused fingers, three legs"
+  outputs: [video]
+  output_dir: wan22_5b_t2v_openvid_bidir
+  max_batches: 0
+  num_samples: 1
+  prompt_batch_size: 1
+  shard_prompts: true
+  height: 480
+  width: 832
+  num_frames: 121
+  num_inference_steps: 30
+  guidance_scale: 3.0
+  seed: 1234
+  output_type: np
+  scheduler:
+    name: native
+    shift: 5.0

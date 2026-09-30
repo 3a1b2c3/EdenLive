@@ -1,0 +1,61 @@
+# Inference-only config. The training recipe's model and runtime settings are
+# inlined here so this file stands alone.
+defaults:
+- models: wan22_5b_proxy_dino_channel_concat
+- runtime: fsdp2_sp
+- data: proxy_video_test
+model:
+  teacher_forcing_attention_backend: flash4
+  proxy_dino:
+    cfg_unconditional_control: zero
+    checkpoint_path: /path/to/proxy-dino/best.pt
+    use_cached_latents: false
+    video_context_time_axis: decoded
+    channel_concat_rmsnorm: false
+  gradient_checkpointing: false
+runtime:
+  sequence_parallel:
+    enabled: true
+    size: 1
+    axis: temporal
+    layout: balanced_blocks
+  torch_compile:
+    enabled: true
+    backend: inductor
+    mode: default
+    fullgraph: false
+    dynamic: false
+    preserve_precision: true
+  attention_backend:
+    enabled: true
+    backend: native
+  kv_cache:
+    enabled: false
+inference:
+  strategy: diffusion
+  outputs:
+  - video
+  checkpoint: /path/to/ckpts/5b_720p/bidir
+  checkpoint_source: ema
+  output_dir: inference/wan22_5b-proxy2fine-channelconcat-stage0-bidirsft-alldata-720p-lr5e5-cosine-5e6-proxytest5s-cfg20
+  max_batches: 0
+  num_samples: 1
+  height: 704
+  width: 1280
+  num_frames: 121
+  num_inference_steps: 48
+  guidance_scale: 2.0
+  guidance_scale_proxy: null
+  negative_prompt: Vibrant colors, overexposed, static, blurry details, subtitles, style, artwork, painting,
+    image, still, overall grayish, worst quality, low quality, JPEG compression residue, ugly, incomplete,
+    extra fingers, poorly drawn hands, poorly drawn face, deformed, disfigured, deformed limbs, fused
+    fingers, three legs
+  seed: 42
+  fps: 24
+  output_type: np
+  use_image_condition: true
+  save_condition_videos:
+    video_context: proxy
+  scheduler:
+    name: flow_unipc
+    shift: 5.0

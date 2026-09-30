@@ -1,0 +1,49 @@
+# Wan2.1-I2V-14B (480p) + Proxy-DINO, bidirectional inference.
+#
+# The image condition is channel-concat (36 DiT input channels) with a scalar
+# timestep, and the cross-attention also takes CLIP image tokens -- see
+# ``eden/models/adapters/wan22_diffusers/i2v_condition.py``.
+#
+# flow_shift 3.0 follows the 480P release's shipped scheduler_config, not the
+# 720p recipe's 5.0.
+defaults:
+  - models: wan21_i2v_14b_480p_proxy_dino_channel_concat
+  - runtime: fsdp2_sp
+  - data: proxy_video_test_480p_161f
+
+model:
+  gradient_checkpointing: false
+
+runtime:
+  # Diffusers resolves DIFFUSERS_ATTN_BACKEND when its attention dispatch module is
+  # imported, so a non-native backend must be exported before Python starts:
+  #   DIFFUSERS_ATTN_BACKEND=flash python -m eden.scripts.infer ... \
+  #     runtime.attention_backend.backend=flash
+  # The plugin hard-fails on a mismatch rather than silently running native.
+  attention_backend: {enabled: true, backend: native}
+  sequence_parallel: {enabled: true, size: 1, axis: temporal, layout: balanced_blocks}
+  torch_compile: {enabled: false}
+
+inference:
+  strategy: diffusion
+  outputs: [video]
+  # TODO: point at a checkpoint produced by the bidirectional recipe.
+  checkpoint: /path/to/checkpoints/step_000000
+  output_dir: inference/wan21_i2v_14b_480p_proxy_dino_bidir
+  max_batches: 0
+  num_samples: 1
+  height: 480
+  width: 832
+  num_frames: 161
+  fps: 16
+  num_inference_steps: 40
+  guidance_scale: 5.0
+  use_image_condition: true
+  seed: 42
+  output_type: np
+  save_condition_videos: {video_context: proxy}
+  scheduler:
+    name: flow_euler
+    schedule: shifted_linear
+    shift: 3.0
+    stretch: false

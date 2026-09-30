@@ -1,0 +1,10 @@
+torch==2.11.0+cu128
+torchvision==0.26.0+cu128
+torchaudio==2.11.0+cu128
+triton==3.6.0
+flash-attn-4==4.0.0b31
+nvidia-cutlass-dsl==4.7.1
+cuda-bindings==12.9.8
+cuda-python==12.9.7
+apache-tvm-ffi==0.1.14.post0
+quack-kernels==0.6.5

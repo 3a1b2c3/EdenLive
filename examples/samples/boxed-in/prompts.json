@@ -1,0 +1,128 @@
+{
+  "game": "boxed-in",
+  "recordedAt": "2026-09-29T12:08:24.133Z",
+  "durationMs": 12213,
+  "staticPrompt": "Clear daylight over a small enclosed courtyard, seen from an elevated three-quarter view above a tiled stone floor. Low garden walls enclose the paving, with a short masonry pillar at the centre of the yard. Two wooden packing crates rest on the tiles, and two square brass plates are inlaid in the paving nearby. A garden keeper in a work shirt, trousers and a brimmed hat occupies an open tile. Cypress and shrub planters stand just outside the walls, with a strip of grass along one edge. Clear blue sky, hard midday sun and crisp shadows on the stone.",
+  "dynamicPrompts": [
+    {
+      "text": "The garden keeper steps up across the courtyard.",
+      "startMs": 1820,
+      "endMs": 2820
+    },
+    {
+      "text": "A wooden crate slides one tile across the courtyard.",
+      "startMs": 3279,
+      "endMs": 4279
+    },
+    {
+      "text": "The garden keeper steps right and pushes a crate.",
+      "startMs": 3279,
+      "endMs": 4279
+    },
+    {
+      "text": "A wooden crate slides onto a marked destination tile.",
+      "startMs": 4804,
+      "endMs": 5804
+    },
+    {
+      "text": "The garden keeper steps right and pushes a crate.",
+      "startMs": 4804,
+      "endMs": 5804
+    },
+    {
+      "text": "The garden keeper steps up across the courtyard.",
+      "startMs": 5445,
+      "endMs": 6445
+    },
+    {
+      "text": "The garden keeper steps left across the courtyard.",
+      "startMs": 6416,
+      "endMs": 7416
+    },
+    {
+      "text": "The garden keeper steps left across the courtyard.",
+      "startMs": 6758,
+      "endMs": 7758
+    },
+    {
+      "text": "The garden keeper steps left across the courtyard.",
+      "startMs": 7083,
+      "endMs": 8083
+    },
+    {
+      "text": "The garden keeper steps down across the courtyard.",
+      "startMs": 7499,
+      "endMs": 8499
+    },
+    {
+      "text": "The garden keeper steps down across the courtyard.",
+      "startMs": 7732,
+      "endMs": 8732
+    },
+    {
+      "text": "The garden keeper steps down across the courtyard.",
+      "startMs": 8033,
+      "endMs": 9033
+    },
+    {
+      "text": "The garden keeper steps down across the courtyard.",
+      "startMs": 8316,
+      "endMs": 9316
+    },
+    {
+      "text": "The garden keeper steps right across the courtyard.",
+      "startMs": 8691,
+      "endMs": 9691
+    },
+    {
+      "text": "The garden keeper steps up across the courtyard.",
+      "startMs": 9300,
+      "endMs": 10300
+    },
+    {
+      "text": "A wooden crate slides one tile across the courtyard.",
+      "startMs": 9899,
+      "endMs": 10899
+    },
+    {
+      "text": "The garden keeper steps right and pushes a crate.",
+      "startMs": 9899,
+      "endMs": 10899
+    },
+    {
+      "text": "The garden keeper steps up across the courtyard.",
+      "startMs": 10366,
+      "endMs": 11366
+    },
+    {
+      "text": "The garden keeper steps down across the courtyard.",
+      "startMs": 10916,
+      "endMs": 11916
+    },
+    {
+      "text": "The garden keeper steps down across the courtyard.",
+      "startMs": 11549,
+      "endMs": 12213
+    },
+    {
+      "text": "The garden keeper steps up across the courtyard.",
+      "startMs": 11879,
+      "endMs": 12213
+    },
+    {
+      "text": "A wooden crate slides onto a marked destination tile.",
+      "startMs": 12204,
+      "endMs": 12213
+    },
+    {
+      "text": "The garden keeper steps right and pushes a crate.",
+      "startMs": 12204,
+      "endMs": 12213
+    },
+    {
+      "text": "Both crates rest on their marked tiles and the courtyard is in order.",
+      "startMs": 12204,
+      "endMs": 12213
+    }
+  ]
+}

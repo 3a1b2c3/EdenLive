@@ -1,0 +1,3 @@
+# Install the matching CUDA PyTorch build first; see docs/zh/wan22-fa4.md.
+-c wan22-fa4-cu128-constraints.txt
+flash-attn-4==4.0.0b31

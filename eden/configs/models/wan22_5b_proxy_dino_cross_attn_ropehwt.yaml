@@ -1,0 +1,35 @@
+model:
+  adapter: wan22_diffusers
+  model_id: Wan-AI/Wan2.2-TI2V-5B-Diffusers
+  torch_dtype: bfloat16
+  local_files_only: true
+  gradient_checkpointing: true
+  max_sequence_length: 512
+  proxy_dino:
+    enabled: true
+    injection_type: frame_cross_attn
+    model_path: /path/to/dinov3-vitl16-pretrain-lvd1689m
+    checkpoint_path: /path/to/proxy-dino/best.pt
+    control_dim: 1024
+    # Cross-attention keeps Wan's 24 x 128 head layout. T/H/W rotary widths
+    # are read from model.rope (44/42/42 for Wan2.2 5B) instead of duplicated
+    # here, while DINO H/W patch centers are normalized into the query grid.
+    cross_attention_heads: 24
+    cross_attention_head_dim: 128
+    cross_attn_spatial_rope: true
+    cross_attn_temporal_rope: true
+    cross_attn_rope_theta: 10000.0
+    # Bidir sees the complete DINO timeline. Teacher-forcing and chunk-AR set
+    # causal visibility at the model-forward path, limiting each query frame
+    # to source frames at or before its own latent-time position.
+    cross_attn_frame_routing: all
+    cross_attn_causal_visibility: true
+    cross_attn_to_out_zero_init: true
+    blocks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+    patchify_factor: 2
+    image_size: [288, 512]
+    vae_time_compression_ratio: 4
+    use_cached_latents: true
+    video_context_time_axis: latent
+    local_files_only: true
+    cfg_unconditional_control: same

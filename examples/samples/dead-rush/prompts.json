@@ -1,0 +1,43 @@
+{
+  "game": "dead-rush",
+  "recordedAt": "2026-09-19T03:28:19.985Z",
+  "durationMs": 18526,
+  "staticPrompt": "Bright midday sunlight over a real city block, seen from an elevated chase camera above a dark yellow sports coupe on a grid of sunlit streets. Grey asphalt roads marked with yellow centre dashes and white crosswalk bars run between low flat-roofed concrete shops with painted signs and awnings, kerbs, pavements and street lamps along both sides; pedestrians in everyday clothes and work uniforms stand along the walkways, each over a faint coloured ring painted on the ground. Clear blue sky, crisp shadows, sharp daylight on grey asphalt.",
+  "dynamicPrompts": [
+    {
+      "text": "The coupe slams into a mage and sends them flying across the street.",
+      "startMs": 4262,
+      "endMs": 5262
+    },
+    {
+      "text": "The coupe slams into a firefighter and sends them flying across the street.",
+      "startMs": 9387,
+      "endMs": 10387
+    },
+    {
+      "text": "The coupe slams into a worker and sends them flying across the street.",
+      "startMs": 10845,
+      "endMs": 11845
+    },
+    {
+      "text": "The coupe slams into a nurse and sends them flying across the street.",
+      "startMs": 12995,
+      "endMs": 13995
+    },
+    {
+      "text": "The coupe slams into a firefighter and sends them flying across the street.",
+      "startMs": 16345,
+      "endMs": 17345
+    },
+    {
+      "text": "Struck a second time, the firefighter lies dead on the asphalt.",
+      "startMs": 18503,
+      "endMs": 18526
+    },
+    {
+      "text": "Victory — the streets are clear and the round comes to an end.",
+      "startMs": 18503,
+      "endMs": 18526
+    }
+  ]
+}
