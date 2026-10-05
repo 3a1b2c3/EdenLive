@@ -1,22 +1,67 @@
 # Eden Game2V backend games
 
-The registered games live in `games/registry.json` at the checkout root.
-Run installation commands in the same Python environment used by `torchrun`:
+How the proxy render behind the model works: the Chromium game, its capture
+path, the HUD channel and the timing. For how to start a session, see
+[the deployment README](../../../../README.md).
+
+The registered games live in `games/registry.json` at the checkout root. Run
+installation commands in the same Python environment used by `torchrun`:
 
 ```bash
 pip install -e ./integrations_v2/eden
 pip install playwright
 python -m playwright install chromium
 npm install --prefix games --no-save --package-lock=false three@0.161.0
-bash start.sh eden-game2v-5b-taehv off
-# Select another game:
-EDEN_GAME=subway-run bash start.sh eden-game2v-5b-taehv off
 ```
 
 Use `EDEN_GAMES_ROOT` for a different resource directory. `EDEN_THREE_MODULE`
 can point to an existing Three.js 0.161.0 `build/three.module.js` instead of npm
 installation. Games are checkout resources, not included in the Eden wheel.
 Playwright is loaded lazily only by Eden's rank-zero model loop.
+
+## Importing a generated game
+
+`skills/game-prototype-turbo/` is a vendored copy of the GamePrototypeTurbo
+skill. Given a game description, an agent following its `SKILL.md` builds a
+standalone Three.js project with reachable win and loss states. Generating the
+project takes an agent. Registering the finished project is one command:
+
+```bash
+python -m eden.apps.game2v.import_game /path/to/project --slug star-course \
+  --cover /path/to/photoreal-cover.png        # optional, see below
+```
+
+The workbench home screen does this end to end -- describe a game, and it
+generates, renders a first frame and registers the result. The command above is
+the same step for a project built elsewhere.
+
+The importer copies the run that passed acceptance (`--allow-incomplete` takes
+the latest run instead), along with its `assets/` closure, into
+`games/<slug>/`. It also writes a minimal HUD overlay with a result card and a
+restart button, and appends a registry entry with `host: "standalone"`. The
+brief supplies the title, the static prompt (`scene.description`, override with
+`--prompt`) and the description. The run card supplies the controls, and the
+strategy supplies the restart key. Hand-ported games cannot be replaced by an
+import. Two failure cases are handled: if any step fails, the registry and any
+replaced directory are restored, and an existing slug requires `--replace`.
+
+Skill games own their loop, so they are not rewritten into `createRuntime()`.
+Instead `GameRenderer` injects `games/host/standalone.js` ahead of the page's
+modules. That script replaces `requestAnimationFrame` and `performance.now()`
+with a virtual clock. Each simulation tick is exactly one RAF callback 1/60 s
+after the previous one, and nothing runs between ticks. The script also
+publishes the same `window.gameBackend` used by the hand-ported games. Game
+state comes from the game's `window.__gameTest.read()`, which the skill's
+acceptance gate already requires. Keys reach the page as `KeyboardEvent`s with
+both `key` and `code` set, and a `restart` client action presses the game's own
+restart key. Event prompt lines come from `--event-prompts`, a JSON map of
+event type to sentence. Events without an entry add nothing to the prompt.
+Gameplay timed with `setTimeout` is outside the skill's clock contract and
+will drift.
+
+Without `--cover`, the importer renders the game's first frame and uses it as
+`cover.png`. That makes the rollout's anchor frame a greybox image, so pass a
+photoreal render of the opening view whenever one exists.
 
 Simulation advances at fixed 1/60-second steps. Captured frames are the
 model's own `frames_per_second_for_step` (Eden default 16, overridable with
@@ -89,9 +134,7 @@ Playwright and JPEG times even when the wait is ~0. Metrics:
 
 On the 8x L20Z pod, a full 12-frame 832x480 chunk's raster+JPEG work is about
 100–123 ms, then sleeps fill the rest of generate so the sim stays live for
-keys. JPEG encoding dominates; the WebGL render itself is under 5 ms. See
-`report.game2v-capture-breakdown.md` and `report.game2v-chromium-gpu.md` at
-the repo root for the per-phase numbers.
+keys. JPEG encoding dominates; the WebGL render itself is under 5 ms.
 
 `GameRenderer` registers NVIDIA's EGL library for Chromium at launch. GPU
 containers ship `libEGL_nvidia.so.0` but register it only when

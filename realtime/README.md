@@ -95,26 +95,78 @@ You can also install FlashDreams as a library from PyPI:
 pip install flashdreams
 ```
 
-### Launch a game session
+### Launch the workbench
+
+The page is a workbench: it opens on a home screen where you pick a game from
+the gallery or describe a new one, and nothing renders until a game is chosen.
+Four services, in this order -- the first three are independent of each other,
+the app wants them up first.
 
 ```bash
-bash start.sh eden-game2v-5b-taehv        # or eden-game2v-14b-taehv
+# 1. TURN relay, on the GPU pod. A browser outside the pod's subnet has no
+#    direct UDP path to it, and its connection stalls without the relay.
+bash turn_server.sh
+
+# 2. Workbench bridge, on the host that has the `claude` CLI (the DSW notebook).
+#    It runs the game-generation jobs. Writes the shared token both sides use.
+bash workbench_bridge.sh
+
+# 3. FLUX worker, on the GPU pod. Renders the photoreal first frame.
+bash workbench_flux.sh            # FLUX_GPU=<n> to place it
+
+# 4. The model app, on the GPU pod. Starts the FLUX worker itself if step 3
+#    was skipped.
+NPROC=2 bash launch.sh            # one rank per GPU; default 2
 ```
 
-`start.sh` picks the application slug, then runs `run.py` under
-`torchrun --nproc_per_node=8` in `webrtc` mode on port 8089. A second argument of
-`off` disables transformer compilation, for when only time-to-first-chunk
-matters. `EDEN_GAME` selects which game feeds the proxy render; the slugs come
-from [`games/registry.json`](games/registry.json) and default to `subway-run`.
+Then open `http://<pod>:8089/`. `NPROC` sets how many ranks `torchrun` starts,
+one per GPU -- set it to the number of GPUs you want to use. `GAME` picks which
+cover the session falls back to; the slugs come from
+[`games/registry.json`](games/registry.json) and default to `subway-run`.
 
-```bash
-EDEN_GAME=need-for-speed bash start.sh eden-game2v-5b-taehv off
-```
-
-It expects the weights in `HF_HOME` (default `/root/cache`) and runs with
+Weights are expected in `HF_HOME` (default `/root/cache`), loaded with
 `HF_HUB_OFFLINE=1`. `copy_models_cache.sh` stages them from a shared cache onto
 local disk, which matters because the loader `mmap()`s each shard and `mmap` over
 FUSE object storage is roughly two orders of magnitude slower.
+
+Making a game takes tens of minutes (an agent writes and plays it), so the
+left column keeps its job log across a page reload. Picking an existing game
+takes a few seconds. `launch.sh` logs to `.eden_app.log`.
+
+### How the four services fit together
+
+```
+browser ──8089──> model app (GPU pod, rank 0)
+                    │  /ext/workbench/  proxied, token-authenticated
+                    ├──8091──> bridge      (DSW notebook: runs `claude` jobs)
+                    └──8092──> FLUX worker (GPU pod: first-frame render)
+browser <──3478──── TURN relay (GPU pod: media path for off-subnet clients)
+```
+
+Rank zero owns the browser-facing side: the page, the Chromium proxy render,
+and the `/ext/workbench/` proxy. The bridge lives on the notebook because that
+is where the `claude` CLI is, and it is reached with a shared token written to
+`.workbench/token` on its first run (`launch.sh` reads the same file).
+
+The TURN relay is the one that fails quietly. Media needs a UDP path the page
+load does not, so a client on another subnet has no route to the pod without
+it. An address pointing at a relay that is not there is worse than none: the
+browser stalls in "gathering candidates" for ten seconds and then fails,
+instead of falling back. Both launchers default to the pod's own coturn, and
+`turn_server.sh` is not supervised -- it needs starting again after a pod
+restart.
+
+### Without the workbench
+
+`start.sh` is the older path: it renders from the first step with no home
+screen and no generation, and needs neither the bridge nor the FLUX worker.
+
+```bash
+NPROC=8 bash start.sh eden-game2v-5b-taehv        # or eden-game2v-14b-taehv
+```
+
+A second argument of `off` disables transformer compilation, for when only
+time-to-first-chunk matters. `EDEN_GAME` selects the game.
 
 ## Supported models
 
@@ -151,8 +203,13 @@ uv sync --extra dev --extra runners
 uv run --group lint pre-commit run -a
 ```
 
-The test suites were removed along with the other integrations, so there is no
-`pytest` target here beyond `integrations_v2/eden/tests/`.
+The test suites were removed along with the other integrations, so
+`integrations_v2/eden/tests/` is the only `pytest` target here. It is
+CPU-only:
+
+```bash
+pytest integrations_v2/eden/tests
+```
 
 ## Contributing
 
