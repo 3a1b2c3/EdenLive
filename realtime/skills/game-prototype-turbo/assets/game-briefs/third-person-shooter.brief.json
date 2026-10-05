@@ -1,0 +1,82 @@
+{
+  "title": "Extraction Square",
+  "core_verb": "Aim and shoot hostiles from behind the shoulder to clear the square, then reach extraction.",
+  "fantasy": "An armed agent clears a village square of hostiles and escapes to extraction.",
+  "control_scheme": "third_person_chase",
+  "player_modality": "avatar",
+  "fail_state": "Your health reaches zero from enemy attacks.",
+  "win_state": "Clear every hostile in the square, then reach the extraction point.",
+  "interaction_tags": [
+    {
+      "id": "hostile",
+      "meaning": "Enemy that pursues and shoots the player; contact and bullets remove health.",
+      "role": "hazard"
+    },
+    {
+      "id": "ammo_pickup",
+      "meaning": "Collectible that refills the scarce ammo pool the player spends to fire.",
+      "role": "resource"
+    },
+    {
+      "id": "extraction_point",
+      "meaning": "Goal location, reachable only after every hostile is cleared; reaching it wins.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 120,
+  "notes": "The full campaign is reduced to one arena with a finite hostile group and an extraction exit: clear, then extract. AimResolver, ProjectileWeaponSystem and CombatBehaviorDirector cover the shooting; ammo scarcity is a spend pool, and loss is health zero.",
+  "context": {},
+  "scene": {
+    "description": "A dusty village square ringed by low houses, abandoned carts and stacked crates, hostiles between the player and a fenced extraction gate. Ammo pickups glow green in doorways, dry leaves and broken shutters clutter the edges. Dense cover, with the fight pushed across the square.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "armed agent",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "village",
+        "label": "dusty square low houses and fenced gate",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "cover",
+        "label": "abandoned carts and stacked crates",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "doorways leaves and broken shutters",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "hostile",
+        "label": "hostile",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Enemy that pursues and shoots the player; contact and bullets remove health."
+      },
+      {
+        "id": "ammo_pickup",
+        "label": "ammo pickup",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Collectible that refills the scarce ammo pool the player spends to fire."
+      },
+      {
+        "id": "extraction_point",
+        "label": "extraction point",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Goal location, reachable only after every hostile is cleared; reaching it wins."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "title": "Comeback Car Soccer",
+  "core_verb": "Drive into the ball to propel it into the opposing goal.",
+  "fantasy": "A compact enclosed car-soccer arena with one player car, one scripted opponent car, one ball, two goals, and boost pads.",
+  "control_scheme": "vehicle",
+  "player_modality": "avatar",
+  "fail_state": "The opponent score reaches 2 when the ball enters your goal, or the 90-second timer reaches zero while your score is not greater than the opponent score.",
+  "win_state": "Starting behind 0-1, raise your score above the opponent score by putting the ball into the opposing goal twice before the timer expires.",
+  "interaction_tags": [
+    {
+      "id": "opponent_car",
+      "meaning": "Scripted rival car that strikes the ball toward your goal and can block or ram the player car.",
+      "role": "hazard"
+    },
+    {
+      "id": "own_goal",
+      "meaning": "Danger zone; the ball entering it raises the opponent score to 2 and immediately loses the round.",
+      "role": "hazard"
+    },
+    {
+      "id": "boost_pad",
+      "meaning": "Collectible pad that restores the car's finite boost meter.",
+      "role": "resource"
+    },
+    {
+      "id": "opponent_goal",
+      "meaning": "Goal zone; each ball entry adds one to the player score, with the second entry producing a 2-1 winning lead.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 90,
+  "notes": "Rocket League's multiplayer 3v3 format is reduced to one player-controlled car versus one scripted opponent car in a 90-second comeback round starting at 0-1; the player must score twice to take the lead, while conceding one goal loses immediately.",
+  "context": {},
+  "scene": {
+    "description": "An enclosed pitch with transparent walls under blazing stadium lights, mirrored across the midline. Two glowing goal mouths at each end, orange boost pads on the ground, a kickoff circle at the centre, and wall boundaries that keep the oversized glowing ball in play. Moderate: open enough to build speed, with the boost pads as the only fixed landmarks.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "player car",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "ball",
+        "label": "oversized ball",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "pitch",
+        "label": "enclosed pitch transparent walls and kickoff circle",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "stadium lights",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "opponent_car",
+        "label": "opponent car",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Scripted rival car that strikes the ball toward your goal and can block or ram the player car."
+      },
+      {
+        "id": "own_goal",
+        "label": "own goal",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Danger zone; the ball entering it raises the opponent score to 2 and immediately loses the round."
+      },
+      {
+        "id": "boost_pad",
+        "label": "boost pad",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Collectible pad that restores the car's finite boost meter."
+      },
+      {
+        "id": "opponent_goal",
+        "label": "opponent goal",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Goal zone; each ball entry adds one to the player score, with the second entry producing a 2-1 winning lead."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

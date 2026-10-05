@@ -1,0 +1,104 @@
+{
+  "title": "Sealed Keep",
+  "core_verb": "Fight enemies and press switches to unlock the route, then defeat the boss to open the exit.",
+  "fantasy": "A hero descends into a sealed stone keep of a few linked rooms.",
+  "control_scheme": "third_person_chase",
+  "player_modality": "avatar",
+  "fail_state": "Your hearts reach zero from enemy attacks or traps.",
+  "win_state": "Defeat the keep boss, then reach the exit room which unlocks once the boss falls.",
+  "interaction_tags": [
+    {
+      "id": "keep_enemy",
+      "meaning": "Hostile that attacks the player; its health and the boss's must reach zero to open the exit.",
+      "role": "hazard"
+    },
+    {
+      "id": "iron_key",
+      "meaning": "Collectible that unlocks the boss door.",
+      "role": "resource"
+    },
+    {
+      "id": "route_switch",
+      "role": "action",
+      "meaning": "A reachable switch opens the guard-room route; activating it is required before reaching the boss door."
+    },
+    {
+      "id": "kept_exit",
+      "meaning": "The exit room; reachable only after the boss is defeated, reaching it wins.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 150,
+  "notes": "The open adventure is sliced to one keep floor: collect the key, activate the route switch, clear the enemies, defeat the boss, then reach the exit. This slice has one key-gated door and no inventory progression.",
+  "context": {
+    "assumptions": [
+      "The core verb requires a route switch in addition to the key-gated boss door; both prerequisites remain in the bounded slice."
+    ]
+  },
+  "scene": {
+    "description": "A sealed stone keep of three linked chambers lit by torches: an entry with an iron key on a pedestal and a switch opening the guard-room route, a guard room, and a boss hall whose door opens only with the key. The exit glows gold beyond the boss. Rubble, banners and broken urns line the rooms; moderate density.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "hero",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "rooms",
+        "label": "three linked stone chambers",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "route",
+        "label": "guard room door and keyed boss door",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "enemies",
+        "label": "guards and boss",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "torches rubble banners broken urns and key pedestal",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "keep_enemy",
+        "label": "keep enemy",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Hostile that attacks the player; its health and the boss's must reach zero to open the exit."
+      },
+      {
+        "id": "iron_key",
+        "label": "iron key",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Collectible that unlocks the boss door."
+      },
+      {
+        "id": "route_switch",
+        "label": "route switch",
+        "role": "action",
+        "source": "interaction_tags",
+        "visual_hint": "A reachable switch opens the guard-room route; activating it is required before reaching the boss door."
+      },
+      {
+        "id": "kept_exit",
+        "label": "kept exit",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "The exit room; reachable only after the boss is defeated, reaching it wins."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

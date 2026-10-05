@@ -13,7 +13,7 @@ from collections import deque
 from concurrent.futures import Future
 import numpy as np
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import cached_property
 from typing import Any
 
@@ -182,6 +182,13 @@ class Game2VSessionConfig:
     rank zero for the whole rollout.
     """
 
+    wait_for_start: bool = False
+    """Hold the first chunk until the web panel picks a game.
+
+    The workbench page uses this so nothing renders before the visitor has
+    built a game (or chosen an existing one) and pressed start.
+    """
+
     def __post_init__(self) -> None:
         if self.total_blocks <= 0:
             raise ValueError("Game2VSessionConfig.total_blocks must be > 0.")
@@ -338,6 +345,33 @@ class Game2VModelState:
     restart, a result-card button, and a self-restarting round alike.
     """
 
+    start_requested: bool = False
+    """Rank-zero flag set by the first panel switch; releases ``wait_for_start``."""
+
+    started: bool = False
+    """Whether the ``wait_for_start`` gate has been passed on this rank."""
+
+    pending_home: bool = False
+    """Rank-zero request to return to the home screen and re-arm the gate.
+
+    Written by the HTTP extension's handler thread; consumed at the top of
+    :meth:`Game2VModelLoop.step`, where every rank hears the same decision.
+    """
+
+    pending_game_restart: bool = False
+    """Ask for a full rewind even when the requested slug is the current one.
+
+    Set by "play again" so the same game restarts from its first frame instead
+    of the switch being treated as a no-op.
+    """
+
+    pending_game_slug: str | None = None
+    """Game the rank-zero web panel asked the next step to switch to.
+
+    Written by the HTTP extension's handler thread; consumed and cleared at the
+    top of :meth:`Game2VModelLoop.step`, where every rank hears the same slug.
+    """
+
     blocks_generated: int = 0
     """Number of completed autoregressive model steps."""
 
@@ -408,6 +442,10 @@ class Game2VModelLoop(IModelLoop[Game2VModelState]):
     def step(self, step_index: int, events: UserInputEvents) -> list[StepResult]:
         """Apply new keyboard edges and generate one autoregressive block."""
         state = self.state
+        if _enter_start_gate(state):
+            self.exclude_from_step_time(_await_start(state, self._shutdown_event))
+            state.started = True
+        _apply_pending_game_switch(state)
         step_started_at = time.perf_counter()
         if state.blocks_generated == state.config.warmup_blocks:
             state.steady_started_at = step_started_at
@@ -839,6 +877,7 @@ class Game2VSession(ISession):
         self._config = config
         self._session_desc = session_desc
         self._use_ui = use_ui
+        self._panel_registered = False
 
     @property
     def session_desc(self) -> SessionDesc:
@@ -896,6 +935,24 @@ class Game2VSession(ISession):
                 control_stream=control_stream,
             ),
         )
+        if int(os.environ.get("RANK", "0")) == 0:
+            from .panel import register_game2v_panel
+            from .workbench_proxy import register_workbench
+
+            register_game2v_panel(self)
+            register_workbench()
+            self._panel_registered = True
+
+    def close(self) -> None:
+        """Drop the web panel, then release session-owned tensors."""
+        if self._panel_registered:
+            from .panel import unregister_game2v_panel
+            from .workbench_proxy import unregister_workbench
+
+            unregister_game2v_panel()
+            unregister_workbench()
+            self._panel_registered = False
+        super().close()
 
 
 def _game_input_payloads(events: UserInputEvents) -> list[dict[str, str]]:
@@ -1176,6 +1233,11 @@ def _await_dialog_dismissed(
                 drain_events=lambda: _drain_live_game_events(state)
             )
             keep_waiting = is_dialog_open(probe.get("state"))
+        # A requested game switch ends the hold: the switch is applied at the
+        # top of the next step, which a held step would otherwise never reach
+        # once the client that could dismiss the card has left.
+        if getattr(state, "pending_game_slug", None) or getattr(state, "pending_home", False):
+            keep_waiting = False
         # A run that is shutting down stops waiting, so a closed tab cannot
         # strand the model thread behind a card nobody is left to dismiss.
         if shutdown_event.is_set():
@@ -1235,6 +1297,177 @@ def _round_id(chunk: GameChunkPacket | None) -> int | None:
     if isinstance(round_id, bool) or not isinstance(round_id, int):
         return None
     return round_id
+
+
+def _apply_pending_game_switch(state: Game2VModelState) -> None:
+    """Honor a rank-zero panel request to change games, on every rank together.
+
+    The HTTP handler only writes :attr:`Game2VModelState.pending_game_slug` on
+    rank zero. The actual swap happens here, on the model thread, so NCCL
+    collectives stay in lockstep: every rank hears the same slug, every rank
+    rewinds, and the next generate uses one game.
+    """
+    requested = state.pending_game_slug
+    restart = getattr(state, "pending_game_restart", False)
+    if is_distributed_initialized():
+        from flashdreams.runtime_v2.distributed_sync import dist
+
+        payload = [(requested, restart)]
+        dist.broadcast_object_list(payload, src=0)
+        requested, restart = payload[0]
+    state.pending_game_slug = None
+    state.pending_game_restart = False
+    if not requested or (requested == state.config.game_slug and not restart):
+        return
+    _switch_game(state, requested)
+
+
+def _end_rollout(state: Game2VModelState) -> None:
+    """Rewind everything the current rollout owns, leaving the game unchanged.
+
+    Shared by the two ways a rollout ends: switching to another game, and
+    returning to the home screen. The queued proxy-DINO encode belongs to that
+    state too, so it goes with the rest -- a step that resumed while a stale
+    encode was still queued for its AR index would fail outright.
+    """
+    _discard_pending_game_chunk(state)
+    control_stream = getattr(state, "control_stream", None)
+    if control_stream is not None:
+        control_stream.reset()
+    if state.game_capture is not None:
+        state.game_capture.close()
+        state.game_capture = None
+    state.pending_game_frames.clear()
+    state.dialog_held = False
+    state.cache = None
+    state.anchor_frame = None
+    state.prompt_events.clear()
+    state.static_prompt = ""
+    state.active_prompt = ""
+    state.active_event_lines = ()
+    state.encoded_prompt = ""
+    state.ar_index = 0
+    state.blocks_generated = 0
+    state.frames_generated = 0
+    state.game_round_id = None
+    state.last_game_chunk = None
+    state.last_generate_wall_s = None
+    state.input_timeline.reset(start_s=0.0)
+    state.keyboard_track.reset()
+    state.pose_integrator.reset()
+    state.steady_started_at = None
+    state.steady_frames_generated = 0
+    state.steady_held_s = 0.0
+    state._recent_model_frame_rate_tracker.reset()
+    state.comparison_pending_generated_frames = None
+    if state.postprocess_stream is not None:
+        state.postprocess_stream.reset()
+    if state.event_buffer is not None:
+        state.event_buffer.read(GAME_EVENT_READER_ID)
+
+
+def _switch_game(state: Game2VModelState, slug: str) -> None:
+    """Rebuild the rollout around ``slug`` without changing resolution or fps.
+
+    Closes the capture worker, drops the i2v cache and the previous game's
+    prompt/cover, and starts a new :class:`GameTimeline`. Same rewind as a
+    round restart, plus a new first frame so the next generate is i2v from
+    the new cover rather than the old one.
+    """
+    from .game14b import resolve_game14b_conditioning
+
+    logger.info("Game2V switch: leaving {} for {}.", state.config.game_slug, slug)
+    _end_rollout(state)
+    model_width = state.config.model_video_width or state.session_desc.video_width
+    model_height = state.config.model_video_height or state.session_desc.video_height
+    conditioning = resolve_game14b_conditioning(
+        {
+            "game": slug,
+            "pixel_width": model_width,
+            "pixel_height": model_height,
+        }
+    )
+    state.config = replace(state.config, game_slug=slug, conditioning=conditioning)
+    state.game_timeline = GameTimeline(slug)
+
+
+def _enter_start_gate(state: Game2VModelState) -> bool:
+    """Decide, on every rank together, whether this step should wait for a game.
+
+    Rank zero owns the decision because only it sees the HTTP requests, and the
+    broadcast is what keeps the ranks in lockstep: a rank that entered the wait
+    alone would start broadcasting into collectives its peers had already left
+    for the generate. The local ``started`` flag is deliberately not the
+    decision, only an input to rank zero's.
+    """
+    if not state.config.wait_for_start:
+        # Identical on every rank (it comes from argv), so leaving early here
+        # costs no collective and cannot desynchronise the ranks.
+        return False
+    enter = not state.started or getattr(state, "pending_home", False)
+    if is_distributed_initialized():
+        # Only the broadcast answer is acted on, never a rank's own view: a
+        # rank that entered the wait on its own would broadcast into
+        # collectives its peers had already passed.
+        enter = broadcast_step_gate(enter)
+    if enter:
+        state.pending_home = False
+        state.start_requested = False
+        state.started = False
+        # The rollout is over, so it is rewound here rather than left to the
+        # next switch: picking the same game again is a no-op switch, and this
+        # rollout's queued encode and cache must not outlive the wait.
+        _end_rollout(state)
+    return enter
+
+
+def _await_start(state: Game2VModelState, shutdown_event: threading.Event) -> float:
+    """Block the first step until the web panel picks a game.
+
+    Rank zero decides and broadcasts each poll, as in
+    :func:`_await_dialog_dismissed`, so every rank leaves on the same iteration.
+
+    Returns:
+        Seconds spent waiting.
+    """
+    logger.info("Game2V waiting: choose a game in the workbench to start rendering.")
+    since = time.perf_counter()
+    while True:
+        keep_waiting = not state.start_requested and not shutdown_event.is_set()
+        if is_distributed_initialized():
+            keep_waiting = broadcast_step_gate(keep_waiting)
+        if not keep_waiting:
+            break
+        shutdown_event.wait(_DIALOG_POLL_SECONDS)
+    waited = time.perf_counter() - since
+    logger.info("Game2V starting {} after {:.1f} s.", state.pending_game_slug or state.config.game_slug, waited)
+    return waited
+
+
+def request_game_switch(state: Game2VModelState, slug: str, *, restart: bool = False) -> None:
+    """Ask the next model step to switch to ``slug``. Rank zero only.
+
+    Also releases a ``wait_for_start`` gate: picking a game is the start signal.
+    ``restart`` asks for a full rewind even when ``slug`` is already current, so
+    "play again" begins the same game from its first frame.
+    """
+    state.start_requested = True
+    state.pending_home = False
+    state.pending_game_restart = bool(restart)
+    if not slug or (slug == state.config.game_slug and not restart):
+        state.pending_game_slug = None
+        state.pending_game_restart = False
+        return
+    state.pending_game_slug = slug
+
+
+def request_home(state: Game2VModelState) -> None:
+    """Ask the next model step to stop and wait for another game. Rank zero only.
+
+    Re-arms the ``wait_for_start`` gate through :func:`_enter_start_gate`, which
+    broadcasts the decision so every rank stops on the same step.
+    """
+    state.pending_home = True
 
 
 def _restart_rollout(state: Game2VModelState) -> bool:
@@ -1478,4 +1711,5 @@ __all__ = [
     "Game2VSession",
     "Game2VSessionConfig",
     "CameraControlInput",
+    "request_game_switch",
 ]

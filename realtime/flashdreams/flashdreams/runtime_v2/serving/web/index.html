@@ -66,7 +66,7 @@ SPDX-License-Identifier: Apache-2.0
       #events:empty::before { content: "No events in this chunk."; color: #777; }
       /* Stacked layout: the text rows get a fixed height rather than `1fr`,
          which against an auto-height grid would still track their contents. */
-      @media (max-width: 700px) { .layout { grid-template-columns: 1fr; grid-template-rows: minmax(16rem, 55vh) repeat(3, 11rem); height: auto; min-height: 0; } .model { grid-row: auto; } }
+      @media (max-width: 700px) { .layout { grid-template-columns: 1fr; grid-template-rows: minmax(16rem, 55vh) repeat(4, 11rem); height: auto; min-height: 0; } .model { grid-row: auto; } }
 
       #status {
         position: fixed;

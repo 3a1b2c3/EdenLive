@@ -1,0 +1,76 @@
+{
+  "title": "Polarity Swarm",
+  "core_verb": "Shoot enemies while dodging bullet patterns, switching polarity to absorb same-colour bullets.",
+  "fantasy": "A lone ship breaking through a scrolling gauntlet of coloured bullets to a final guardian.",
+  "control_scheme": "top_down_world",
+  "player_modality": "avatar",
+  "fail_state": "Your ship is destroyed when hit by a bullet of the opposite polarity.",
+  "win_state": "Destroy the guardian by reducing its health to zero after the approach.",
+  "interaction_tags": [
+    {
+      "id": "enemy_bullet",
+      "meaning": "Opposite-polarity bullet; contact destroys the ship.",
+      "role": "hazard"
+    },
+    {
+      "id": "score_orb",
+      "meaning": "Optional collectible dropped by enemies that adds score.",
+      "role": "resource"
+    },
+    {
+      "id": "guardian",
+      "meaning": "The end-of-approach boss; reducing its health to zero wins.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 120,
+  "notes": "The stage is reduced to a single scrolling approach ending in one guardian; polarity-switch absorption is the signature twist carried in the verb. ProjectileWeaponSystem, ProjectileManager and WaveSpawnDirector cover the shooting loop; bullet density is the main acceptance performance risk.",
+  "context": {},
+  "scene": {
+    "description": "A top-down scrolling corridor of starfield and drifting wreckage, coloured bullet patterns filling the screen, a guardian waiting at the end. Score orbs float where enemies fell. Dense with fire, sparse on cover: dodging is the only defence.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "player ship",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "enemies",
+        "label": "enemy ships",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "backdrop",
+        "label": "starfield corridor and drifting wreckage",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "enemy_bullet",
+        "label": "enemy bullet",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Opposite-polarity bullet; contact destroys the ship."
+      },
+      {
+        "id": "score_orb",
+        "label": "score orb",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Optional collectible dropped by enemies that adds score."
+      },
+      {
+        "id": "guardian",
+        "label": "guardian",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "The end-of-approach boss; reducing its health to zero wins."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

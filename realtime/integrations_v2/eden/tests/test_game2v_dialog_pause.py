@@ -12,7 +12,9 @@ from eden.apps.game2v.game_hud import is_dialog_open
 from eden.apps.game2v.game_timeline import GameChunkPacket, GameFramePacket
 from eden.apps.game2v.session import (
     _await_dialog_dismissed,
+    _await_start,
     _hold_for_dialog,
+    request_game_switch,
 )
 from flashdreams.runtime_v2.session_desc import PresentationMode, SessionDesc
 
@@ -170,6 +172,62 @@ def test_await_gives_up_when_the_run_is_shutting_down(monkeypatch):
     _await_dialog_dismissed(state, shutdown)
     # One probe still runs, so the decision is taken on the same code path as
     # a live poll; the loop then leaves rather than waiting again.
+    assert capture.probes == 1
+    assert state.dialog_held is False
+
+
+def test_await_gives_up_when_a_game_switch_is_requested(monkeypatch):
+    # The workbench switches games while a finished round's card is still up and
+    # its client has left; the hold must yield so the switch can be applied.
+    monkeypatch.setattr('eden.apps.game2v.session._DIALOG_POLL_SECONDS', 0.0)
+    capture = _FakeCapture(open_polls=10_000)
+    state = _state(_chunk({'state': 'WON'}), game_capture=capture)
+    assert _hold_for_dialog(state) is True
+    state.pending_game_slug = 'qq'
+    _await_dialog_dismissed(state, threading.Event())
+    assert capture.probes == 1
+    assert state.dialog_held is False
+
+
+def test_start_gate_waits_for_the_first_switch(monkeypatch):
+    monkeypatch.setattr('eden.apps.game2v.session._DIALOG_POLL_SECONDS', 0.01)
+    monkeypatch.setattr('eden.apps.game2v.session.is_distributed_initialized', lambda: False)
+    state = SimpleNamespace(
+        start_requested=False, pending_game_slug=None,
+        config=SimpleNamespace(game_slug='boxed-in'),
+    )
+    done = threading.Event()
+    thread = threading.Thread(target=lambda: (_await_start(state, threading.Event()), done.set()))
+    thread.start()
+    assert not done.wait(0.1)
+    request_game_switch(state, 'qq')
+    assert done.wait(2.0)
+    thread.join()
+    assert state.pending_game_slug == 'qq'
+
+
+def test_start_gate_releases_on_switch_to_the_current_game(monkeypatch):
+    monkeypatch.setattr('eden.apps.game2v.session._DIALOG_POLL_SECONDS', 0.0)
+    monkeypatch.setattr('eden.apps.game2v.session.is_distributed_initialized', lambda: False)
+    state = SimpleNamespace(
+        start_requested=False, pending_game_slug=None, pending_home=False,
+        pending_game_restart=False,
+        config=SimpleNamespace(game_slug='boxed-in'),
+    )
+    request_game_switch(state, 'boxed-in')
+    assert state.pending_game_slug is None
+    _await_start(state, threading.Event())
+
+
+def test_await_gives_up_when_home_is_requested(monkeypatch):
+    # Returning home has to reach the gate, which a held step would never get
+    # to: the card that paused it belongs to a client that may already be gone.
+    monkeypatch.setattr('eden.apps.game2v.session._DIALOG_POLL_SECONDS', 0.0)
+    capture = _FakeCapture(open_polls=10_000)
+    state = _state(_chunk({'state': 'WON'}), game_capture=capture)
+    assert _hold_for_dialog(state) is True
+    state.pending_home = True
+    _await_dialog_dismissed(state, threading.Event())
     assert capture.probes == 1
     assert state.dialog_held is False
 

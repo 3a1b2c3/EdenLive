@@ -1,0 +1,76 @@
+{
+  "title": "Solo Kitchen Rush",
+  "core_verb": "Collect, chop, cook, plate, and serve the same three-ingredient dish repeatedly.",
+  "fantasy": "A lone chef filling meal orders in a compact restaurant kitchen during one timed shift.",
+  "control_scheme": "top_down_world",
+  "player_modality": "avatar",
+  "fail_state": "The 150-second shift timer reaches zero before 4 completed dishes have been served.",
+  "win_state": "Deliver 4 correctly completed dishes to the serving window before the shift timer reaches zero.",
+  "interaction_tags": [
+    {
+      "id": "ingredient",
+      "meaning": "Collectible raw food item; 3 ingredients must be chopped and cooked to create one complete dish.",
+      "role": "resource"
+    },
+    {
+      "id": "serving_window",
+      "meaning": "Goal counter; delivering a plated complete dish here increments orders served by one.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 150,
+  "notes": "Overcooked's multiplayer co-op kitchen was reduced to one solo chef repeatedly collecting ingredients, chopping and cooking them, plating the result, and serving 4 identical orders during a single timed shift.",
+  "context": {},
+  "scene": {
+    "description": "A cramped restaurant kitchen during peak service, stainless steel counters crowding every wall under warm overhead strip lights. A chopping station, a cooking station, a serving window glowing gold at the far end, and ingredient crates stacked in the corners are what the player runs between. Hanging pots, spice racks, cutting boards, steam and a tiled floor fill the rest; dense, with barely room to turn around.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "chef",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "stations",
+        "label": "chopping station cooking station counters and ingredient crates",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "orders",
+        "label": "order display and meal representation",
+        "role": "interface",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "pots spice racks cutting boards steam and tiled floor",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "backdrop",
+        "label": "warm kitchen lighting",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "ingredient",
+        "label": "ingredient",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Collectible raw food item; 3 ingredients must be chopped and cooked to create one complete dish."
+      },
+      {
+        "id": "serving_window",
+        "label": "serving window",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Goal counter; delivering a plated complete dish here increments orders served by one."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

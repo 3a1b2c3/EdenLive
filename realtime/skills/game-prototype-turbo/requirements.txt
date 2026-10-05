@@ -1,0 +1,5 @@
+# Runtime dependency for forge scripts (docs/specs JSON Schema checks).
+jsonschema==4.26.0
+
+# Test runner for forge/tests/.
+pytest==8.1.1

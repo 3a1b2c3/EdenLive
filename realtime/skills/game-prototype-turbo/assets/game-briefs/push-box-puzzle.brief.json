@@ -1,0 +1,64 @@
+{
+  "title": "Crate Home",
+  "core_verb": "Push each crate one cell at a time onto its marked goal tile.",
+  "fantasy": "A quiet warehouse grid where a lone mover slides crates onto painted goal tiles.",
+  "control_scheme": "custom",
+  "player_modality": "avatar",
+  "fail_state": "The 120-second timer expires before every crate sits on a goal tile.",
+  "win_state": "Push every crate onto a goal tile so no goal remains uncovered.",
+  "interaction_tags": [
+    {
+      "id": "wall",
+      "meaning": "Impassable cell that blocks movement and pushing.",
+      "role": "hazard"
+    },
+    {
+      "id": "goal_tile",
+      "meaning": "Painted target tile; a crate must be pushed onto each one to win.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 120,
+  "notes": "This bounded example chooses a 120-second puzzle clock as its loss rule and all crates on goals as its win. Four-way movement advances one cell per accepted move; a push needs a free cell beyond the crate. A timer is a choice for this brief, not a requirement for other puzzles.",
+  "context": {},
+  "scene": {
+    "description": "A top-down warehouse grid of grey floor tiles, red walls, wooden crates and painted gold goal tiles, a single mover to steer. Sparse: the walls, crates and goals are the whole puzzle.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "warehouse mover",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "board",
+        "label": "gray warehouse floor grid",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "crates",
+        "label": "wooden crates",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "wall",
+        "label": "wall",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Impassable cell that blocks movement and pushing."
+      },
+      {
+        "id": "goal_tile",
+        "label": "goal tile",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Painted target tile; a crate must be pushed onto each one to win."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

@@ -45,6 +45,8 @@ from flashdreams.recipes.wan.pipeline import (
     WanInferencePipelineConfig,
 )
 
+from flashdreams.infra.encoder.text.umt5 import UMT5TextEncoderConfig
+
 from .encoder import Game5BCtrlEncoderConfig, Game5BCtrlInput
 
 # The recipe's own negative prompt (``algorithm.negative_prompt`` in the Stage-3
@@ -77,6 +79,17 @@ class Game5BInferencePipelineConfig(WanInferencePipelineConfig):
 
     Pinned to ``None`` rather than left to the base default so a derived config
     cannot switch on a DiT cross-attention branch these weights do not have.
+    """
+
+    text_encoder: UMT5TextEncoderConfig | None = field(
+        default_factory=lambda: UMT5TextEncoderConfig(
+            model_id_or_local_path="Wan-AI/Wan2.2-TI2V-5B-Diffusers"
+        )
+    )
+    """UMT5 from the Wan 2.2 TI2V-5B snapshot, not the 1.3B donor.
+
+    The 5B release carries its own T5 and tokenizer, so a node that staged only
+    the 5B set can run without the Wan 2.1 1.3B repo the base default points at.
     """
 
 

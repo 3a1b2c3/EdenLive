@@ -1,0 +1,76 @@
+{
+  "title": "Maze Munch",
+  "core_verb": "Steer through a fixed grid maze to eat every pellet while avoiding ghosts.",
+  "fantasy": "A maze-eating chase in which one character clears food from corridors while ghosts pursue it.",
+  "control_scheme": "snake",
+  "player_modality": "avatar",
+  "fail_state": "A ghost catches you while you are not powered, removing one life and resetting positions; you lose when lives reach zero from an initial 3.",
+  "win_state": "Collect all 60 regular pellets and 4 power pellets so the remaining pellet count reaches zero.",
+  "interaction_tags": [
+    {
+      "id": "ghost",
+      "meaning": "Moving maze hazard; contact removes one life unless the 6-second power timer is active, in which case the ghost returns to its spawn.",
+      "role": "hazard"
+    },
+    {
+      "id": "pellet",
+      "meaning": "Regular corridor collectible; collecting it decrements the remaining pellet count by one.",
+      "role": "resource"
+    },
+    {
+      "id": "power_pellet",
+      "meaning": "Required goal collectible; collecting it decrements the remaining pellet count by one and enables eating ghosts for 6 seconds.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 120,
+  "notes": "Pac-Man's repeating multi-level structure is reduced to one fixed 15-by-15 grid maze containing 64 total pellets, 3 pursuing ghosts, and 3 player lives.",
+  "context": {},
+  "scene": {
+    "description": "A top-down maze of blue walls on a black floor, every corridor exactly one cell wide. Pellets line every open path, power pellets pulse larger in the four corners, and a ghost spawn pen sits in the centre. Packed: the walls are the visual, and movement is entirely through the corridor gaps.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "maze eater",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "board",
+        "label": "blue walls black floor and one-cell corridors",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "spawn",
+        "label": "central ghost pen",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "ghost",
+        "label": "ghost",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Moving maze hazard; contact removes one life unless the 6-second power timer is active, in which case the ghost returns to its spawn."
+      },
+      {
+        "id": "pellet",
+        "label": "pellet",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Regular corridor collectible; collecting it decrements the remaining pellet count by one."
+      },
+      {
+        "id": "power_pellet",
+        "label": "power pellet",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Required goal collectible; collecting it decrements the remaining pellet count by one and enables eating ghosts for 6 seconds."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

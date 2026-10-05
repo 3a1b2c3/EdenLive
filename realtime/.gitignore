@@ -168,3 +168,6 @@ node_modules/
 # tasks/ 
 
 /.dev*
+# Workbench runtime state (token, jobs, generated projects) and logs
+.workbench/
+.workbench_flux.log

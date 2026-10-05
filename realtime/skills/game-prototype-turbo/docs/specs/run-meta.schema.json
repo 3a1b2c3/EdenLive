@@ -1,0 +1,269 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "run-meta",
+  "description": "Stage run metadata. Link the authoritative brief and declare its signature actions; capabilities route implementation and checks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "control_scheme",
+    "player_modality",
+    "core_verb",
+    "modules",
+    "controls",
+    "brief",
+    "signature_actions",
+    "scene_manifest"
+  ],
+  "properties": {
+    "control_scheme": {
+      "type": "string",
+      "enum": [
+        "first_person_mouse",
+        "third_person_chase",
+        "top_down_world",
+        "heading_relative",
+        "vehicle",
+        "aircraft",
+        "snake",
+        "plate_tilt",
+        "custom"
+      ],
+      "description": "Control hint from the brief; actual controls and camera belong in implementation."
+    },
+    "player_modality": {
+      "type": "string",
+      "enum": [
+        "avatar",
+        "cursor",
+        "menu",
+        "stationary"
+      ],
+      "description": "The brief's player_modality the run implements."
+    },
+    "core_verb": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The player action or connected action sequence implemented by this run."
+    },
+    "gate": {
+      "type": "string",
+      "description": "One line naming this stage's acceptance gate (shown on the card)."
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Library modules the run imports, as /assets/... paths, for the card's provenance. Checkers do not treat this list as proof of import; catalog reuse is the runtime import graph or implementation.catalog_skips."
+    },
+    "controls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Human-readable player controls. Checkers never infer input semantics by parsing these strings."
+    },
+    "out_of_scope": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Intentional scope exclusions and behavior deferred to a later build stage; do not silently drop requested defining actions."
+    },
+    "scene_manifest": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path to the static scene manifest emitted by the scene stage, relative to this run."
+    },
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Composable capability IDs from grimoire/review/capability-matrix.md; use custom:<name> for an uncovered capability and document its checks. No genre implies an entire bundle. An empty list is valid when the stage only contains static scene work.",
+      "minItems": 0
+    },
+    "parameter_source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strategy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "brief": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path to the authoritative brief, relative to this run directory or absolute. Supplies validation time budget. With explicit --project-root, the resolved path must stay inside that root, including symlink targets."
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controllers",
+        "camera",
+        "input_model"
+      ],
+      "properties": {
+        "controllers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "camera": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input_model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "catalog_skips": {
+          "type": "array",
+          "description": "When a catalog camera, combat or resource module was considered and not imported, record the path and why. Omit the array when a matching module is imported by the run page, or none apply. Listing a path in modules is provenance, not an import.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["considered", "reason"],
+            "properties": {
+              "considered": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Catalog path under assets/, for example assets/camera/PoseFollowCameraRig.js"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "input_checks": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Real bound actions with assertions against window.__gameTest.read(). At least one check must change an asserted gameplay field. See grimoire/review/input-contract.md.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "actions",
+          "expect"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object"
+            }
+          },
+          "before": {
+            "type": "object",
+            "minProperties": 1
+          },
+          "expect": {
+            "type": "object",
+            "minProperties": 1
+          },
+          "settle_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5000
+          },
+          "persist_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5000
+          }
+        }
+      }
+    },
+    "signature_actions": {
+      "type": "array",
+      "description": "Brief-derived defining actions; scene drafts may be empty, behavior requires success/boundary input proof.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "brief_refs",
+          "action",
+          "success_checks",
+          "boundary",
+          "feedback"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "brief_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "action": {
+            "type": "string",
+            "minLength": 1
+          },
+          "success_checks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "boundary": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "checks": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "skip_reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "feedback": {
+            "type": "string"
+          }
+        }
+      },
+      "minItems": 0
+    },
+    "capability_checks": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "description": "For behavior, map each declared capability to input check names covering its relevant success and boundary."
+    }
+  }
+}

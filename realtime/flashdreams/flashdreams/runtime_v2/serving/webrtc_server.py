@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 import math
+import mimetypes
 import os
 import re
 import socket
@@ -36,6 +37,10 @@ from av import VideoFrame
 from loguru import logger
 
 from flashdreams.runtime_v2.cuda_utils import resolve_cuda_device
+from flashdreams.runtime_v2.serving.extensions import (
+    dispatch_extension,
+    serve_extension_manifest,
+)
 from flashdreams.runtime_v2.session_desc import SessionDesc
 from flashdreams.runtime_v2.step_result import StepResult
 from flashdreams.runtime_v2.user_input_event import (
@@ -998,8 +1003,14 @@ class WebRTCServer:
         app.router.add_get("/", self._serve_browser)
         app.router.add_get("/app.js", self._serve_browser_script)
         app.router.add_get("/games/{slug}/hud/{filename}", self._serve_game_overlay)
+        app.router.add_get("/vendor/{filename}", self._serve_game_vendor)
+        app.router.add_get("/assets/{tail:.*}", self._serve_game_tree)
+        app.router.add_get("/host/{filename}", self._serve_game_host)
+        app.router.add_get("/game/{slug}/{tail:.*}", self._serve_registered_game)
         app.router.add_get("/healthz", self._health)
         app.router.add_post("/api/webrtc/offer", self._offer)
+        app.router.add_get("/extensions.json", serve_extension_manifest)
+        app.router.add_route("*", "/ext/{name}/{tail:.*}", dispatch_extension)
         runner = web.AppRunner(app)
         await runner.setup()
         address_family = socket.AF_INET6 if ":" in self._host else socket.AF_INET
@@ -1025,11 +1036,22 @@ class WebRTCServer:
             "<script>window.__ICE_SERVERS__ = %s;</script>" % json.dumps(_browser_ice_servers())
         )
         page = page.replace("</head>", ice_script + "</head>", 1)
-        return web.Response(text=page, content_type="text/html")
+        # The ICE servers are injected inline, so a cached copy pins whatever
+        # relay was configured when it was stored — a stale one breaks every
+        # later connection with an ICE gathering timeout.
+        return web.Response(
+            text=page,
+            content_type="text/html",
+            headers={"cache-control": "no-store"},
+        )
 
     async def _serve_browser_script(self, _: web.Request) -> web.Response:
         """Return the browser client's JavaScript."""
-        return web.Response(text=_BROWSER_SCRIPT, content_type="text/javascript")
+        return web.Response(
+            text=_BROWSER_SCRIPT,
+            content_type="text/javascript",
+            headers={"cache-control": "no-store"},
+        )
 
     async def _serve_game_overlay(self, request: web.Request) -> web.Response:
         """Return one per-game overlay module from the games checkout.
@@ -1048,6 +1070,68 @@ class WebRTCServer:
         if not path.is_relative_to(root) or not path.is_file():
             raise web.HTTPNotFound()
         return web.Response(body=path.read_bytes(), content_type=content_type)
+
+    def _game_file_response(self, path: Path, *, root: Path) -> web.Response:
+        resolved = path.resolve()
+        if not resolved.is_relative_to(root) or not resolved.is_file():
+            raise web.HTTPNotFound()
+        content_type = (
+            "text/javascript"
+            if resolved.suffix in {".js", ".mjs"}
+            else (mimetypes.guess_type(resolved.name)[0] or "application/octet-stream")
+        )
+        if resolved.suffix == ".html":
+            content_type = "text/html"
+        if resolved.suffix == ".css":
+            content_type = "text/css"
+        return web.Response(body=resolved.read_bytes(), content_type=content_type)
+
+    async def _serve_game_vendor(self, request: web.Request) -> web.Response:
+        """Serve the shared Three.js build the games import as ``/vendor/``."""
+        filename = request.match_info["filename"]
+        if filename != "three.module.js":
+            raise web.HTTPNotFound()
+        root = _games_root()
+        path = Path(
+            os.environ.get(
+                "EDEN_THREE_MODULE",
+                root / "node_modules" / "three" / "build" / "three.module.js",
+            )
+        )
+        if not path.is_file():
+            raise web.HTTPNotFound()
+        return web.Response(body=path.read_bytes(), content_type="text/javascript")
+
+    async def _serve_game_host(self, request: web.Request) -> web.Response:
+        """Serve ``games/host/*.js`` for live browser preview."""
+        filename = request.match_info["filename"]
+        if not re.fullmatch(r"[A-Za-z0-9._-]+\.js", filename):
+            raise web.HTTPNotFound()
+        root = _games_root()
+        return self._game_file_response(root / "host" / filename, root=root)
+
+    async def _serve_game_tree(self, request: web.Request) -> web.Response:
+        """Serve ``games/assets/...`` for live browser preview."""
+        rel = request.match_info["tail"]
+        root = _games_root()
+        return self._game_file_response(root / "assets" / rel, root=root)
+
+    async def _serve_registered_game(self, request: web.Request) -> web.Response:
+        """Serve ``games/<slug>/...`` under ``/game/<slug>/`` for live preview."""
+        slug = request.match_info["slug"]
+        if _GAME_OVERLAY_SLUG.fullmatch(slug) is None:
+            raise web.HTTPNotFound()
+        root = _games_root()
+        registry = root / "registry.json"
+        if not registry.is_file():
+            raise web.HTTPNotFound()
+        slugs = {
+            entry.get("slug")
+            for entry in json.loads(registry.read_text()).get("games", [])
+        }
+        if slug not in slugs:
+            raise web.HTTPNotFound()
+        return self._game_file_response(root / slug / request.match_info["tail"], root=root)
 
     async def _health(self, _: web.Request) -> web.Response:
         """Report whether the server has an open session and client."""
@@ -1092,6 +1176,16 @@ class WebRTCServer:
 
             peer_connection = RTCPeerConnection(
                 configuration=RTCConfiguration(iceServers=self._ice_servers)
+            )
+            # Who is negotiating, and over which candidate types. A client that
+            # cannot reach the pod over UDP is invisible otherwise: its offer
+            # arrives over TCP and then nothing happens.
+            peer_name = request.remote or "unknown"
+            logger.info(
+                "WebRTC offer from {} ({} candidate lines, turn={})",
+                peer_name,
+                sdp.count("a=candidate"),
+                bool(self._ice_servers),
             )
             video_track = (_PairedVideoTrack if payload.get("paired_video") is True else _VideoTrack)(session_desc.frames_per_second_for_ui)
             peer_connection.addTrack(video_track)
@@ -1154,6 +1248,12 @@ class WebRTCServer:
             async def on_connectionstatechange() -> None:
                 if self._peer_connection is not peer_connection:
                     return
+                # A client whose media never opens leaves no other trace, so the
+                # transition is logged: it is the only server-side evidence of
+                # whether a browser's candidates ever reached us.
+                logger.info(
+                    "WebRTC peer {} -> {}", peer_name, peer_connection.connectionState
+                )
                 if peer_connection.connectionState == "connected":
                     self._media_connected.set()
                     # The media path is open now, which is the earliest a frame

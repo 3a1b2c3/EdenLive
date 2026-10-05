@@ -1,0 +1,82 @@
+{
+  "title": "Rail Dash",
+  "core_verb": "Dodge obstacles by switching between three lanes, jumping, or ducking while running forward automatically.",
+  "fantasy": "A runner escapes through a railway corridor containing tracks, trains, barriers, and coins.",
+  "control_scheme": "third_person_chase",
+  "player_modality": "avatar",
+  "fail_state": "Collide with a train or barrier; the collision immediately ends the run.",
+  "win_state": "Cross the target-distance gate at the end of the fixed track segment without crashing.",
+  "interaction_tags": [
+    {
+      "id": "train_or_barrier",
+      "meaning": "Oncoming train or fixed barrier; collision immediately ends the run.",
+      "role": "hazard"
+    },
+    {
+      "id": "coin",
+      "meaning": "Optional collectible placed along lanes and jump paths; contact adds one coin.",
+      "role": "resource"
+    },
+    {
+      "id": "distance_gate",
+      "meaning": "Goal gate at the end of the fixed segment; crossing it wins the run.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 90,
+  "notes": "The original endless runner is reduced to one fixed single-player track segment: the character runs forward automatically, dodges lane obstacles, optionally collects coins, and wins by reaching the segment's distance gate.",
+  "context": {},
+  "scene": {
+    "description": "A dimly lit underground railway corridor split into three lanes, with oncoming trains, barriers and coins along the way and a distance gate at the end. Concrete pillars and graffitied tunnel walls rush past under flickering fluorescent strips, signal lights and ventilation grates. Dense, so the player is maneuvering constantly.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "runner",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "course",
+        "label": "three railway lanes",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "concrete pillars graffitied walls fluorescent strips signals and ventilation grates",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "backdrop",
+        "label": "underground tunnel",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "train_or_barrier",
+        "label": "train or barrier",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Oncoming train or fixed barrier; collision immediately ends the run."
+      },
+      {
+        "id": "coin",
+        "label": "coin",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Optional collectible placed along lanes and jump paths; contact adds one coin."
+      },
+      {
+        "id": "distance_gate",
+        "label": "distance gate",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Goal gate at the end of the fixed segment; crossing it wins the run."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "attempt-ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "attempts"],
+  "properties": {
+    "format": {"const": "gameblocks-attempts/v1"},
+    "attempts": {"type": "array", "items": {"$ref": "#/definitions/attempt"}}
+  },
+  "definitions": {
+    "hashes": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^[a-f0-9]{64}$"}},
+    "attempt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["run_id", "check", "artifact", "dependencies", "result", "affected"],
+      "properties": {
+        "run_id": {"type": "string", "minLength": 1}, "check": {"type": "string", "minLength": 1},
+        "artifact": {"$ref": "#/definitions/hashes"}, "dependencies": {"$ref": "#/definitions/hashes"},
+        "result": {"enum": ["passed", "failed", "not_evaluated"]},
+        "affected": {"type": "array", "items": {"type": "string"}},
+        "failure": {}, "cause": {}, "edit": {}, "retest": {},
+        "binding": {"type": "object", "required": ["format", "run", "kind", "inputs", "settings", "tools", "environment", "uncertain"],
+          "properties": {"format": {"const": "gameblocks-check-inputs/v1"}}}
+      }
+    }
+  }
+}

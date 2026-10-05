@@ -1,0 +1,86 @@
+{
+  "title": "Final Wave",
+  "core_verb": "Move around the arena to evade enemies and collect dropped XP gems while weapons attack automatically.",
+  "fantasy": "A lone monster hunter survives escalating supernatural waves in a bounded top-down arena.",
+  "control_scheme": "top_down_world",
+  "player_modality": "avatar",
+  "fail_state": "Player health reaches zero before extraction is completed, including after the 120-second survival timer has elapsed.",
+  "win_state": "Remain alive until the 120-second round timer reaches zero, then reach the activated extraction beacon to complete the round.",
+  "interaction_tags": [
+    {
+      "id": "enemy",
+      "meaning": "Wave-spawned hostile that moves toward the player and deals contact damage.",
+      "role": "hazard"
+    },
+    {
+      "id": "xp_gem",
+      "meaning": "Pickup dropped by defeated enemies; collecting enough gems upgrades the player's automatic weapon.",
+      "role": "resource"
+    },
+    {
+      "id": "extraction_beacon",
+      "meaning": "Goal object that activates when the round timer reaches zero; touching it while alive completes the survival round.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 150,
+  "notes": "Vampire Survivors' longer escalating runs and open-ended enemy waves are reduced to one fixed 120-second single-player survival round. Weapons fire automatically at nearby enemies; the player's repeated action is movement. The extraction beacon provides a concrete gold-tagged goal object after the survival timer expires.",
+  "context": {
+    "assumptions": [
+      "The validation allowance includes up to 30 seconds to reach extraction after the unchanged 120-second survival phase; this does not add a gameplay deadline."
+    ]
+  },
+  "scene": {
+    "description": "A dark overgrown field at night with low fog hugging the terrain. Enemies close in from all directions as a spawn ring, XP gems scatter across the ground like green fireflies, and an extraction beacon pulses gold in the distance once the timer runs out. Tall grass tufts, dead tree stumps and scattered rocks break up the ground: dense enough to feel overrun, but never blocking movement.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "monster hunter",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "arena",
+        "label": "bounded overgrown field with spawn ring",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "tall grass dead stumps scattered rocks and low fog",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "backdrop",
+        "label": "night sky",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "enemy",
+        "label": "enemy",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Wave-spawned hostile that moves toward the player and deals contact damage."
+      },
+      {
+        "id": "xp_gem",
+        "label": "xp gem",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Pickup dropped by defeated enemies; collecting enough gems upgrades the player's automatic weapon."
+      },
+      {
+        "id": "extraction_beacon",
+        "label": "extraction beacon",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Goal object that activates when the round timer reaches zero; touching it while alive completes the survival round."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

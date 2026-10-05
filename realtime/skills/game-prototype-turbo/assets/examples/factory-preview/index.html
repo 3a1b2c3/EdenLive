@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="data:,">
+  <title>Asset workshop · Game Prototype Turbo</title>
+  <style>
+    :root { font: 14px/1.5 system-ui, sans-serif; color: #233f44; background: #f1f3eb; accent-color: #24776c; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    header { min-height: 88px; padding: 18px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #d5ddd3; }
+    h1 { font-size: 24px; letter-spacing: -.6px; margin: 0; }
+    header p { margin: 2px 0 0; color: #5b7371; }
+    .badge { border: 1px solid #c6d5cb; padding: 6px 12px; border-radius: 30px; white-space: nowrap; font-size: 12px; }
+    main { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: calc(100vh - 88px); }
+    aside { padding: 22px; background: #fafbf5; border-right: 1px solid #d5ddd3; overflow-y: auto; max-height: calc(100vh - 88px); }
+    fieldset { padding: 0; border: 0; margin: 0 0 22px; min-width: 0; }
+    legend { font-size: 11px; font-weight: 750; letter-spacing: 1.3px; text-transform: uppercase; margin-bottom: 10px; color: #657975; }
+    label { display: block; margin: 10px 0; }
+    label > span { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
+    select, input[type="number"], textarea { width: 100%; border: 1px solid #cbd8ce; border-radius: 7px; padding: 9px 10px; background: #fffef9; color: inherit; font: inherit; }
+    input[type="range"] { width: 100%; margin: 2px 0; }
+    output { font-variant-numeric: tabular-nums; font-size: 12px; color: #54726a; }
+    button { border: 1px solid #cad8ce; border-radius: 7px; padding: 8px 12px; background: #e7eee3; color: inherit; cursor: pointer; font: inherit; font-weight: 600; }
+    button:hover { background: #dce7d6; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid #24776c; outline-offset: 3px; }
+    .primary { background: #24776c; color: white; border-color: #24776c; }
+    .primary:hover { background: #1b6258; }
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; min-width: 0; }
+    .check { display: flex; align-items: center; gap: 8px; }
+    .muted { color: #6a8079; font-size: 12px; }
+    details { border-top: 1px solid #d5ddd3; padding-top: 14px; }
+    summary { cursor: pointer; font-weight: 650; }
+    textarea { margin: 10px 0 6px; font: 11px/1.6 ui-monospace, monospace; resize: vertical; }
+    #error { color: #9c392d; font-size: 12px; overflow-wrap: anywhere; }
+    #viewport { position: relative; min-height: 520px; overflow: hidden; }
+    canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+    canvas:active { cursor: grabbing; }
+    .view-top { position: absolute; inset: 20px 24px auto; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; pointer-events: none; }
+    .view-top h2 { font-size: 19px; margin: 0; }
+    .view-top p { margin: 3px 0; font-size: 12px; color: #617b74; }
+    .readout { position: absolute; inset: auto 24px 20px; padding: 12px 16px; border: 1px solid #d4dfd2; border-radius: 10px; background: #fafcf4e8; display: flex; justify-content: space-between; gap: 12px; pointer-events: none; font-size: 12px; font-variant-numeric: tabular-nums; }
+    [hidden] { display: none !important; }
+    @media (max-width: 760px) {
+      header { padding: 16px; }
+      header p { max-width: 250px; }
+      .badge { display: none; }
+      main { grid-template-columns: 1fr; }
+      #viewport { order: -1; height: 56vh; min-height: 360px; }
+      aside { max-height: none; border-right: 0; border-top: 1px solid #d5ddd3; }
+      .readout { inset: auto 12px 12px; flex-wrap: wrap; }
+      .view-top { inset: 14px 16px auto; }
+    }
+  </style>
+  <script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+  <header>
+    <div><h1>Asset workshop</h1><p>Explore shape, color and motion from a few parameters.</p></div>
+    <span class="badge">Game Prototype Turbo · Component preview</span>
+  </header>
+  <main>
+    <aside aria-label="Asset controls">
+      <fieldset>
+        <legend>01 / Choose a starting point</legend>
+        <label for="family"><span>Asset</span><select id="family"></select></label>
+        <label for="preset"><span>Preset</span><select id="preset"></select></label>
+        <label for="seed"><span>Variation seed</span><input id="seed" type="number" step="1" min="0" max="4294967295" value="42"></label>
+        <div class="row"><button id="sample" class="primary" type="button">Apply seed</button><button id="next" type="button">Next seed</button></div>
+        <p class="muted">Seeds choose a new form and palette. Presets restore a curated design.</p>
+      </fieldset>
+      <fieldset><legend>02 / Adjust the shape</legend><div id="shape"></div></fieldset>
+      <fieldset>
+        <legend>03 / See it move</legend>
+        <label id="motion-label" for="motion"><span>Motion</span><select id="motion"></select></label>
+        <label for="speed"><span id="speed-label">Animation speed</span><input id="speed" type="range" min="0" max="2" step="0.1" value="1"><output id="speed-value" for="speed">1</output></label>
+        <label id="steam-label" class="check" hidden><input id="steaming" type="checkbox" checked>Steam emission (when available)</label>
+        <div class="row"><button id="pause" type="button" aria-pressed="false">Pause</button><button id="reset" type="button">Reset pose</button></div>
+        <label class="check"><input id="show-bounds" type="checkbox">Show local rest bounds</label>
+      </fieldset>
+      <details id="resolved">
+        <summary>Resolved parameters</summary>
+        <p class="muted">Edit any supported option, then apply. Save this JSON to preserve the design.</p>
+        <label for="params" class="muted">Full configuration</label>
+        <textarea id="params" rows="13" spellcheck="false"></textarea>
+        <button id="apply" type="button">Apply JSON</button>
+      </details>
+      <p id="error" role="alert" hidden></p>
+    </aside>
+    <section id="viewport" aria-label="3D asset preview">
+      <canvas id="canvas" aria-label="3D model. Drag to orbit; scroll to zoom."></canvas>
+      <div class="view-top"><div><h2 id="asset-title">Character</h2><p id="asset-subtitle">Building preview…</p></div><p>Drag to orbit<br>Scroll to zoom</p></div>
+      <div class="readout"><span id="dimensions">Preparing model…</span><span id="stats"></span></div>
+    </section>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

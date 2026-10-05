@@ -1,0 +1,12 @@
+tmp/
+__pycache__/
+*.pyc
+node_modules/
+forge/tests/.fixtures/
+runs/
+evidence/
+
+# package.json / package-lock.json are tracked on purpose: they pin three@0.161.0
+# for the headless JS tests, and a fresh clone cannot run them without the manifest.
+
+/*.sh

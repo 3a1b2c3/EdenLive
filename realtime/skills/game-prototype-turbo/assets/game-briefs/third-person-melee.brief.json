@@ -1,0 +1,81 @@
+{
+  "title": "Ember Duel",
+  "core_verb": "Read the boss's tells, dodge its swings, and land committed melee strikes to empty its health.",
+  "fantasy": "A lone knight duels a towering ember boss in a closed stone arena.",
+  "control_scheme": "third_person_chase",
+  "player_modality": "avatar",
+  "fail_state": "Your health reaches zero from the boss's attacks.",
+  "win_state": "Reduce the boss's health to zero by landing strikes.",
+  "interaction_tags": [
+    {
+      "id": "boss_attack",
+      "meaning": "The boss's telegraphed swing or blast; contact removes player health.",
+      "role": "hazard"
+    },
+    {
+      "id": "estus_flask",
+      "meaning": "Single-use healing pickup in the arena that restores 4 of 6 health.",
+      "role": "resource"
+    },
+    {
+      "id": "boss",
+      "meaning": "The goal target; reducing its health to zero triggers victory.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 120,
+  "notes": "The long gauntlet is reduced to a single-boss arena with one healing pickup, retaining lock-on, invincibility-frame dodges, telegraphed attacks and committed melee strikes.",
+  "context": {
+    "assumptions": [
+      "A dodge prevents damage only during its defined invulnerability window; the boss's cue and the player's committed attack recovery must make the timing legible.",
+      "The prototype contains one boss and no gameplay countdown; the 120-second allowance applies to purposeful validation play."
+    ]
+  },
+  "scene": {
+    "description": "A circular stone arena ringed by broken pillars, a towering boss at its centre, one glowing flask resting by the far wall. Ash drifts through shafts of light, scorch marks scar the floor. Sparse enough to read the boss at a glance, with pillars to break line of sight.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "knight with melee equipment",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "arena",
+        "label": "circular stone floor and broken pillars",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "ash shafts of light and scorch marks",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "boss_attack",
+        "label": "boss attack",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "The boss's telegraphed swing or blast; contact removes player health."
+      },
+      {
+        "id": "estus_flask",
+        "label": "estus flask",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Single-use healing pickup in the arena that restores 4 of 6 health."
+      },
+      {
+        "id": "boss",
+        "label": "boss",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "The goal target; reducing its health to zero triggers victory."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

@@ -14,11 +14,14 @@ import io
 import json
 import mimetypes
 import os
+import re
 import tempfile
 import time
+from collections.abc import Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 from urllib.parse import unquote, urlsplit
 
 import numpy as np
@@ -54,6 +57,31 @@ _WEBGL_RENDERER_QUERY = '''() => {
              : gl.getParameter(gl.RENDERER);
 }'''
 _SOFTWARE_RENDERER_MARKS = ('SwiftShader', 'llvmpipe', 'softpipe')
+
+STANDALONE_HOST = 'standalone'
+"""Registry ``host`` of a game that owns its loop, such as a GamePrototypeTurbo export.
+
+Such a page is served unmodified except for ``host/standalone.js``, injected
+ahead of every module so it can take over the page's clock.
+"""
+
+
+def standalone_page(html: str, entry: Mapping[str, Any]) -> str:
+    """Inject the virtual-clock host into a standalone game's ``index.html``."""
+    config = {
+        'restartKeys': list(entry.get('restart_keys') or ['r']),
+        'eventPrompts': dict(entry.get('event_prompts') or {}),
+    }
+    # `</` cannot appear inside the inline script, whatever a prompt contains.
+    payload = json.dumps(config).replace('</', '<\\/')
+    script = (
+        f'<script>window.gameStandalone={payload}</script>'
+        '<script src="/host/standalone.js"></script>'
+    )
+    head = re.search(r'<head[^>]*>', html, flags=re.IGNORECASE)
+    if head is None:
+        raise ValueError('Standalone game index.html has no <head>.')
+    return html[: head.end()] + script + html[head.end():]
 
 
 def registered_game_slugs(*, games_root: Path | None = None) -> tuple[str, ...]:
@@ -104,16 +132,19 @@ class GameRenderer:
         *,
         width: int = DEFAULT_CAPTURE_WIDTH,
         height: int = DEFAULT_CAPTURE_HEIGHT,
+        games_root: Path | None = None,
     ):
         from playwright.sync_api import sync_playwright
 
         if width <= 0 or height <= 0:
             raise ValueError('Game capture size must be positive')
-        self.root = Path(os.environ.get('EDEN_GAMES_ROOT', Path(__file__).resolve().parents[4] / 'games')).resolve()
+        self.root = Path(games_root or os.environ.get('EDEN_GAMES_ROOT', Path(__file__).resolve().parents[4] / 'games')).resolve()
         entries = json.loads((self.root / 'registry.json').read_text())['games']
-        if slug not in {entry['slug'] for entry in entries}:
+        entry = next((entry for entry in entries if entry['slug'] == slug), None)
+        if entry is None:
             raise ValueError(f'Unregistered game: {slug}')
         self.slug = slug
+        self.entry = entry
         self.width = width
         self.height = height
         self.last_evaluate_s = 0.0
@@ -129,7 +160,9 @@ class GameRenderer:
             self.page = self._browser.new_page(viewport={'width': width, 'height': height}, device_scale_factor=1)
             self.page.route('**/*', self._route)
             self.page.goto(f'http://eden.local/{slug}/index.html')
-            self.page.wait_for_function('Boolean(window.gameBackend)', timeout=30000)
+            # Interval polling: Playwright's default polls on requestAnimationFrame,
+            # which host/standalone.js takes over and never runs on its own.
+            self.page.wait_for_function('Boolean(window.gameBackend)', timeout=30000, polling=50)
             self._log_webgl_renderer()
         except BaseException:
             self.close()
@@ -191,6 +224,8 @@ class GameRenderer:
             rel = f'{self.slug}/{rel}'
         if rel == 'vendor/three.module.js':
             path = Path(os.environ.get('EDEN_THREE_MODULE', self.root / 'node_modules/three/build/three.module.js')).resolve()
+        elif rel == 'vendor/rapier.es.js':
+            path = Path(os.environ.get('EDEN_RAPIER_MODULE', self.root / 'node_modules/@dimforge/rapier3d-compat/rapier.es.js')).resolve()
         else:
             path = (self.root / rel).resolve()
             if not path.is_relative_to(self.root):
@@ -200,7 +235,9 @@ class GameRenderer:
             route.fulfill(status=404, body=f'Missing game resource: {rel}')
             return
         body = path.read_bytes()
-        if rel == f'{self.slug}/index.html':
+        if rel == f'{self.slug}/index.html' and self.entry.get('host') == STANDALONE_HOST:
+            body = standalone_page(body.decode(), self.entry).encode()
+        elif rel == f'{self.slug}/index.html':
             html = body.decode().replace('<script type="module" src="/shared/host/play-page.js"></script>',
                 f'<script>window.gameSlug={json.dumps(self.slug)}</script><script type="module" src="/host/backend.js"></script>')
             # EDEN_GAME_AUTOPILOT names a script injected after the backend, so a
@@ -321,8 +358,10 @@ class GameCaptureWorker:
         *,
         width: int = DEFAULT_CAPTURE_WIDTH,
         height: int = DEFAULT_CAPTURE_HEIGHT,
+        games_root: Path | None = None,
     ) -> None:
         self.slug = slug
+        self.games_root = games_root
         self.width = width
         self.height = height
         self.last_evaluate_s = 0.0
@@ -366,7 +405,9 @@ class GameCaptureWorker:
     ) -> GameChunkPacket:
         if self._renderer is None:
             self._renderer = GameRenderer(
-                self.slug, width=self.width, height=self.height
+                self.slug, width=self.width, height=self.height,
+                # Only when set, so stand-ins built for the original signature still work.
+                **({'games_root': self.games_root} if self.games_root is not None else {}),
             )
             self.webgl_renderer = getattr(self._renderer, 'webgl_renderer', '')
         rendered = self._renderer.render_chunk(

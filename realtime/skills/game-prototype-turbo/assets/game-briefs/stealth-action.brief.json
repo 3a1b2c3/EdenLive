@@ -1,0 +1,100 @@
+{
+  "title": "Silent Contract",
+  "core_verb": "Sneak through a guarded estate to eliminate one target and escape.",
+  "fantasy": "A covert assassin infiltrates a secured estate to complete a contract and leave undetected.",
+  "control_scheme": "third_person_chase",
+  "player_modality": "avatar",
+  "fail_state": "You are eliminated when player health reaches zero, or the 120-second mission timer reaches zero before you enter the exit after eliminating the target.",
+  "win_state": "Reduce the contract target's health to zero, then enter the gold exit marker before the mission timer expires.",
+  "interaction_tags": [
+    {
+      "id": "armed_guard",
+      "meaning": "Patrolling hostile who detects nearby intruders, pursues them, and deals damage until player health reaches zero.",
+      "role": "hazard"
+    },
+    {
+      "id": "contract_target",
+      "meaning": "The designated hostile whose health must be reduced to zero before the exit can complete the mission.",
+      "role": "hazard"
+    },
+    {
+      "id": "guard_disguise",
+      "meaning": "Pickup that suppresses guard detection while the player remains outside the target's restricted room.",
+      "role": "resource"
+    },
+    {
+      "id": "exit_marker",
+      "meaning": "Goal zone that grants victory when entered after the contract target's health reaches zero.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 120,
+  "notes": "The stealth sandbox is reduced to one compact single-player contract: infiltrate a small guarded estate, optionally collect one disguise, eliminate one scripted target, and reach one exit.",
+  "context": {},
+  "scene": {
+    "description": "A secured estate at night, high walls around a compound of interconnected rooms and corridors, security lights casting harsh cones on the ground. Guard patrol zones, cover walls, disguise pickups, a target location and a gold exit marker beyond the target building are what the layout has to contain. Hedges, wooden crates, sandbags, a guard booth, security cameras and an iron gate fill the compound: dense, so there is always cover within reach and always a sight line to break.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "assassin",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "estate",
+        "label": "compound rooms corridors and high walls",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "cover",
+        "label": "cover walls hedges crates and sandbags",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "guard booth cameras iron gate and security lights",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "backdrop",
+        "label": "night sky",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "armed_guard",
+        "label": "armed guard",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Patrolling hostile who detects nearby intruders, pursues them, and deals damage until player health reaches zero."
+      },
+      {
+        "id": "contract_target",
+        "label": "contract target",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "The designated hostile whose health must be reduced to zero before the exit can complete the mission."
+      },
+      {
+        "id": "guard_disguise",
+        "label": "guard disguise",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Pickup that suppresses guard detection while the player remains outside the target's restricted room."
+      },
+      {
+        "id": "exit_marker",
+        "label": "exit marker",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Goal zone that grants victory when entered after the contract target's health reaches zero."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

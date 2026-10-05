@@ -1,0 +1,134 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "factory manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "generatedAt",
+    "source",
+    "factories"
+  ],
+  "properties": {
+    "format": {
+      "const": "gameblocks-factory-manifest/v1"
+    },
+    "generatedAt": {
+      "type": "string"
+    },
+    "source": {
+      "const": "factory exports"
+    },
+    "factories": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/factory"
+      }
+    }
+  },
+  "definitions": {
+    "factory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "source",
+        "sourceSha256",
+        "status"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "status": {
+          "enum": [
+            "ready",
+            "unavailable"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "constructor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "normalize": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "presets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/param"
+          }
+        },
+        "runtimeDependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "apiDoc": {
+          "type": "string"
+        }
+      }
+    },
+    "param": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "choice",
+            "number",
+            "boolean",
+            "string",
+            "undefined"
+          ]
+        },
+        "default": {},
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "step": {
+          "type": "number"
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "when": {
+          "const": "conditional"
+        }
+      }
+    }
+  }
+}

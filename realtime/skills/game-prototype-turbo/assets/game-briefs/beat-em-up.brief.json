@@ -1,0 +1,82 @@
+{
+  "title": "Street Brawl",
+  "core_verb": "Strike enemies to reduce their health to zero while advancing toward the stage boss.",
+  "fantasy": "A lone street fighter battles through an urban side-scrolling stage occupied by a gang and its boss.",
+  "control_scheme": "heading_relative",
+  "player_modality": "avatar",
+  "fail_state": "The player is defeated when player health reaches zero.",
+  "win_state": "Defeat the stage boss by reducing boss health to zero after clearing 8 regular enemies.",
+  "interaction_tags": [
+    {
+      "id": "gang_enemy",
+      "meaning": "Regular hostile fighter; attacks reduce player health and its health must reach zero to clear the stage path.",
+      "role": "hazard"
+    },
+    {
+      "id": "health_pickup",
+      "meaning": "Collectible food item that restores 30 player health, up to the maximum.",
+      "role": "resource"
+    },
+    {
+      "id": "stage_boss",
+      "meaning": "Final hostile fighter; reducing its health to zero triggers victory.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 120,
+  "notes": "The cooperative campaign is reduced to one single-player stage containing 8 regular enemies followed by 1 boss.",
+  "context": {},
+  "scene": {
+    "description": "A grimy urban back alley at dusk, dumpsters and chain-link fences narrowing the path, neon signs flickering from storefronts above. Gang clusters block the way forward, health pickups sit between them, and a boss area waits at the end. Trash bags, cardboard boxes, fire hydrants and puddles reflecting orange street light crowd the sides, dense enough that every fight happens in a confined space.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "street fighter",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "street",
+        "label": "confined back alley",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "dumpsters chain-link fences neon storefronts trash bags boxes hydrants and puddles",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "backdrop",
+        "label": "dusk and orange street lights",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "gang_enemy",
+        "label": "gang enemy",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Regular hostile fighter; attacks reduce player health and its health must reach zero to clear the stage path."
+      },
+      {
+        "id": "health_pickup",
+        "label": "health pickup",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Collectible food item that restores 30 player health, up to the maximum."
+      },
+      {
+        "id": "stage_boss",
+        "label": "stage boss",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Final hostile fighter; reducing its health to zero triggers victory."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

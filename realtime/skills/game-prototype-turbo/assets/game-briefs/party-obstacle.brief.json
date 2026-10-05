@@ -1,0 +1,94 @@
+{
+  "title": "Solo Qualifier",
+  "core_verb": "Run and jump through a compact obstacle course toward the finish line.",
+  "fantasy": "A playful televised obstacle-course qualifier, greyboxed as elevated platforms, rotating bars, moving gates, and a finish platform.",
+  "control_scheme": "third_person_chase",
+  "player_modality": "avatar",
+  "fail_state": "The round timer reaches zero before the finish line is crossed, or the player touches the out-of-bounds kill volume.",
+  "win_state": "Cross the finish line before the round timer reaches zero.",
+  "interaction_tags": [
+    {
+      "id": "moving_obstacle",
+      "meaning": "Rotating bar, swinging block, or moving gate that knocks the player toward delays or out-of-bounds areas on contact.",
+      "role": "hazard"
+    },
+    {
+      "id": "out_of_bounds",
+      "meaning": "Kill volume below and beside the course; touching it immediately eliminates the player.",
+      "role": "hazard"
+    },
+    {
+      "id": "checkpoint",
+      "meaning": "Helper marker collected when passed; records the player's latest course checkpoint for progress verification.",
+      "role": "resource"
+    },
+    {
+      "id": "finish_line",
+      "meaning": "Goal trigger at the end of the course; crossing it before timeout wins the round.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 90,
+  "notes": "Fall Guys' multiplayer 60-player elimination format is reduced to one solo qualifier loop: traverse a single obstacle course and cross the finish line before the timer expires, with no opponents, placements, or qualification quota.",
+  "context": {},
+  "scene": {
+    "description": "A brightly coloured televised obstacle course floating above a void, candy-coloured and swept by studio spotlights. Elevated platforms, spinning hurdle bars and checkpoints lead to a finish platform under a giant banner. Confetti drifts in the air, crowd silhouettes and sponsor banners ring the course and foam padding lines the edges; moderate, with a clear run-up between obstacles.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "qualifier contestant",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "course",
+        "label": "elevated platforms and moving gates",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "backdrop",
+        "label": "void and studio spotlights",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "crowd silhouettes sponsor banners finish banner confetti and foam padding",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "moving_obstacle",
+        "label": "moving obstacle",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Rotating bar, swinging block, or moving gate that knocks the player toward delays or out-of-bounds areas on contact."
+      },
+      {
+        "id": "out_of_bounds",
+        "label": "out of bounds",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Kill volume below and beside the course; touching it immediately eliminates the player."
+      },
+      {
+        "id": "checkpoint",
+        "label": "checkpoint",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Helper marker collected when passed; records the player's latest course checkpoint for progress verification."
+      },
+      {
+        "id": "finish_line",
+        "label": "finish line",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Goal trigger at the end of the course; crossing it before timeout wins the round."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

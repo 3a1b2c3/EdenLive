@@ -1,0 +1,235 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "game-brief",
+  "description": "Structured intent for a bounded browser game prototype. Preserve mechanics, outcomes and assumptions independently of implementation choices.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "title",
+    "core_verb",
+    "fantasy",
+    "control_scheme",
+    "player_modality",
+    "fail_state",
+    "win_state",
+    "interaction_tags",
+    "time_budget_seconds",
+    "context",
+    "scene",
+    "ui"
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short working title for the prototype."
+    },
+    "core_verb": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repeated player action or connected action sequence, including automatic actions that the player influences."
+    },
+    "fantasy": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Theme and setting retained throughout the build. The static-scene stage turns this intent into a complete scene; later stages add applicable behaviour and acceptance."
+    },
+    "control_scheme": {
+      "type": "string",
+      "enum": [
+        "first_person_mouse",
+        "third_person_chase",
+        "top_down_world",
+        "heading_relative",
+        "vehicle",
+        "aircraft",
+        "snake",
+        "plate_tilt",
+        "custom"
+      ],
+      "description": "Discovery hint only; never mandates a controller or camera. Use custom when no hint fits. Run metadata records the actual implementation."
+    },
+    "player_modality": {
+      "type": "string",
+      "enum": [
+        "avatar",
+        "cursor",
+        "menu",
+        "stationary"
+      ],
+      "description": "Primary interaction: avatar (continuous or discrete actor), cursor (point/place/manipulate), menu (select/confirm), stationary (fixed viewpoint). Hybrids compose capabilities in run metadata; this label does not exclude other inputs."
+    },
+    "fail_state": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Loss condition, verifiable by a gameplay state machine within the time budget. Must be concrete (health reaches zero, timer expires, falls off the world), not vague."
+    },
+    "win_state": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Victory condition, verifiable by a gameplay state machine within the time budget. Must be a terminal state the loop can actually reach (defuse complete, lap finished, all waves cleared), not an open-ended goal."
+    },
+    "interaction_tags": {
+      "type": "array",
+      "minItems": 0,
+      "description": "Semantic objects, actions or events used by the rules, including noncollision interactions. Empty is valid when no named tags are useful. IDs are unique within the brief.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "meaning",
+          "role"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "description": "Stable machine id, lowercase snake_case, unique within this brief."
+          },
+          "meaning": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What this tag represents in this specific game."
+          },
+          "role": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Semantic role such as hazard, resource, goal, action, information or another brief-specific role. Rules use IDs/events, not rendered colors."
+          }
+        }
+      }
+    },
+    "time_budget_seconds": {
+      "type": "integer",
+      "minimum": 30,
+      "maximum": 300,
+      "default": 120,
+      "description": "Simulation-time allowance for each purposeful validation scenario (30..300 seconds), separate from the wall-clock execution limit, not a mandatory game clock or idle timeout. Include all phases, including extraction after survival. Declare actual timer/turn rules in win_state, fail_state and context."
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Structured carry-over for everything the fixed fields above do not capture, so a brief is self-sufficient without the original prompt. The object must be present; its properties are optional.",
+      "properties": {
+        "distilled_prompt": {
+          "type": "string",
+          "description": "The distilled essence of the original prompt, including nuance and twists that did not map to the fixed fields. Downstream stages read this instead of the raw prompt."
+        },
+        "twists": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Unique mechanical twists the player must feel (e.g. 'kills rewind time', 'gravity flips on jump')."
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "What intake inferred and from what signal, so later stages can re-decide rather than treat inference as fact."
+        },
+        "open_questions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ambiguities left unresolved; later stages must resolve them or request input."
+        }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Scene, board or interface intent. The first build stage renders all required thematic elements, including menu and board layouts; later stages make applicable behaviour and outcomes live.",
+      "required": [
+        "description",
+        "theme_elements"
+      ],
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Concise prose describing the play space, board or interface and required elements; no decorative quota or mandatory traversal. Record conflicting spatial requirements in context.open_questions."
+        },
+        "theme_elements": {
+          "type": "array",
+          "description": "Explicit thematic elements extracted from the prompt. Each element is rendered or represented in the static scene when applicable.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "label",
+              "role"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9_]+$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source": {
+                "type": "string"
+              },
+              "visual_hint": {
+                "type": "string"
+              }
+            }
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional one-line distillation summary; anything richer belongs in context."
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "polish",
+            "none"
+          ],
+          "description": "Default polish; none only for an explicit omission of interface design. Acceptance still verifies outcomes, restart and delivery."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The user requirement behind an opt-out."
+        },
+        "style": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Requested UI aesthetic, if any. Default theme uses dark teal panels, cream text and gold accents; no implied mechanics."
+        }
+      },
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "none"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "reason"
+        ]
+      }
+    }
+  }
+}

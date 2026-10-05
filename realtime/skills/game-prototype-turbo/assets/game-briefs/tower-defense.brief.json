@@ -1,0 +1,88 @@
+{
+  "title": "Five-Wave Defense",
+  "core_verb": "Click empty pads to spend cash and place towers that automatically shoot bloons moving along the path.",
+  "fantasy": "A top-down tower defense map with one winding path, fixed tower pads, incoming balloon-like enemies, and a defended exit.",
+  "control_scheme": "top_down_world",
+  "player_modality": "cursor",
+  "fail_state": "Each bloon that reaches the path exit removes one life; the game ends in defeat when lives decrease from 20 to zero.",
+  "win_state": "Survive all 5 rounds with at least one life remaining: each round is cleared once every bloon it spawned has left the path, whether popped or leaked.",
+  "interaction_tags": [
+    {
+      "id": "bloon",
+      "meaning": "Path-following enemy; tower projectile hits reduce its health, while reaching the defended exit removes one life.",
+      "role": "hazard"
+    },
+    {
+      "id": "cash_drop",
+      "meaning": "Resource pickup spawned by a popped bloon; clicking it adds cash used to place another tower.",
+      "role": "resource"
+    },
+    {
+      "id": "defended_exit",
+      "meaning": "Goal object at the end of the path; bloon collisions consume lives, and it triggers victory after round 5 when no bloons remain.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 120,
+  "notes": "Bloons TD 6 is reduced to one map, eight fixed tower pads, one tower type, 20 starting lives, and five scripted rounds of 10 bloons each. The player starts with 300 cash, each tower costs 100 cash, towers automatically target the nearest bloon in range, and no upgrades or branching paths are included.",
+  "context": {},
+  "scene": {
+    "description": "A top-down grassy field with a winding dirt path from a bloon entry to a bloon exit, under gentle afternoon light. Circular stone tower pads line both sides of the path, and bloons drift along it in colourful single file. The path and pad positions are the mechanic itself rather than a layout decision; grass patches and wooden fences dress the field.",
+    "theme_elements": [
+      {
+        "id": "field",
+        "label": "grassy field and winding dirt path",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "pads",
+        "label": "circular stone tower pads",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "towers",
+        "label": "representative tower and placement anchors",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "grass patches and wooden fences",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "backdrop",
+        "label": "afternoon light",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "bloon",
+        "label": "bloon",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Path-following enemy; tower projectile hits reduce its health, while reaching the defended exit removes one life."
+      },
+      {
+        "id": "cash_drop",
+        "label": "cash drop",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Resource pickup spawned by a popped bloon; clicking it adds cash used to place another tower."
+      },
+      {
+        "id": "defended_exit",
+        "label": "defended exit",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Goal object at the end of the path; bloon collisions consume lives, and it triggers victory after round 5 when no bloons remain."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

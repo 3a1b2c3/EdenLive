@@ -1,0 +1,71 @@
+<!--
+  Runnable static-scene skeleton. This is the exact DOM contract the stage-1
+  checker (forge/check_step1.py) and the review viewer (forge/serve_step.py) expect:
+
+    - import map pins `three` and `@dimforge/rapier3d-compat` to the server's /vendor/
+      builds (three@0.161.0 + rapier3d-compat@0.14.0, resolved by serve_step.py)
+    - `#app` container: PrototypeShell.createRenderer() appends its own <canvas> here
+      (do NOT hand-write a second <canvas> -- the checker reads the first one it finds)
+    - `#app canvas` is pinned to the container's CSS box. installResize() calls
+      setSize(cssWidth, cssHeight, false), which updates the drawing buffer only;
+      without this CSS, a pixelRatio > 1 overflows the window and crops the view.
+    - `#hud`: the label/value HUD target (makeHudWriter writes into it)
+    - `#fatal`: hidden error panel; the bootstrap below sets display:'block' and the
+      exception text, which is how the checker reports "the page threw" instead of
+      "no <canvas>"
+    - the <script type="module"> bootstrap loads './main.js' and calls start(),
+      reporting module-load and startup failures in #fatal; the checker waits for
+      a canvas + window.__scene
+
+  Every run imports the library via absolute `/assets/...` specifiers (the server
+  serves the output project root) and resolves bare `three` from its local npm
+  dependency here. Copy only needed assets into that project. main.js must set
+  `window.__scene = { scene, camera }` for the framing check.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>greybox prototype</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0b0e14; overflow: hidden; }
+    #app { position: absolute; inset: 0; }
+    #app canvas { display: block; width: 100%; height: 100%; }
+    #hud {
+      position: absolute; left: 12px; top: 12px; z-index: 5;
+      color: #cfe0f4; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: #101824; padding: 8px 10px; border-radius: 6px;
+      max-width: calc(100vw - 44px); box-sizing: border-box;
+      white-space: pre-wrap; pointer-events: none;
+    }
+    #fatal {
+      position: absolute; left: 12px; bottom: 12px; z-index: 20;
+      max-width: 80vw; padding: 10px 12px; display: none;
+      color: #ffd9d9; background: rgba(120, 20, 20, 0.9);
+      font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap; border-radius: 6px;
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/vendor/three.module.js",
+      "@dimforge/rapier3d-compat": "/vendor/rapier.es.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="hud"></div>
+  <div id="fatal" style="display:none"></div>
+  <script type="module">
+    import('./main.js').then(({ start }) => start()).catch((err) => {
+      const fatal = document.getElementById('fatal');
+      fatal.style.display = 'block';
+      fatal.textContent = err?.stack ?? String(err);
+    });
+  </script>
+</body>
+</html>

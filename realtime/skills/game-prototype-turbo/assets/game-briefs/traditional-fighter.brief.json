@@ -1,0 +1,68 @@
+{
+  "title": "Final Round",
+  "core_verb": "Strike the CPU fighter to empty its health bar within the round timer.",
+  "fantasy": "A one-on-one arcade duel between two fighters on a flat strip.",
+  "control_scheme": "heading_relative",
+  "player_modality": "avatar",
+  "fail_state": "Your health reaches zero, or the round timer expires while your health is not higher than the opponent's.",
+  "win_state": "The CPU fighter's health reaches zero before the round timer expires, or the timer expires with your health higher than the opponent's.",
+  "interaction_tags": [
+    {
+      "id": "opponent_attack",
+      "meaning": "CPU-generated strike hitbox; contact removes player health.",
+      "role": "hazard"
+    },
+    {
+      "id": "cpu_fighter",
+      "meaning": "The goal target; emptying its health bar before time expires wins.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 90,
+  "notes": "The arcade ladder is reduced to a single round versus one CPU fighter on a flat strip, auto-facing the opponent. Special-move command motions are out of scope; only movement and basic strikes remain, and facing stays locked to the opponent.",
+  "context": {
+    "assumptions": [
+      "At timer expiry a health lead wins; a tie loses, consistent with fail_state."
+    ]
+  },
+  "scene": {
+    "description": "A flat stone fighting strip under a simple score roof, a crowd silhouette along the back, two fighters facing off. The strip is the whole arena. Sparse by design: nothing but the fighters and the ground.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "player fighter",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "arena",
+        "label": "flat stone fighting strip",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "score roof and crowd silhouettes",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "opponent_attack",
+        "label": "opponent attack",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "CPU-generated strike hitbox; contact removes player health."
+      },
+      {
+        "id": "cpu_fighter",
+        "label": "cpu fighter",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "The goal target; emptying its health bar before time expires wins."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

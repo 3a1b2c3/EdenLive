@@ -1,0 +1,82 @@
+{
+  "title": "Night Watch",
+  "core_verb": "Check camera feeds to track approaching animatronics and close the corresponding office door before they enter.",
+  "fantasy": "A lone night guard monitors a small building from a fixed security office while hostile animatronics approach through two corridors.",
+  "control_scheme": "first_person_mouse",
+  "player_modality": "stationary",
+  "fail_state": "An animatronic enters the office while its corridor door is open, setting player health from 1 to 0.",
+  "win_state": "Remain alive until the 120-second night clock reaches 6:00 AM.",
+  "interaction_tags": [
+    {
+      "id": "animatronic",
+      "meaning": "Hostile moving between camera nodes; entering the office through an open door reduces player health to zero.",
+      "role": "hazard"
+    },
+    {
+      "id": "power_buffer",
+      "meaning": "Collectible visible on a camera feed that restores 20 units to the office's 100-unit power supply.",
+      "role": "resource"
+    },
+    {
+      "id": "six_am_clock",
+      "meaning": "Goal clock that completes when the 120-second night timer elapses, ending the shift in victory.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 120,
+  "notes": "The multi-night game is reduced to one two-minute shift with two corridor doors, a finite 100-unit power supply, scripted animatronic movement between camera nodes, and a single-health fail state.",
+  "context": {},
+  "scene": {
+    "description": "A cramped security office lit only by monitor screens, two heavy doors flanking the desk. Four camera feeds show dim corridors, a power meter glows on the wall, and a clock ticks toward 6 AM in the corner. The player never leaves the desk, so the space is fixed by the mechanic rather than laid out; desk clutter and door buttons are the only props.",
+    "theme_elements": [
+      {
+        "id": "office",
+        "label": "fixed security desk and clutter",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "doors",
+        "label": "two heavy doors and door buttons",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "feeds",
+        "label": "four corridor camera feeds and selection controls",
+        "role": "interface",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "readouts",
+        "label": "power meter and clock",
+        "role": "interface",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "animatronic",
+        "label": "animatronic",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Hostile moving between camera nodes; entering the office through an open door reduces player health to zero."
+      },
+      {
+        "id": "power_buffer",
+        "label": "power buffer",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Collectible visible on a camera feed that restores 20 units to the office's 100-unit power supply."
+      },
+      {
+        "id": "six_am_clock",
+        "label": "six am clock",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Goal clock that completes when the 120-second night timer elapses, ending the shift in victory."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

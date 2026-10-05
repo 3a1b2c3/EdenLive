@@ -1,0 +1,76 @@
+{
+  "title": "Sortie",
+  "core_verb": "Destroy enemy aircraft with the fighter's guns and missiles.",
+  "fantasy": "A modern fighter pilot conducts a single combat sortie against a finite enemy formation and boss aircraft in a bounded airspace above solid terrain.",
+  "control_scheme": "aircraft",
+  "player_modality": "avatar",
+  "fail_state": "The aircraft's health reaches zero, the aircraft collides with terrain and crashes, or the sortie timer expires.",
+  "win_state": "Every aircraft in the formation, including the boss aircraft, is destroyed and the target count reaches zero.",
+  "interaction_tags": [
+    {
+      "id": "enemy_aircraft",
+      "meaning": "Hostile formation aircraft that can attack the player and must be destroyed.",
+      "role": "hazard"
+    },
+    {
+      "id": "terrain",
+      "meaning": "Solid ground hazard; colliding with it causes the player's aircraft to crash.",
+      "role": "hazard"
+    },
+    {
+      "id": "boss_aircraft",
+      "meaning": "Final goal aircraft; destroying it as part of the finite target set contributes to reaching the zero-target victory state.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 120,
+  "notes": "A single-player campaign sortie is reduced to one bounded flight-combat encounter against scripted enemy aircraft and one boss. There is no campaign progression, score requirement, or endless wave loop.",
+  "context": {},
+  "scene": {
+    "description": "High-altitude open airspace above a brown-green terrain patchwork, the sun low on the horizon casting long shadows on the ground far below. An enemy formation spread waits ahead as a cluster of dark specks, a boss aircraft behind it, and the terrain floor bounds the volume from underneath. Contrails, cloud layers and runway markings far below are all that fill the space: sparse and wide open.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "fighter aircraft",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "backdrop",
+        "label": "open airspace with low sun and cloud layers",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "contrails and distant runway markings",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "enemy_aircraft",
+        "label": "enemy aircraft",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Hostile formation aircraft that can attack the player and must be destroyed."
+      },
+      {
+        "id": "terrain",
+        "label": "terrain",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Solid ground hazard; colliding with it causes the player's aircraft to crash."
+      },
+      {
+        "id": "boss_aircraft",
+        "label": "boss aircraft",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Final goal aircraft; destroying it as part of the finite target set contributes to reaching the zero-target victory state."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

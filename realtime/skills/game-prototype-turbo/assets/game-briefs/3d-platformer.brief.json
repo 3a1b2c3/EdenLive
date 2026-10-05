@@ -1,0 +1,82 @@
+{
+  "title": "Star Course",
+  "core_verb": "Run and double-jump across floating platforms to collect every star and reach the goal.",
+  "fantasy": "A mascot-style platformer set on a floating course of bright platforms high above a void.",
+  "control_scheme": "third_person_chase",
+  "player_modality": "avatar",
+  "fail_state": "You fall through the void below the course, or your health reaches zero after touching a hazard three times.",
+  "win_state": "Land on the goal platform after collecting all 6 stars on the course.",
+  "interaction_tags": [
+    {
+      "id": "spiked_hazard",
+      "meaning": "Hazard that removes one of 3 health on contact.",
+      "role": "hazard"
+    },
+    {
+      "id": "star",
+      "meaning": "Collectible placed around the course; collecting all 6 is the first win clause.",
+      "role": "resource"
+    },
+    {
+      "id": "goal_platform",
+      "meaning": "Goal platform; landing on it after collecting every star wins.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 120,
+  "notes": "The hub-and-star adventure is reduced to one fixed platform course with 6 stars and a goal platform: collect, then land on the goal. Three health points make hazard contact a real loss path without any enemy AI.",
+  "context": {},
+  "scene": {
+    "description": "A bright floating sky course of gray and white platforms over a bottomless blue void, a glowing gold goal platform at the far end. Stars spin above gaps and ledges, spiked hazards stud the mid-course, and floating rocks line the approach. Moderate: enough platforms to keep a running double-jump flowing without hunting for the next foothold.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "mascot jumper",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "backdrop",
+        "label": "blue sky and void",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "course",
+        "label": "gray and white floating platforms",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "floating approach rocks",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "spiked_hazard",
+        "label": "spiked hazard",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Hazard that removes one of 3 health on contact."
+      },
+      {
+        "id": "star",
+        "label": "star",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Collectible placed around the course; collecting all 6 is the first win clause."
+      },
+      {
+        "id": "goal_platform",
+        "label": "goal platform",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Goal platform; landing on it after collecting every star wins."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "title": "Demon Arena",
+  "core_verb": "Shoot demons while moving through the arena to reduce the enemy count to zero.",
+  "fantasy": "A lone armored fighter trapped in an enclosed demonic combat arena with six hostile demons, weapon pickups, and a sealed exit.",
+  "control_scheme": "first_person_mouse",
+  "player_modality": "avatar",
+  "fail_state": "Player health reaches zero from demon attacks or contact.",
+  "win_state": "Kill all six demons so the enemy count reaches zero, then cross the unlocked exit threshold.",
+  "interaction_tags": [
+    {
+      "id": "demon",
+      "meaning": "Hostile enemy; attacks and contact reduce player health, and killing one decreases the arena enemy count.",
+      "role": "hazard"
+    },
+    {
+      "id": "armor_ammo_pickup",
+      "meaning": "Single-use pickup that restores 25 armor and 10 ammunition.",
+      "role": "resource"
+    },
+    {
+      "id": "arena_exit",
+      "meaning": "Sealed goal doorway that unlocks when the enemy count reaches zero; crossing its threshold wins.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 120,
+  "notes": "DOOM Eternal is reduced to one enclosed single-player arena containing exactly six demons, one pickup class, and one exit; campaign traversal, upgrades, glory kills, and additional encounters are omitted.",
+  "context": {},
+  "scene": {
+    "description": "An enclosed stone arena lit by flickering torches and a red-orange glow from cracks in the floor. Thick square pillars break sight lines, demon spawn points ring the edges, weapon pickups glow green on wall racks, and a sealed iron gate marks the exit. Iron chains and skull decorations dress the walls; moderate clutter, so there is cover to use but open lanes to fight across.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "armored first-person fighter weapon",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "arena",
+        "label": "stone floor walls and thick cover pillars",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "racks",
+        "label": "weapon racks and demon spawn markers",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "torches glowing floor cracks iron chains and skulls",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "demon",
+        "label": "demon",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Hostile enemy; attacks and contact reduce player health, and killing one decreases the arena enemy count."
+      },
+      {
+        "id": "armor_ammo_pickup",
+        "label": "armor ammo pickup",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Single-use pickup that restores 25 armor and 10 ammunition."
+      },
+      {
+        "id": "arena_exit",
+        "label": "arena exit",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Sealed goal doorway that unlocks when the enemy count reaches zero; crossing its threshold wins."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

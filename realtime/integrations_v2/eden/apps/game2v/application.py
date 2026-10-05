@@ -49,6 +49,7 @@ class Game2VApplication(IApplication):
         self._warmup_blocks = defaults.warmup_blocks
         self._use_ui = True
         self._game_slug = defaults.game_slug
+        self._wait_for_start = False
         self._input_values: dict[str, Any] | None = None
         self._pipeline: Any | None = None
         self._postprocess = VideoPostprocessChainConfig()
@@ -70,6 +71,15 @@ class Game2VApplication(IApplication):
         )
         # Choices come from games/registry.json, so a ported game needs no edit here.
         parser.add_argument("--game", choices=registered_game_slugs(), default=self.defaults.game_slug)
+        parser.add_argument(
+            "--wait-for-start",
+            action=argparse.BooleanOptionalAction,
+            default=False,
+            help=(
+                "Render nothing until the web workbench picks a game "
+                "(POST /ext/game2v/switch). Default: %(default)s."
+            ),
+        )
         parser.add_argument(
             "--prompt-event-chunks",
             type=int,
@@ -226,6 +236,7 @@ class Game2VApplication(IApplication):
         self._game_slug = args.game
         self._prompt_event_chunks = args.prompt_event_chunks
         self._dynamic_prompt = args.dynamic_prompt
+        self._wait_for_start = args.wait_for_start
         os.environ["FLASHDREAMS_PAIRED_VIDEO"] = "1"
         self._postprocess = _resolve_postprocess_config(
             preset=args.postprocess_preset,
@@ -339,6 +350,7 @@ class Game2VApplication(IApplication):
                 game_slug=self._game_slug,
                 prompt_event_chunks=self._prompt_event_chunks,
                 dynamic_prompt=self._dynamic_prompt,
+                wait_for_start=self._wait_for_start,
                 control_stream_factory=self.defaults.control_stream_factory,
                 compile_control_encoder=self._compile is not False,
             ),

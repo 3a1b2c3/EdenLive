@@ -1,0 +1,82 @@
+{
+  "title": "Length Run",
+  "core_verb": "Steer the snake through the arena to collect growth orbs while avoiding AI snakes.",
+  "fantasy": "An abstract enclosed arena where one growing snake competes against three AI-controlled snakes for energy orbs.",
+  "control_scheme": "snake",
+  "player_modality": "avatar",
+  "fail_state": "The player snake's head collides with a boundary wall or any segment of an AI snake, setting health from 1 to zero, or the round timer reaches zero before the player reaches 30 segments.",
+  "win_state": "Grow from 10 to 29 segments by collecting 19 food orbs, then collect the spawned target orb to reach 30 segments before the timer expires.",
+  "interaction_tags": [
+    {
+      "id": "ai_snake",
+      "meaning": "Moving enemy snake; contact between the player's head and any of its segments reduces player health to zero.",
+      "role": "hazard"
+    },
+    {
+      "id": "food_orb",
+      "meaning": "Collectible orb that adds one segment to the player snake; 19 are available.",
+      "role": "resource"
+    },
+    {
+      "id": "target_orb",
+      "meaning": "Goal orb that spawns after all 19 food orbs are collected; collecting it adds the 30th segment and wins the round.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 90,
+  "notes": "Slither.io's endless multiplayer arena is reduced to one player snake against three AI snakes in a single timed round: collect 19 food orbs and one final target orb to grow from 10 to 30 segments while avoiding lethal head-to-enemy collisions.",
+  "context": {},
+  "scene": {
+    "description": "A dark abstract enclosed arena with a glowing grid floor and boundary walls that emit a faint blue hum. Food orbs pulse softly in a spawn zone, rival snakes enter from their own spawns trailing coloured segments, and the boundary walls kill on contact. Glowing grid lines and energy pulses are the only decoration: moderate, and mostly open surface.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "growing segmented snake",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "arena",
+        "label": "enclosed dark grid floor and boundary walls",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "spawns",
+        "label": "food and rival spawn zones",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "glowing grid lines and energy highlights",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "ai_snake",
+        "label": "ai snake",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Moving enemy snake; contact between the player's head and any of its segments reduces player health to zero."
+      },
+      {
+        "id": "food_orb",
+        "label": "food orb",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Collectible orb that adds one segment to the player snake; 19 are available."
+      },
+      {
+        "id": "target_orb",
+        "label": "target orb",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Goal orb that spawns after all 19 food orbs are collected; collecting it adds the 30th segment and wins the round."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

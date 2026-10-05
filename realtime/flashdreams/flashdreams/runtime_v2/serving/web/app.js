@@ -276,6 +276,10 @@ const loadOverlay = async slug => {
 };
 
 const applyGameUi = payload => {
+  // The workbench home screen watches this to know when a round ends and when
+  // the first frame of a newly chosen game has arrived. The payload is the
+  // server's own envelope, forwarded unchanged.
+  window.dispatchEvent(new CustomEvent("game2v-ui", {detail: payload}));
   const slug = payload?.slug;
   const frameId = Number(payload?.frame_id);
   if (typeof slug !== "string" || !slug) {
@@ -624,3 +628,18 @@ connect().catch(error => {
   console.error("Unable to start WebRTC.", error);
   showStatus(`Unable to start WebRTC: ${error.message}`, true);
 });
+
+(async () => {
+  try {
+    const manifest = await (await fetch("/extensions.json", {cache: "no-store"})).json();
+    for (const src of manifest.scripts ?? []) {
+      try {
+        await import(src);
+      } catch (error) {
+        console.warn(`Unable to load extension script ${src}.`, error);
+      }
+    }
+  } catch (error) {
+    console.warn("Unable to load /extensions.json.", error);
+  }
+})();

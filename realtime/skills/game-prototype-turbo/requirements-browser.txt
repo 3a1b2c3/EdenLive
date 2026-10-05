@@ -1,0 +1,4 @@
+# Optional browser gates and regression tests. Install Chromium separately:
+# python3 -m playwright install chromium
+-r requirements.txt
+playwright==1.62.0

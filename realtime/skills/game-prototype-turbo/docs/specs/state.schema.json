@@ -1,0 +1,227 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "state",
+  "description": "Authoritative progress: intake, static scene, behavior, acceptance. Each stage passes with evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "current_stage",
+    "stages"
+  ],
+  "properties": {
+    "current_stage": {
+      "type": "string",
+      "enum": [
+        "intake",
+        "scene",
+        "behavior",
+        "acceptance",
+        "done"
+      ],
+      "description": "Next stage; all predecessors must have passed. done requires every stage to pass."
+    },
+    "stages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "intake",
+        "scene",
+        "behavior",
+        "acceptance"
+      ],
+      "properties": {
+        "intake": {
+          "$ref": "#/definitions/stageRecord"
+        },
+        "scene": {
+          "$ref": "#/definitions/stageRecord"
+        },
+        "behavior": {
+          "$ref": "#/definitions/stageRecord"
+        },
+        "acceptance": {
+          "$ref": "#/definitions/stageRecord"
+        }
+      }
+    },
+    "revisions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/revision"
+      }
+    }
+  },
+  "definitions": {
+    "stageRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence",
+        "loop_count"
+      ],
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "passed"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "artifact"
+        ]
+      },
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "not_started",
+            "in_progress",
+            "passed"
+          ],
+          "description": "Only passed stages may advance. Unresolved work stays in_progress; there is no unresolved or skipped status."
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Paths or values proving the step ran (generated files, validate.py output, timestamps). Empty is not a pass \u2014 an unevaluated gate fails closed."
+        },
+        "loop_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Refine rounds spent at this stage. Hard cap is 3; hitting it stops the pipeline (fail loud)."
+        },
+        "assessments": {
+          "$ref": "#/definitions/assessments"
+        },
+        "artifact": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Required for a passed stage; path relative to the state file or absolute."
+        }
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "passed",
+            "failed",
+            "not_evaluated",
+            "not_applicable"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "assessments": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "functional",
+        "experience",
+        "performance"
+      ],
+      "properties": {
+        "functional": {
+          "$ref": "#/definitions/assessment"
+        },
+        "experience": {
+          "$ref": "#/definitions/assessment"
+        },
+        "performance": {
+          "$ref": "#/definitions/assessment"
+        }
+      }
+    },
+    "revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "request",
+        "affected_stages",
+        "status",
+        "loop_count",
+        "evidence",
+        "parameter_source",
+        "regressions"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "request": {
+          "type": "string",
+          "minLength": 1
+        },
+        "affected_stages": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "scene",
+              "behavior",
+              "acceptance"
+            ]
+          }
+        },
+        "status": {
+          "enum": [
+            "in_progress",
+            "passed"
+          ]
+        },
+        "loop_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "parameter_source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "regressions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "assessments": {
+          "$ref": "#/definitions/assessments"
+        }
+      }
+    }
+  }
+}

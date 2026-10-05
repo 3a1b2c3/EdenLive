@@ -1,0 +1,86 @@
+{
+  "title": "Blast Maze",
+  "core_verb": "Place a bomb and dodge its cross-shaped blast to break blocks and defeat enemies.",
+  "fantasy": "A bomber clears a block-filled grid maze of enemies and exits.",
+  "control_scheme": "custom",
+  "player_modality": "avatar",
+  "fail_state": "Your own blast catches you, reducing your single life to zero, or the 120-second timer expires before the exit is reached.",
+  "win_state": "Defeat every enemy, then step onto the exit tile which opens once the maze is cleared.",
+  "interaction_tags": [
+    {
+      "id": "maze_enemy",
+      "meaning": "Hostile on the grid; its health must reach zero to open the exit.",
+      "role": "hazard"
+    },
+    {
+      "id": "range_powerup",
+      "meaning": "Optional collectible that widens the next bomb's blast by one cell.",
+      "role": "resource"
+    },
+    {
+      "id": "exit_tile",
+      "meaning": "The goal tile, unlocked once every enemy is defeated; stepping onto it wins.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 120,
+  "notes": "The battle mode is reduced to a single-player grid arena: place timed bombs, escape their cross-shaped blasts, break blocks and defeat a finite set of enemies, then exit.",
+  "context": {
+    "assumptions": [
+      "A blast propagates along its four arms through breakable blocks, destroying them, and stops at an indestructible wall or its range limit."
+    ]
+  },
+  "scene": {
+    "description": "A top-down grid maze of breakable blocks and indestructible walls, a few enemies patrolling the corridors, and a sealed exit tile in one corner that glows gold once cleared. Power-ups sit in alcoves. Dense: the walls are the visual and the blast carves the routes.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "bomber",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "board",
+        "label": "grid maze of breakable blocks and solid walls",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "bombs",
+        "label": "bomb and blast representations",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "power-up alcoves",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "maze_enemy",
+        "label": "maze enemy",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Hostile on the grid; its health must reach zero to open the exit."
+      },
+      {
+        "id": "range_powerup",
+        "label": "range powerup",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Optional collectible that widens the next bomb's blast by one cell."
+      },
+      {
+        "id": "exit_tile",
+        "label": "exit tile",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "The goal tile, unlocked once every enemy is defeated; stepping onto it wins."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

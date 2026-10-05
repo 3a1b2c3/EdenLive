@@ -1,0 +1,86 @@
+{
+  "title": "Route Duel",
+  "core_verb": "Choose an attack each turn to reduce the opposing creature's health to zero.",
+  "fantasy": "A creature trainer crosses a short route and challenges another trainer to a one-on-one creature battle.",
+  "control_scheme": "top_down_world",
+  "player_modality": "menu",
+  "fail_state": "Your creature's health reaches zero, reducing your remaining party count from one to zero.",
+  "win_state": "The opponent creature's health reaches zero, reducing the opponent party count from one to zero.",
+  "interaction_tags": [
+    {
+      "id": "opponent_creature",
+      "meaning": "The opposing trainer's only creature; it attacks on alternating turns and can reduce your party to zero.",
+      "role": "hazard"
+    },
+    {
+      "id": "healing_item",
+      "meaning": "A single route pickup that restores 40 health to your creature when used during the battle.",
+      "role": "resource"
+    },
+    {
+      "id": "rival_trainer",
+      "meaning": "The route-end goal object; contact starts the one-on-one battle that must be won.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 90,
+  "notes": "Pokémon's open-ended exploration, collection, trading, and multiplayer battles are reduced to one short walkable route, one optional healing-item pickup, and one scripted single-player battle with one creature per party. Victory occurs only when the opponent party reaches zero; failure occurs when the player party reaches zero.",
+  "context": {
+    "open_questions": [
+      "The notes mention a short walkable route and optional healing pickup, but scene.description specifies a fixed encounter. Resolve whether exploration is included before choosing capabilities; do not silently drop either requirement."
+    ]
+  },
+  "scene": {
+    "description": "A sunlit forest clearing with a dirt path, two trainers facing each other across a patch of trampled grass, tall trees forming a natural arena wall. Nothing is traversed: the encounter resolves from these two fixed positions, so the space is a backdrop rather than a layout.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "trainer and player creature",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "backdrop",
+        "label": "sunlit forest clearing dirt path trampled grass and tall trees",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "commands",
+        "label": "battle choices and party health readouts",
+        "role": "interface",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "route",
+        "label": "short walkable route pending resolution of the recorded scope question",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "opponent_creature",
+        "label": "opponent creature",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "The opposing trainer's only creature; it attacks on alternating turns and can reduce your party to zero."
+      },
+      {
+        "id": "healing_item",
+        "label": "healing item",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "A single route pickup that restores 40 health to your creature when used during the battle."
+      },
+      {
+        "id": "rival_trainer",
+        "label": "rival trainer",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "The route-end goal object; contact starts the one-on-one battle that must be won."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

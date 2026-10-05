@@ -1,0 +1,76 @@
+{
+  "title": "Final Stock",
+  "core_verb": "Strike the CPU opponent to increase its knockback and launch it beyond the stage boundary.",
+  "fantasy": "A mascot-style fighter duel on a single floating platform surrounded by open space.",
+  "control_scheme": "heading_relative",
+  "player_modality": "avatar",
+  "fail_state": "Your fighter crosses the blast boundary, reducing your single stock to zero.",
+  "win_state": "The CPU opponent crosses the blast boundary, reducing its single stock to zero.",
+  "interaction_tags": [
+    {
+      "id": "opponent_attack",
+      "meaning": "CPU-generated attack hitbox; contact increases your damage and knockback.",
+      "role": "hazard"
+    },
+    {
+      "id": "blast_boundary",
+      "meaning": "Out-of-bounds volume surrounding the platform; crossing it removes one stock from the fighter that entered it.",
+      "role": "hazard"
+    },
+    {
+      "id": "cpu_opponent",
+      "meaning": "Goal target; strike and launch this fighter across the blast boundary to remove its final stock and win.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 90,
+  "notes": "The multiplayer party brawl is reduced to one player-controlled fighter versus one CPU opponent on a single-platform stage, with one stock each; the first fighter knocked beyond the blast boundary loses.",
+  "context": {},
+  "scene": {
+    "description": "A single flat stone platform suspended in open sky, clouds drifting far below. The platform is the whole arena, and faint coloured blast boundary lines mark the edges past which a fighter is out. Sparse by design: nothing on the platform but the fighters.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "player fighter",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "arena",
+        "label": "single floating stone platform",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "backdrop",
+        "label": "open sky and clouds",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "opponent_attack",
+        "label": "opponent attack",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "CPU-generated attack hitbox; contact increases your damage and knockback."
+      },
+      {
+        "id": "blast_boundary",
+        "label": "blast boundary",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Out-of-bounds volume surrounding the platform; crossing it removes one stock from the fighter that entered it."
+      },
+      {
+        "id": "cpu_opponent",
+        "label": "cpu opponent",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Goal target; strike and launch this fighter across the blast boundary to remove its final stock and win."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "title": "Horizon Sprint",
+  "core_verb": "Drive a car along a marked point-to-point road course toward the finish line.",
+  "fantasy": "A festival road race across open countryside, reduced to a greyboxed highway with barriers and checkpoints.",
+  "control_scheme": "vehicle",
+  "player_modality": "avatar",
+  "fail_state": "The race timer reaches zero before the car crosses the finish line, or the car's health reaches zero from collisions.",
+  "win_state": "Cross the finish line before the race timer reaches zero.",
+  "interaction_tags": [
+    {
+      "id": "road_hazard",
+      "meaning": "Barrier or obstacle that damages the car on collision.",
+      "role": "hazard"
+    },
+    {
+      "id": "speed_boost",
+      "meaning": "Road pickup that temporarily increases the car's acceleration and maximum speed.",
+      "role": "resource"
+    },
+    {
+      "id": "finish_line",
+      "meaning": "Goal trigger at the end of the course; crossing it before time expires wins the race.",
+      "role": "goal"
+    }
+  ],
+  "time_budget_seconds": 90,
+  "notes": "Forza Horizon 5's open-world and multiplayer racing are reduced to one single-player point-to-point sprint against a countdown timer, with no AI opponents or free-roam objectives.",
+  "context": {},
+  "scene": {
+    "description": "A sunlit countryside highway stretching to the horizon, worn asphalt with painted lane markings. Road barriers narrow the racing line, speed boost pickups sit along it, and a finish line gate closes the run. Low hedgerows, fence posts, hay bales and parked tractors fill the margins; moderate clutter, with room to pick a line.",
+    "theme_elements": [
+      {
+        "id": "player",
+        "label": "race car",
+        "role": "actor",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "road",
+        "label": "asphalt highway with lane markings",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "landmarks",
+        "label": "checkpoints",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "dressing",
+        "label": "hedgerows fence posts hay bales and parked tractors",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "backdrop",
+        "label": "sunlit countryside",
+        "role": "setting",
+        "source": "scene.description and fantasy"
+      },
+      {
+        "id": "road_hazard",
+        "label": "road hazard",
+        "role": "hazard",
+        "source": "interaction_tags",
+        "visual_hint": "Barrier or obstacle that damages the car on collision."
+      },
+      {
+        "id": "speed_boost",
+        "label": "speed boost",
+        "role": "resource",
+        "source": "interaction_tags",
+        "visual_hint": "Road pickup that temporarily increases the car's acceleration and maximum speed."
+      },
+      {
+        "id": "finish_line",
+        "label": "finish line",
+        "role": "goal",
+        "source": "interaction_tags",
+        "visual_hint": "Goal trigger at the end of the course; crossing it before time expires wins the race."
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

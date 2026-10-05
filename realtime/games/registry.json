@@ -295,6 +295,78 @@
         "/assets/world/object/factory/TreeVisualFactory.js",
         "/assets/world/object/factory/VehicleVisualFactory.js"
       ]
+    },
+    {
+      "slug": "lantern-yard",
+      "title": "Lantern Yard",
+      "description": "Walk around a walled garden collecting five glowing lanterns while avoiding a patrolling guard.",
+      "prompt": "A square walled courtyard garden at dusk: stone perimeter walls, a central fountain, hedges and planters forming loose paths, a few trees, stone benches and gravel walkways. Five glowing lanterns sit in different corners and nooks of the garden. A guard in a dark uniform patrols a loop between the hedges.",
+      "cover_prompt": "Eye-level, front-facing wide view of an enclosed yard at dusk. A broad open ground fills the lower two-thirds as the main walkable foreground. Midground: a low perimeter wall spans the full width, with one lantern at the far left and one at the far right. Two trees stand along the wall: a larger one at left-center and a smaller one at right-center. Between them sit a single small standing figure, a central hedge enclosure holding a pedestal with one lantern above it, and a low hedge segment. Open sky lies above.",
+      "cover": "cover.png",
+      "entry": "index.html",
+      "host": "standalone",
+      "vendor": {
+        "three": "0.161.0"
+      },
+      "controls": [
+        "WASD / arrow keys: walk relative to the camera",
+        "Mouse (click to lock) or Q/E: orbit look",
+        "Shift: sprint",
+        "R: restart the round"
+      ],
+      "modules": [
+        "/assets/math/TimeUtils.js",
+        "/assets/user-interface/PrototypeShell.js",
+        "/assets/camera/OrbitFollowCameraRig.js",
+        "/assets/actor-motion/character/CameraRelativeCharacterMotionController.js",
+        "/assets/behavior/WaypointProgressTracker.js",
+        "/assets/gameplay/ResourcePool.js"
+      ],
+      "restart_keys": [
+        "keyr"
+      ],
+      "event_prompts": {},
+      "source": {
+        "skill": "game-prototype-turbo",
+        "run": "runs/step3/acceptance"
+      }
+    },
+    {
+      "slug": "qq",
+      "title": "Nitro Kart Rush",
+      "description": "Steer a go-kart around a closed loop track, hold drift through corners to charge the nitro gauge, and fire nitro boosts to overtake rival karts.",
+      "prompt": "A sunny cartoon city kart circuit: a closed loop asphalt track with red-white curbs, a few sweeping corners, a checkered start/finish gate with a banner, floating blue nitro boxes on the racing line, low barriers along the edges, and grandstands, palm trees, colorful buildings and balloons around it under a blue sky. The player's kart and three differently colored rival karts line up on the starting grid.",
+      "cover_prompt": "A rear-facing view down a kart racing track with a start gantry. In the foreground, two karts with helmeted drivers sit side by side, left and center-right. A third kart is partly hidden behind the left one. Two smaller karts with drivers sit in the midground near a checkered start line. A banner reading NITRO KART RUSH spans two posts above them. Barriers line both edges as the track curves left. Covered tiered grandstands and a tree stand on the right; a small house, palm trees, a tall tower and a balloon sit in the background.",
+      "cover": "cover.png",
+      "entry": "index.html",
+      "host": "standalone",
+      "vendor": {
+        "three": "0.161.0"
+      },
+      "controls": [
+        "W / Up: accelerate",
+        "S / Down: brake / reverse",
+        "A D / Left Right: steer",
+        "Shift (hold while steering): drift, fills the nitro gauge",
+        "Space: fire a nitro charge",
+        "R: restart after the race ends"
+      ],
+      "modules": [
+        "/assets/math/TimeUtils.js",
+        "/assets/user-interface/PrototypeShell.js",
+        "/assets/camera/PoseFollowCameraRig.js",
+        "/assets/gameplay/ResourcePool.js",
+        "/assets/world/object/factory/BuildingVisualFactory.js",
+        "/assets/world/object/factory/TreeVisualFactory.js"
+      ],
+      "restart_keys": [
+        "keyr"
+      ],
+      "event_prompts": {},
+      "source": {
+        "skill": "game-prototype-turbo",
+        "run": "runs/step3/final"
+      }
     }
   ]
 }
