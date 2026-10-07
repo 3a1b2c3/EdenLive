@@ -66,7 +66,10 @@ def enable_wan_channel_concat(
     latent_dim = int(model.config.in_channels)
     old_embedding = model.patch_embedding
     expected_channels = latent_dim + control_dim
-    if int(old_embedding.in_channels) == expected_channels:
+    # A checkpoint that already stored the widened embedding loads as a plain
+    # Conv3d at the target width. It still needs the RMSNorm wrapper, so it falls
+    # through to the rebuild below, which copies its trained weights over.
+    if int(old_embedding.in_channels) == expected_channels and not getattr(model, "_eden_loaded_widened", False):
         existing = getattr(model, "_eden_channel_concat_control_dim", control_dim)
         if int(existing) != control_dim:
             raise ValueError(
@@ -89,7 +92,7 @@ def enable_wan_channel_concat(
                 f"condition_rmsnorm={existing_rmsnorm}, not {condition_rmsnorm}"
             )
         return
-    if int(old_embedding.in_channels) != latent_dim:
+    if int(old_embedding.in_channels) != latent_dim and not getattr(model, "_eden_loaded_widened", False):
         raise ValueError(
             f"Wan patch embedding has {old_embedding.in_channels} input channels; expected {latent_dim} "
             "before channel-concat expansion"
@@ -109,14 +112,31 @@ def enable_wan_channel_concat(
         dtype=old_embedding.weight.dtype,
         **embedding_kwargs,
     )
+    # A checkpoint that already stored the widened embedding arrives as a plain
+    # Conv3d with the trained weights on it. Copy those weights wholesale instead
+    # of the base slice plus zeros, and carry its condition norm over.
+    loaded_weight = getattr(old_embedding, "weight", None)
+    loaded_widened = (
+        getattr(model, "_eden_loaded_widened", False)
+        and loaded_weight is not None
+        and tuple(loaded_weight.shape) == tuple(expanded_embedding.weight.shape)
+    )
     with torch.no_grad():
-        if zero_init_control_channels:
-            expanded_embedding.weight.zero_()
-        expanded_embedding.weight[:, :latent_dim].copy_(old_embedding.weight)
+        if loaded_widened:
+            expanded_embedding.weight.copy_(loaded_weight)
+        else:
+            if zero_init_control_channels:
+                expanded_embedding.weight.zero_()
+            expanded_embedding.weight[:, :latent_dim].copy_(old_embedding.weight)
         if old_embedding.bias is not None:
             expanded_embedding.bias.copy_(old_embedding.bias)
+    if loaded_widened:
+        loaded_norm = getattr(old_embedding, "condition_norm", None)
+        if loaded_norm is not None and getattr(expanded_embedding, "condition_norm", None) is not None:
+            expanded_embedding.condition_norm.load_state_dict(loaded_norm.state_dict())
     model.patch_embedding = expanded_embedding
     model._eden_channel_concat_control_dim = control_dim
+    model._eden_loaded_widened = False
     model._eden_channel_concat_zero_init_control_channels = bool(zero_init_control_channels)
     model._eden_channel_concat_condition_rmsnorm = bool(condition_rmsnorm)
 

@@ -48,7 +48,7 @@ from flashdreams.recipes.wan.transformer.wan21 import (
 # models use (this one, the DINOv3 encoder and the overlapped control stream).
 from eden.impl.game14b.transformer import I2VProxyDinoCtrl
 
-from .checkpoint import Game5BCheckpointSource, load_game5b_dit_state_dict
+from .checkpoint import load_game5b_dit_state_dict
 from .network import Game5BDiTNetwork, Game5BDiTNetworkConfig
 
 
@@ -63,18 +63,11 @@ class Game5BTransformerConfig(Wan21TransformerConfig):
     network: Game5BDiTNetworkConfig = field(default_factory=Game5BDiTNetworkConfig)
 
     dcp_checkpoint_path: str | None = None
-    """Training DCP directory (FSDP2 ``get_model_state_dict`` layout).
+    """Published safetensors file, holding the distilled EMA with Diffusers keys.
 
     Loaded after construction with the Diffusers key remap. Distinct from the
-    base ``checkpoint_path``, which only handles safetensors/pt files whose keys
-    already match the network.
-    """
-
-    dcp_checkpoint_source: Game5BCheckpointSource = "ema"
-    """Which module subtree of the DCP to load.
-
-    ``"ema"`` is the distilled rollout-DMD EMA the reference inference config
-    selects (``checkpoint_source: ema``); ``"model"`` is the live generator.
+    base ``checkpoint_path``, which only handles files whose keys already match
+    the network.
     """
 
 
@@ -94,7 +87,7 @@ class Game5BTransformer(Wan21Transformer):
 
     @staticmethod
     def _setup_network(config: Game5BTransformerConfig) -> Game5BDiTNetwork:
-        """Build the network and load the DCP weights before compile.
+        """Build the network and load the weights before compile.
 
         Loading here rather than in ``__init__`` keeps it ahead of
         ``torch.compile`` and the CUDA-graph wrappers the base constructor
@@ -110,20 +103,13 @@ class Game5BTransformer(Wan21Transformer):
         )
         if config.dcp_checkpoint_path is None:
             return network
-        # The heaviest single step of startup. Only the selected subtree's
-        # tensors are read, so the optimizer state sharing those shards (the
-        # bulk of the directory) is never materialized -- but that is still the
-        # whole 5B DiT off a network filesystem.
+        # The heaviest single step of startup: the whole 5B DiT off a network
+        # filesystem.
         logger.info(
-            "Loading Game2V 5B DiT weights ({} subtree) from {}",
-            config.dcp_checkpoint_source,
-            config.dcp_checkpoint_path,
+            "Loading Game2V 5B DiT weights from {}", config.dcp_checkpoint_path
         )
         load_started = time.perf_counter()
-        state_dict = load_game5b_dit_state_dict(
-            config.dcp_checkpoint_path,
-            source=config.dcp_checkpoint_source,
-        )
+        state_dict = load_game5b_dit_state_dict(config.dcp_checkpoint_path)
         # The checkpoint stores fp32; the network runs at ``config.dtype``.
         state_dict = {
             key: value.to(dtype=config.dtype) for key, value in state_dict.items()

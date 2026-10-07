@@ -46,7 +46,14 @@ if [ -n "$_PID_8089" ]; then
 fi
 pkill -9 -f '[r]un.py' 2>/dev/null || true
 
-export HF_HOME="${HF_HOME:-/root/cache}" HF_HUB_OFFLINE=1 PYTHONUNBUFFERED=1
+if [ -z "${EDEN_MODEL_ROOT:-}" ]; then
+  if [ -d /mnt/workspace/models/EdenLive ]; then
+    EDEN_MODEL_ROOT=/mnt/workspace/models/EdenLive
+  else
+    EDEN_MODEL_ROOT=/mnt/workspace/models/EdenLive
+  fi
+fi
+export EDEN_MODEL_ROOT HF_HUB_OFFLINE=1 PYTHONUNBUFFERED=1
 # TURN 必须指向一台活着的 relay：填了不存在的地址会让浏览器卡在
 # "gathering candidates" 10 秒然后失败，而不是退回 host candidate。
 # localhost 那台已经没了，现在默认用 pod 自己跑的 coturn（turn_server.sh）。

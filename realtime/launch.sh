@@ -16,7 +16,17 @@ set -u
 cd "$(dirname "$(readlink -f "$0")")" || exit 1
 ENV=/mnt/workspace/envs/miniconda3/envs/wm
 export PATH=$ENV/bin:$PATH
-export HF_HOME=/root/cache HF_HUB_CACHE=/root/cache/hub HF_HUB_OFFLINE=1 PYTHONUNBUFFERED=1
+# Weights come from the EdenLive tree, not an HF cache. The CPFS mount point
+# differs between the notebook and the pod, so the default follows whichever
+# exists; EDEN_MODEL_ROOT overrides it.
+if [ -z "${EDEN_MODEL_ROOT:-}" ]; then
+  if [ -d /mnt/workspace/models/EdenLive ]; then
+    EDEN_MODEL_ROOT=/mnt/workspace/models/EdenLive
+  else
+    EDEN_MODEL_ROOT=/mnt/workspace/models/EdenLive
+  fi
+fi
+export EDEN_MODEL_ROOT HF_HUB_OFFLINE=1 PYTHONUNBUFFERED=1
 # mediapy -> IPython -> sqlite3 pulls the env's ICU, which needs the env's newer
 # libstdc++ (CXXABI_1.3.15) rather than the pod's system one.
 export LD_PRELOAD=$ENV/lib/libstdc++.so.6

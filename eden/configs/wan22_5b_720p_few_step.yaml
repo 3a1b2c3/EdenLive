@@ -17,7 +17,17 @@ model:
   # A directory holding one subdirectory per component, Diffusers-style:
   #   vae/ text_encoder/ tokenizer/ scheduler/ transformer/
   # No model_index.json is read; each component's loader class is fixed by the adapter.
-  pretrained_dir: /path/to/eden-wan22-5b-720p
+  components:
+    vae:
+      path: /mnt/workspace/models/EdenLive/vae-5b
+    text_encoder:
+      path: /mnt/workspace/models/EdenLive/umt5/text_encoder
+    tokenizer:
+      path: /mnt/workspace/models/EdenLive/umt5/tokenizer
+    scheduler:
+      path: /mnt/workspace/models/EdenLive/scheduler-5b
+    transformer:
+      path: /mnt/workspace/models/EdenLive/dit-5b
   # Point any single component somewhere else — this is how the DiT is swapped without
   # restaging the rest of the tree:
   #   components:
@@ -42,7 +52,7 @@ model:
     # checkpoint-loaded DINO patch projection). Zero-init keeps the model numerically
     # equivalent to base Wan before finetuning.
     channel_concat_zero_init: true
-    checkpoint_path: /path/to/proxy-dino/best.pt
+    checkpoint_path: /mnt/workspace/models/EdenLive/vision-encoder/projection.safetensors
     control_dim: 1024
     enabled: true
     image_size:
@@ -50,7 +60,7 @@ model:
     - 512
     local_files_only: true
     # Override these paths for the local DINOv3 backbone and the finetuned proxy.
-    model_path: /path/to/dinov3-vitl16-pretrain-lvd1689m
+    model_path: /mnt/workspace/models/EdenLive/vision-encoder/backbone
     patchify_factor: 2
     # Offline inference decodes RGB source clips; cached target latents are training-only.
     use_cached_latents: false
@@ -119,18 +129,16 @@ data:
           condition: video_context
           loader: video
           params:
-            # Match the canonical GameBlocks proxy evaluation: span the full five-second
-            # clip and resize/crop into the 720p training geometry.
-            duration_seconds: 5.0
-            duration_tolerance_seconds: 0.05
+            # Chunk-AR consumes one proxy frame per decoded frame, so the clip covers the
+            # whole generated rollout: 121 frames is 5 seconds at 24 fps.
+            duration_seconds: null
             height: 704
             num_frames: 121
             num_threads: 2
-            # The 24 FPS proxies hold exactly 120 frames, one short of the 121 requested
-            # here, so uniform sampling must be allowed to repeat a single interior frame.
-            # The 30 FPS proxies carry 150 frames and are unaffected.
-            pad_short: true
-            sampling: uniform
+            pad_short: false
+            sampling: fps
+            fps: 24
+            clip_position: start
             value_range: -1,1
             width: 1280
           required: true
@@ -154,14 +162,13 @@ inference:
   strategy: chunk_causal
   outputs:
   - video
-  checkpoint: /path/to/ckpts/5b_720p/few_step
-  checkpoint_source: ema
   output_dir: inference/wan22_5b_720p_few_step
   max_batches: 0
   num_samples: 1
   height: 704
   width: 1280
-  num_frames: 237
+  # 121 frames is 5 seconds at 24 fps, matching the bidirectional config.
+  num_frames: 121
   fps: 24
   chunk_size: 3
   pack_first_frame: true

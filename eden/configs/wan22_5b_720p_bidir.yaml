@@ -12,7 +12,17 @@ model:
   # A directory holding one subdirectory per component, Diffusers-style:
   #   vae/ text_encoder/ tokenizer/ scheduler/ transformer/
   # No model_index.json is read; each component's loader class is fixed by the adapter.
-  pretrained_dir: /path/to/eden-wan22-5b-720p
+  components:
+    vae:
+      path: /mnt/workspace/models/EdenLive/vae-5b
+    text_encoder:
+      path: /mnt/workspace/models/EdenLive/umt5/text_encoder
+    tokenizer:
+      path: /mnt/workspace/models/EdenLive/umt5/tokenizer
+    scheduler:
+      path: /mnt/workspace/models/EdenLive/scheduler-5b
+    transformer:
+      path: /mnt/workspace/models/EdenLive/dit-5b-bidir
   # Point any single component somewhere else — this is how the DiT is swapped without
   # restaging the rest of the tree:
   #   components:
@@ -28,7 +38,9 @@ model:
   torch_dtype: bfloat16
   gradient_checkpointing: false
   max_sequence_length: 512
-  teacher_forcing_attention_backend: flash4
+  # triton rather than flash4: the flash4 kernel targets SM90 (Hopper) and needs the
+  # flash-attn-4 stack, while triton runs on the GPUs the rest of the configs target.
+  teacher_forcing_attention_backend: triton
   proxy_dino:
     # This checkpoint was trained with `zero`: the unconditional CFG branch uses zero DINO
     # control, so guidance pushes along the proxy axis as well as text. Must match how the
@@ -39,7 +51,7 @@ model:
     # checkpoint-loaded DINO patch projection). Zero-init keeps the model numerically
     # equivalent to base Wan before finetuning.
     channel_concat_zero_init: true
-    checkpoint_path: /path/to/proxy-dino/best.pt
+    checkpoint_path: /mnt/workspace/models/EdenLive/vision-encoder/projection.safetensors
     control_dim: 1024
     enabled: true
     image_size:
@@ -47,7 +59,7 @@ model:
     - 512
     local_files_only: true
     # Override these paths for the local DINOv3 backbone and the finetuned proxy.
-    model_path: /path/to/dinov3-vitl16-pretrain-lvd1689m
+    model_path: /mnt/workspace/models/EdenLive/vision-encoder/backbone
     patchify_factor: 2
     # Offline inference decodes RGB source clips; cached target latents are training-only.
     use_cached_latents: false
@@ -140,8 +152,6 @@ inference:
   strategy: diffusion
   outputs:
   - video
-  checkpoint: /path/to/ckpts/5b_720p/bidir
-  checkpoint_source: ema
   output_dir: inference/wan22_5b_720p_bidir
   max_batches: 0
   num_samples: 1

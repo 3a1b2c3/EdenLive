@@ -300,21 +300,19 @@ def test_app_defaults_wire_the_5b_hooks() -> None:
     assert defaults.input_defaults["example_data"] is False
 
 
-def test_checkpoint_loads_the_distilled_ema_subtree() -> None:
-    """``checkpoint_source: ema`` selects the rollout-DMD EMA, not the generator.
+def test_checkpoint_points_at_the_published_ema_file() -> None:
+    """The published file is the distilled EMA, so there is no subtree to pick.
 
-    The DCP holds the live generator, the DMD critic, the EMA and two optimizer
-    states side by side; sampling the wrong subtree is a quality regression with
-    no error attached, so the prefix mapping is pinned here.
+    The live generator, the DMD critic and both optimizer states are not in the
+    weight tree at all, which is what makes sampling the wrong one impossible.
     """
-    from eden.impl.game5b.checkpoint import _SOURCE_PREFIXES
+    from eden.model_root import EDEN_MODEL_ROOT
 
     transformer = PIPELINE_GAME2V_EDEN_WORLD_V2_5B.diffusion_model.transformer
-    assert transformer.dcp_checkpoint_source == "ema"
-    assert _SOURCE_PREFIXES["ema"] == "algorithm.rollout_dmd.ema_transformer."
-    assert _SOURCE_PREFIXES["model"] == "model."
-    # The DCP path is the loader's job; the base safetensors slot stays unset.
-    assert transformer.dcp_checkpoint_path is not None
+    assert transformer.dcp_checkpoint_path == (
+        f"{EDEN_MODEL_ROOT}/dit-5b/model.safetensors"
+    )
+    # The remap loader reads this slot; the base safetensors slot stays unset.
     assert transformer.checkpoint_path is None
 
 
@@ -348,41 +346,6 @@ def test_checkpoint_keys_need_only_the_shared_diffusers_remap() -> None:
         "head.modulation",
         "head.head.weight",
     }
-
-
-def test_flatten_loaded_unwraps_the_ema_nesting() -> None:
-    """DCP hands back nested dicts whose depth differs per subtree.
-
-    The EMA arrives as ``{"algorithm.rollout_dmd": {"ema_transformer.…": t}}``
-    while the generator arrives as ``{"model": {…}}``, so the flattener walks to
-    the tensors rather than assuming a depth.
-    """
-    from eden.impl.game5b.checkpoint import _flatten_loaded
-
-    tensor = torch.zeros(1)
-    ema = _flatten_loaded(
-        {
-            "algorithm.rollout_dmd": {
-                "ema_transformer.scale_shift_table": tensor,
-                "fake_score_transformer.scale_shift_table": torch.ones(1),
-            }
-        },
-        "algorithm.rollout_dmd.ema_transformer.",
-    )
-    # Only the requested subtree survives; the critic is dropped.
-    assert list(ema) == ["scale_shift_table"]
-    assert ema["scale_shift_table"] is tensor
-
-    generator = _flatten_loaded({"model": {"proj_out.weight": tensor}}, "model.")
-    assert list(generator) == ["proj_out.weight"]
-
-
-def test_unknown_checkpoint_source_is_rejected() -> None:
-    """A typo'd source must fail loudly rather than read nothing."""
-    from eden.impl.game5b.checkpoint import load_game5b_dit_state_dict
-
-    with pytest.raises(ValueError, match="unknown checkpoint source"):
-        load_game5b_dit_state_dict("/nonexistent", source="training_ema")  # type: ignore[arg-type]
 
 
 def test_encoder_stamps_only_the_first_chunk() -> None:

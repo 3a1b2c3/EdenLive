@@ -13,7 +13,6 @@ from eden.inference.checkpoint import (
 from eden.inference.engine import InferenceEngine
 from eden.inference.io import save_generation_artifacts
 from eden.inference.request import GenerationRequest
-from eden.runtime.experiment import resolve_output_path
 from eden.runtime.precision import attach_runtime_precision, resolve_torch_dtype
 
 
@@ -49,7 +48,7 @@ def run_offline_inference(config: dict[str, Any], *, output_dir: str | Path | No
         plugin.prepare_model(model, runtime_context)
 
     inference_cfg = config.get("inference", {})
-    output_root = resolve_output_path(
+    output_root = Path(
         output_dir
         or inference_cfg.get("output_dir")
         or "outputs/inference"

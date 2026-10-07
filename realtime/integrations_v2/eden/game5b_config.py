@@ -56,28 +56,13 @@ from eden.impl.game5b.encoder import Game5BCtrlEncoderConfig
 from eden.impl.game5b.network import Game5BDiTNetworkConfig
 from eden.impl.game5b.pipeline import Game5BInferencePipelineConfig
 from eden.impl.game5b.transformer import Game5BTransformerConfig
+from eden.model_root import EDEN_MODEL_ROOT
 
-GAME2V_EDEN_WORLD_V2_5B_CHECKPOINT_PATH = (
-    "/root/cache/dit/"
-    "wan22_5b-proxy2fine-channelconcat-stage3-sgf-datagame-720p-lr2e6-4e7/"
-    "step_002600"
-)
-"""Stage-3 rollout-DMD 5B DCP checkpoint, as staged by ``copy_models_cache.sh``.
-
-A torch distributed checkpoint directory (65 shards + ``.metadata``) written by
-FSDP2, holding the live generator, the DMD critic, the distilled EMA and two
-optimizer states side by side, so it is read through
-:func:`eden.impl.game5b.checkpoint.load_game5b_dit_state_dict` rather than the
-stock safetensors loader. Only the EMA subtree is loaded; see
-:data:`GAME2V_5B_CHECKPOINT_SOURCE`.
-"""
-
-GAME2V_5B_CHECKPOINT_SOURCE = "ema"
-"""Which subtree of the DCP to load (``checkpoint_source: ema`` upstream).
-
-The reference inference config samples from the rollout-DMD EMA, not the live
-generator, and its comment is explicit that the algorithm's ``ema_*`` state is
-the one selected.
+GAME2V_EDEN_WORLD_V2_5B_CHECKPOINT_PATH = f"{EDEN_MODEL_ROOT}/dit-5b/model.safetensors"
+"""The distilled EMA of the cfgsame Stage-3 run (``step_000400``), published as
+a single safetensors file with Diffusers keys. Read through
+:func:`eden.impl.game5b.checkpoint.load_game5b_dit_state_dict`, which applies
+the shared Diffusers remap.
 """
 
 # Latent frames per AR chunk (``chunk_size: 3``). Combined with the VAE's 4x
@@ -120,7 +105,6 @@ PIPELINE_GAME2V_EDEN_WORLD_V2_5B = Game5BInferencePipelineConfig(
         transformer=Game5BTransformerConfig(
             network=Game5BDiTNetworkConfig(),
             dcp_checkpoint_path=GAME2V_EDEN_WORLD_V2_5B_CHECKPOINT_PATH,
-            dcp_checkpoint_source=GAME2V_5B_CHECKPOINT_SOURCE,
             # Single-rollout layout: no leading batch dim.
             batch_shape=(),
             len_t=GAME2V_5B_LEN_T,
@@ -184,7 +168,6 @@ PIPELINE_GAME2V_EDEN_WORLD_V2_5B_TAEHV = derive_config(
 
 
 __all__ = [
-    "GAME2V_5B_CHECKPOINT_SOURCE",
     "GAME2V_5B_FPS",
     "GAME2V_5B_LEN_T",
     "GAME2V_5B_PIXEL_HEIGHT",

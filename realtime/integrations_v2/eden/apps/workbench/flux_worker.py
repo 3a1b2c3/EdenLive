@@ -24,6 +24,8 @@ from typing import Any
 from aiohttp import web
 from loguru import logger
 
+from eden.model_root import EDEN_MODEL_ROOT
+
 SKILL_SCRIPT = Path(
     os.environ.get(
         "EDEN_FLUX_C2F_SCRIPT",
@@ -70,13 +72,16 @@ class FluxRenderer:
         started = time.perf_counter()
         self._torch = torch
         self.device = torch.device("cuda", 0)
+        # The published tree is a diffusers layout (one shard per component),
+        # so the worker loads it directly instead of the skill's bundle paths.
+        model_dir = f"{EDEN_MODEL_ROOT}/flux-c2f"
         self.pipe = Flux2KleinPipeline.from_pretrained(
-            skill.DEFAULT_MODEL_ID, torch_dtype=torch.bfloat16, local_files_only=True
+            model_dir, torch_dtype=torch.bfloat16, local_files_only=True
         )
         if bool(getattr(self.pipe.config, "is_distilled", False)):
             raise ValueError("The canonical coarse-to-fine LoRA requires a base model")
         self.pipe.to(device=self.device, dtype=torch.bfloat16)
-        self.pipe.load_lora_weights(skill.DEFAULT_LORA_DIR, weight_name=skill.DEFAULT_WEIGHT_NAME)
+        self.pipe.load_lora_weights(model_dir, weight_name="c2f_lora.safetensors")
         self.pipe.set_progress_bar_config(disable=True)
         self.skill = skill
         logger.info("FLUX c2f pipeline ready in {:.1f}s", time.perf_counter() - started)

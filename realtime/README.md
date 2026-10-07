@@ -124,10 +124,15 @@ one per GPU -- set it to the number of GPUs you want to use. `GAME` picks which
 cover the session falls back to; the slugs come from
 [`games/registry.json`](games/registry.json) and default to `subway-run`.
 
-Weights are expected in `HF_HOME` (default `/root/cache`), loaded with
-`HF_HUB_OFFLINE=1`. `copy_models_cache.sh` stages them from a shared cache onto
-local disk, which matters because the loader `mmap()`s each shard and `mmap` over
-FUSE object storage is roughly two orders of magnitude slower.
+Weights live in one directory, `EDEN_MODEL_ROOT` (default
+`/mnt/workspace/models/EdenLive`, or `/mnt/workspace/models/EdenLive`
+inside the GPU pod — the same CPFS mount). `launch.sh` and `start.sh` pick
+whichever exists. The tree is the Hugging Face repo layout: `dit-5b/`,
+`dit-14b/`, `dit-5b-bidir/`, `dit-14b-bidir/`, `umt5/`, `vae-5b/`, `vae-14b/`,
+`decoder-5b/`, `vision-encoder/`, `flux-c2f/` and `clip/`. The two `*-bidir/`
+directories hold the bidirectional base DiT weights; no serving config loads
+them, the realtime pipelines use `dit-5b/` and `dit-14b/`. Everything is loaded
+with `HF_HUB_OFFLINE=1`.
 
 Making a game takes tens of minutes (an agent writes and plays it), so the
 left column keeps its job log across a page reload. Picking an existing game

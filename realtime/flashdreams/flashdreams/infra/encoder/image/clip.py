@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Literal, cast
+from typing import cast
 
 import torch
 from torch import Tensor
@@ -40,12 +40,9 @@ class CLIPImageEncoderConfig(EncoderConfig):
 
     _target: type["CLIPImageEncoder"] = field(default_factory=lambda: CLIPImageEncoder)
 
-    model_id_or_local_path: Literal[
-        "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers",
-        "Wan-AI/Wan2.1-I2V-14B-720P-Diffusers",
-        "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
-    ] = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
-    """HF repo id or local snapshot path."""
+    model_id_or_local_path: str = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
+    """HF repo id, or a local snapshot whose ``image_encoder/`` and
+    ``image_processor/`` subfolders ``from_pretrained`` can read directly."""
 
     dtype: torch.dtype = torch.bfloat16
 

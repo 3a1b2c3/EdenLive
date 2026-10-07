@@ -38,22 +38,35 @@ each proxy frame, and those features condition the diffusion transformer.
 
 ## Installation
 
-Requires Python 3.10-3.12, CUDA, and one GPU with >=40GB for 5B at 720p.
+| | Requirement |
+| --- | --- |
+| Python | 3.10 – 3.12 (`>=3.10,<3.13`) |
+| PyTorch | >= 2.6, CUDA build matching your driver |
+| GPU | One NVIDIA GPU; >= 40 GB VRAM for 5B at 720p |
+| OS | Linux x86-64 |
+
+PyTorch has to be installed first and separately: the wheel depends on your driver's
+CUDA version, so resolving it from the project metadata would pick the wrong build.
 
 ```bash
 git clone xxx
 cd eden
 
-# Install the CUDA build of PyTorch matching your driver first.
+# cu128 shown; match the CUDA build to your driver.
 pip install torch --index-url https://download.pytorch.org/whl/cu128
 
 pip install -e ".[data]"
 ```
 
 `[data]` adds `decord` (video decoding) and `pandas`/`pyarrow` (manifest reading), which
-the manifest-driven inference path needs.
+the manifest-driven inference path needs. Without it, only the prompt-driven path
+(`inference.use_prompt_loader`) works.
 
-Optional: FlashAttention 4 for the fastest teacher-forcing attention. It is version
+The real-time streaming service under `realtime/` is a separate uv workspace with
+heavier requirements of its own (CUDA 13.x, PyTorch 2.11, 80 GB VRAM) — see
+[`realtime/README.md`](realtime/README.md).
+
+Optional: FlashAttention 4 for the fastest attention kernel. It is version
 sensitive — a `flash_attn`/`cutlass` mismatch surfaces as
 `AttributeError: module 'cutlass.cute.core' has no attribute 'ThrMma'`. Pass
 `model.teacher_forcing_attention_backend=triton` to fall back.
@@ -119,13 +132,12 @@ own data.
 manifest plus timed `dynamicPrompts` for the events in the clip. `prompts.txt` is the
 same content, readable.
 
-Two models ship, each in the same three inference modes. Every config in
+Two models ship, each in the same two inference modes. Every config in
 `eden/configs/` is self-contained — one file, no includes:
 
 | Mode | Wan2.1-I2V-14B @ 480p | Wan2.2-TI2V-5B @ 720p |
 | --- | --- | --- |
 | Bidirectional | `wan21_14b_480p_bidir.yaml` | `wan22_5b_720p_bidir.yaml` |
-| Teacher forcing | `wan21_14b_480p_tf.yaml` | `wan22_5b_720p_tf.yaml` |
 | Few-step | `wan21_14b_480p_few_step.yaml` | `wan22_5b_720p_few_step.yaml` |
 
 The 14B commands below run the shipped recordings as-is; swap the `--config` for the 5B
@@ -139,18 +151,6 @@ torchrun --nproc_per_node=2 -m eden.scripts.infer \
   data.dataset.params.path=examples/samples/manifest.csv \
   data.dataset.params.root=examples/samples \
   runtime.sequence_parallel.size=2 \
-  inference.checkpoint=/path/to/ckpts/14b_480p/bidir
-```
-
-**Teacher forcing** — chunk-autoregressive with unbounded KV context, 30 steps per chunk:
-
-```bash
-torchrun --nproc_per_node=2 -m eden.scripts.infer \
-  --config eden/configs/wan21_14b_480p_tf.yaml \
-  data.dataset.params.path=examples/samples/manifest.csv \
-  data.dataset.params.root=examples/samples \
-  runtime.sequence_parallel.size=2 \
-  inference.checkpoint=/path/to/ckpts/14b_480p/tf
 ```
 
 **Few-step** — chunk-autoregressive, 4 steps per chunk, near real time:
@@ -161,14 +161,11 @@ torchrun --nproc_per_node=2 -m eden.scripts.infer \
   data.dataset.params.path=examples/samples/manifest.csv \
   data.dataset.params.root=examples/samples \
   runtime.sequence_parallel.size=2 \
-  inference.checkpoint=/path/to/ckpts/14b_480p/few_step
 ```
 
-The 5B configs generate at 1280x704 — 121 frames bidirectional, 117 teacher forcing, 237
-few-step. Each asserts the proxy clip is **exactly 5.0s ±0.05**
-(`data.dataset.params.columns.proxy_video.params.duration_seconds`), so the two shipped
-recordings (12.1s and 18.4s) are rejected by the loader. Point them at a 5-second proxy, or
-override that check:
+The 5B configs generate at 1280x704. They read a 5-second window of the proxy by
+default, which the two shipped recordings are longer than; pass
+`duration_seconds=null` to take them as they are, or set it to the window you want:
 
 ```bash
 torchrun --nproc_per_node=2 -m eden.scripts.infer \
@@ -177,46 +174,47 @@ torchrun --nproc_per_node=2 -m eden.scripts.infer \
   data.dataset.params.root=examples/samples \
   data.dataset.params.columns.proxy_video.params.duration_seconds=null \
   runtime.sequence_parallel.size=2 \
-  inference.checkpoint=/path/to/ckpts/5b_720p/bidir
 ```
 
 **Streaming service** — interactive real-time inference. The proxy comes from a game
 running in the browser instead of a recorded file, and frames are served over WebRTC as
-they are generated. This path lives in [`realtime/`](realtime/), a trimmed fork of
-[NVIDIA FlashDreams](https://github.com/NVIDIA/flashdreams) carrying only the Eden
-`game2v` deployment:
+they are generated. This path lives in [`realtime/`](realtime/):
 
 ```bash
 cd realtime
 uv sync --package flashdreams-eden --extra runners
 
-# HF_HOME must hold the model weights; the script exports HF_HUB_OFFLINE=1.
-bash start.sh eden-game2v-5b-taehv      # or eden-game2v-14b-taehv
+# 1. TURN relay. Media needs a UDP path the page load does not, so a browser on
+#    another subnet cannot receive video without it.
+bash turn_server.sh
+
+# 2. FLUX worker. Renders the photoreal first frame each session starts from.
+bash workbench_flux.sh
+
+# 3. The model app. HF_HOME must hold the weights; the script sets HF_HUB_OFFLINE=1.
+NPROC=2 bash launch.sh          # one rank per GPU
 ```
 
-Open `http://<host>:8089` and play. `start.sh` maps the model name to an application
-slug, then runs `run.py` under `torchrun --nproc_per_node=8` in `webrtc` mode. Pass `off`
-as the second argument (`bash start.sh eden-game2v-5b-taehv off`) to skip transformer
-compilation when you only care about time-to-first-chunk.
+Open `http://<host>:8089`. The page is a workbench: it starts on a home screen
+listing the games, and nothing renders until you pick one. Choosing a game loads it
+and begins streaming; when a round ends you can replay it or go back and switch.
+`NPROC` sets how many ranks `torchrun` starts — one per GPU, so set it to the number
+you want to use.
 
-| `start.sh` model | Application slug |
+A fourth service, `workbench_bridge.sh`, is only needed to *generate* new games from
+a text description; it runs where the `claude` CLI is installed. Playing the games
+already in [`realtime/games/registry.json`](realtime/games/registry.json) does not
+need it.
+
+| Model | Application slug |
 | --- | --- |
-| `eden-game2v-5b-taehv` | `game2v-eden-world-v2-5b-taehv` |
-| `eden-game2v-14b-taehv` | `game2v-eden-world-v2-14b-taehv` |
+| 5B | `game2v-eden-world-v2-5b-taehv` |
+| 14B | `game2v-eden-world-v2-14b-taehv` |
 
 Both decode with the TAEHV decoder rather than the Wan VAE, trading some fidelity for
-latency.
-`EDEN_GAME` selects which game drives the proxy render — the slugs come from
-[`realtime/games/registry.json`](realtime/games/registry.json), and `subway-run` is the
-default:
-
-```bash
-EDEN_GAME=need-for-speed bash start.sh eden-game2v-5b-taehv
-```
-
-`realtime/` is a separate uv workspace with its own `eden` package (the FlashDreams
-integration, unrelated to the `eden/` package at the repo root) — see
-[`realtime/README.md`](realtime/README.md) for its architecture and developer guides.
+latency. `realtime/` is a separate uv workspace with its own `eden` package, unrelated to
+the `eden/` package at the repo root — see [`realtime/README.md`](realtime/README.md) for
+the service topology, the older non-workbench launcher, and the developer guides.
 
 Videos and the conditions used to produce them are written to
 `<output_dir>/save/inference/<step>/`: the generated `.mp4`, the proxy control video, the
@@ -247,67 +245,7 @@ python -m eden.scripts.infer --config CONFIG.yaml \
 > and `237` (60 latent) does not — the run aborts with *"Proxy-DINO source timeline is
 > shorter than latent chunk"* rather than silently reusing the last proxy frame.
 
-## Configuration
-
-Each config in `eden/configs/` is one self-contained YAML file — no includes, no group
-composition — plus dotlist overrides on the command line. Four blocks: `model:` names the
-adapter and the weight directories, `runtime:` the parallelism and caching, `data:` the
-manifest and how frames are sampled, `inference:` the sampling itself.
-
-```yaml
-model:
-  adapter: wan22_diffusers
-  pretrained_dir: /path/to/eden-wan22-5b-720p
-  pipeline_class: WanPipeline
-  torch_dtype: bfloat16
-  proxy_dino:
-    enabled: true
-    model_path: /path/to/dinov3-vitl16-pretrain-lvd1689m
-    checkpoint_path: /path/to/proxy-dino/best.pt
-
-runtime:
-  sequence_parallel: {enabled: true, size: 1, axis: temporal, layout: balanced_blocks}
-  kv_cache:
-    enabled: true
-    context: {max_latent_frames: 18, sink_latent_frames: 6}
-
-data:
-  dataset:
-    name: manifest
-    params:
-      path: /path/to/proxy_manifest.csv
-      root: /path/to/proxy_dataset
-      # ... column loaders
-
-inference:
-  strategy: chunk_causal      # or: diffusion
-  checkpoint: /path/to/ckpts/step_013000
-  height: 704
-  width: 1280
-  num_frames: 117
-  chunk_size: 3               # chunk_causal only
-  num_inference_steps: 30
-  guidance_scale: 3.0
-  seed: 42
-```
-
-Keys worth knowing:
-
-| Key | Meaning |
-| --- | --- |
-| `inference.strategy` | `diffusion` (bidirectional) or `chunk_causal` (autoregressive) |
-| `inference.checkpoint` | Sharded DCP directory or a single `.pt` file |
-| `inference.checkpoint_source` | `model` (default) or `ema` for saved EMA weights |
-| `inference.use_prompt_loader` | Skip the dataset; generate from `inference.prompt` |
-| `inference.guidance_scale` | Text CFG scale |
-| `inference.guidance_scale_proxy` | Separate CFG scale for the proxy control stream |
-| `inference.chunk_size` | Latent frames per autoregressive chunk |
-| `runtime.sequence_parallel.size` | Shard one sample's sequence across N GPUs |
-| `runtime.kv_cache.context.max_latent_frames` | Sliding KV window for long rollouts |
-| `model.teacher_forcing_attention_backend` | `triton` or `flash4` |
-
-Any key can be overridden positionally:
-`inference.num_frames=241 runtime.kv_cache.context.max_latent_frames=21`.
+## Checking configs
 
 To confirm every shipped config still composes into a dispatchable run — it loads,
 names a registered strategy and adapter, and asks for outputs the adapter can
@@ -324,9 +262,8 @@ still need a real inference run.
 
 - [ ] Replace every `xxx` link: project page, paper, model repo, demo, clone URL.
 - [ ] Publish weights and document the download.
-- [ ] Replace the `/path/to/...` placeholders in `eden/configs/` — `model.pretrained_dir`,
-      `model.proxy_dino.*`, `inference.checkpoint`, and the manifest paths — with the
-      published locations.
+- [ ] Replace the `/path/to/...` placeholders in `eden/configs/` — `model.proxy_dino.*`
+      and the manifest paths — with the published locations.
 - [ ] Add more example results alongside `docs/assets/generated.mp4`.
 - [ ] Fill in the citation block.
 
@@ -347,7 +284,11 @@ Built on [Wan2.1 / Wan2.2](https://github.com/Wan-Video),
 🤗 [Diffusers](https://github.com/huggingface/diffusers), and
 [DINOv3](https://github.com/facebookresearch/dinov3).
 
+The real-time streaming service under `realtime/` builds on
+[NVIDIA FlashDreams](https://github.com/NVIDIA/flashdreams).
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE). Model weights and the upstream Wan checkpoints carry
-their own licenses.
+their own licenses. `realtime/` is also Apache 2.0 and keeps its own
+[LICENSE](realtime/LICENSE) and [NOTICE](realtime/NOTICE).

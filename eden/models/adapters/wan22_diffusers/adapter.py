@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -55,6 +56,123 @@ from eden.schedulers import (
 from eden.utils import get_logger
 
 logger = get_logger(__name__)
+
+
+
+# Native Wan ``.pth`` key -> ``AutoencoderKLWan`` key. The inverse of the
+# diffusers-to-native table the realtime VAE keeps
+# (``flashdreams.recipes.wan.autoencoder.vae._WAN22_TI2V_5B_VAE_KEY_REMAP``),
+# which is what ``Wan2.2_VAE.pth`` was validated against. The Wan 2.1 ``.pth``
+# uses the same names except that it has no residual shortcut or per-stage
+# resample entries, so the extra rules simply never match.
+_WAN_VAE_KEY_REMAP = tuple(
+    (re.compile(pattern), replacement)
+    for pattern, replacement in (
+        (r"^conv1\.(.*)$", r"quant_conv.\1"),
+        (r"^conv2\.(.*)$", r"post_quant_conv.\1"),
+        (r"^encoder\.conv1\.(.*)$", r"encoder.conv_in.\1"),
+        (r"^decoder\.conv1\.(.*)$", r"decoder.conv_in.\1"),
+        (r"^encoder\.head\.0\.(.*)$", r"encoder.norm_out.\1"),
+        (r"^encoder\.head\.2\.(.*)$", r"encoder.conv_out.\1"),
+        (r"^decoder\.head\.0\.(.*)$", r"decoder.norm_out.\1"),
+        (r"^decoder\.head\.2\.(.*)$", r"decoder.conv_out.\1"),
+        (r"^encoder\.middle\.0\.residual\.0\.(.*)$", r"encoder.mid_block.resnets.0.norm1.\1"),
+        (r"^encoder\.middle\.0\.residual\.2\.(.*)$", r"encoder.mid_block.resnets.0.conv1.\1"),
+        (r"^encoder\.middle\.0\.residual\.3\.(.*)$", r"encoder.mid_block.resnets.0.norm2.\1"),
+        (r"^encoder\.middle\.0\.residual\.6\.(.*)$", r"encoder.mid_block.resnets.0.conv2.\1"),
+        (r"^encoder\.middle\.0\.shortcut\.(.*)$", r"encoder.mid_block.resnets.0.conv_shortcut.\1"),
+        (r"^encoder\.middle\.2\.residual\.0\.(.*)$", r"encoder.mid_block.resnets.1.norm1.\1"),
+        (r"^encoder\.middle\.2\.residual\.2\.(.*)$", r"encoder.mid_block.resnets.1.conv1.\1"),
+        (r"^encoder\.middle\.2\.residual\.3\.(.*)$", r"encoder.mid_block.resnets.1.norm2.\1"),
+        (r"^encoder\.middle\.2\.residual\.6\.(.*)$", r"encoder.mid_block.resnets.1.conv2.\1"),
+        (r"^encoder\.middle\.2\.shortcut\.(.*)$", r"encoder.mid_block.resnets.1.conv_shortcut.\1"),
+        (r"^encoder\.middle\.1\.(.*)$", r"encoder.mid_block.attentions.0.\1"),
+        (r"^decoder\.middle\.0\.residual\.0\.(.*)$", r"decoder.mid_block.resnets.0.norm1.\1"),
+        (r"^decoder\.middle\.0\.residual\.2\.(.*)$", r"decoder.mid_block.resnets.0.conv1.\1"),
+        (r"^decoder\.middle\.0\.residual\.3\.(.*)$", r"decoder.mid_block.resnets.0.norm2.\1"),
+        (r"^decoder\.middle\.0\.residual\.6\.(.*)$", r"decoder.mid_block.resnets.0.conv2.\1"),
+        (r"^decoder\.middle\.0\.shortcut\.(.*)$", r"decoder.mid_block.resnets.0.conv_shortcut.\1"),
+        (r"^decoder\.middle\.2\.residual\.0\.(.*)$", r"decoder.mid_block.resnets.1.norm1.\1"),
+        (r"^decoder\.middle\.2\.residual\.2\.(.*)$", r"decoder.mid_block.resnets.1.conv1.\1"),
+        (r"^decoder\.middle\.2\.residual\.3\.(.*)$", r"decoder.mid_block.resnets.1.norm2.\1"),
+        (r"^decoder\.middle\.2\.residual\.6\.(.*)$", r"decoder.mid_block.resnets.1.conv2.\1"),
+        (r"^decoder\.middle\.2\.shortcut\.(.*)$", r"decoder.mid_block.resnets.1.conv_shortcut.\1"),
+        (r"^decoder\.middle\.1\.(.*)$", r"decoder.mid_block.attentions.0.\1"),
+        (r"^encoder\.downsamples\.(\d+)\.downsamples\.(\d+)\.residual\.0\.(.*)$", r"encoder.down_blocks.\1.resnets.\2.norm1.\3"),
+        (r"^encoder\.downsamples\.(\d+)\.downsamples\.(\d+)\.residual\.2\.(.*)$", r"encoder.down_blocks.\1.resnets.\2.conv1.\3"),
+        (r"^encoder\.downsamples\.(\d+)\.downsamples\.(\d+)\.residual\.3\.(.*)$", r"encoder.down_blocks.\1.resnets.\2.norm2.\3"),
+        (r"^encoder\.downsamples\.(\d+)\.downsamples\.(\d+)\.residual\.6\.(.*)$", r"encoder.down_blocks.\1.resnets.\2.conv2.\3"),
+        (r"^encoder\.downsamples\.(\d+)\.downsamples\.(\d+)\.shortcut\.(.*)$", r"encoder.down_blocks.\1.resnets.\2.conv_shortcut.\3"),
+        (r"^encoder\.downsamples\.(\d+)\.avg_shortcut\.(.*)$", r"encoder.down_blocks.\1.avg_shortcut.\2"),
+        (r"^encoder\.downsamples\.(\d+)\.downsamples\.2\.(.*)$", r"encoder.down_blocks.\1.downsampler.\2"),
+        (r"^decoder\.upsamples\.(\d+)\.upsamples\.(\d+)\.residual\.0\.(.*)$", r"decoder.up_blocks.\1.resnets.\2.norm1.\3"),
+        (r"^decoder\.upsamples\.(\d+)\.upsamples\.(\d+)\.residual\.2\.(.*)$", r"decoder.up_blocks.\1.resnets.\2.conv1.\3"),
+        (r"^decoder\.upsamples\.(\d+)\.upsamples\.(\d+)\.residual\.3\.(.*)$", r"decoder.up_blocks.\1.resnets.\2.norm2.\3"),
+        (r"^decoder\.upsamples\.(\d+)\.upsamples\.(\d+)\.residual\.6\.(.*)$", r"decoder.up_blocks.\1.resnets.\2.conv2.\3"),
+        (r"^decoder\.upsamples\.(\d+)\.upsamples\.(\d+)\.shortcut\.(.*)$", r"decoder.up_blocks.\1.resnets.\2.conv_shortcut.\3"),
+        (r"^decoder\.upsamples\.(\d+)\.avg_shortcut\.(.*)$", r"decoder.up_blocks.\1.avg_shortcut.\2"),
+        (r"^decoder\.upsamples\.(\d+)\.upsamples\.3\.(.*)$", r"decoder.up_blocks.\1.upsampler.\2"),
+    )
+)
+
+# The Wan 2.1 ``.pth`` keeps the same block contents but lays each stage out flat,
+# and its decoder numbers the upsampling stages and their three residual blocks in
+# one running index (0,1,2 then resample at 3, 4,5,6 then resample at 7, ...).
+# The nested rules above never match that layout and these never match the nested
+# one. Wan 2.1's encoder is a flat ``ModuleList``: each residual block and each
+# resample is its own entry, numbered in the same order as the ``.pth`` counts
+# them, so the index passes through unchanged and there is no ``resnets`` or
+# ``downsampler`` level.
+_WAN21_FLAT_VAE_KEY_REMAP = tuple(
+    (re.compile(pattern), replacement)
+    for pattern, replacement in (
+        (r"^encoder\.downsamples\.(\d+)\.residual\.0\.(.*)$", r"encoder.down_blocks.\1.norm1.\2"),
+        (r"^encoder\.downsamples\.(\d+)\.residual\.2\.(.*)$", r"encoder.down_blocks.\1.conv1.\2"),
+        (r"^encoder\.downsamples\.(\d+)\.residual\.3\.(.*)$", r"encoder.down_blocks.\1.norm2.\2"),
+        (r"^encoder\.downsamples\.(\d+)\.residual\.6\.(.*)$", r"encoder.down_blocks.\1.conv2.\2"),
+        (r"^encoder\.downsamples\.(\d+)\.shortcut\.(.*)$", r"encoder.down_blocks.\1.conv_shortcut.\2"),
+        (r"^encoder\.downsamples\.(\d+)\.resample\.(.*)$", r"encoder.down_blocks.\1.resample.\2"),
+        (r"^encoder\.downsamples\.(\d+)\.time_conv\.(.*)$", r"encoder.down_blocks.\1.time_conv.\2"),
+    )
+)
+
+
+def _remap_wan_vae_key(key):
+    """Translate one native Wan ``.pth`` key to its ``AutoencoderKLWan`` name.
+
+    ``None`` when no rule matches, so the caller can tell an untranslated key
+    from one that legitimately keeps its name.
+    """
+
+    for pattern, replacement in _WAN_VAE_KEY_REMAP:
+        renamed, count = pattern.subn(replacement, key, count=1)
+        if count:
+            return renamed
+    for pattern, replacement in _WAN21_FLAT_VAE_KEY_REMAP:
+        renamed, count = pattern.subn(replacement, key, count=1)
+        if count:
+            return renamed
+    # Wan 2.1 decoder: stages of three residual blocks separated by a resample,
+    # numbered in one sequence.
+    match = re.match(r"^decoder\.upsamples\.(\d+)\.(residual|shortcut|resample|time_conv)\.(.*)$", key)
+    if match:
+        index = int(match.group(1))
+        kind, rest = match.group(2), match.group(3)
+        if index % 4 == 3:
+            stage, slot = index // 4, None
+        else:
+            stage, slot = index // 4, index % 4
+        if kind == "residual":
+            field = {"0": "norm1", "2": "conv1", "3": "norm2", "6": "conv2"}.get(rest.split(".")[0])
+            if field is not None and slot is not None:
+                return f"decoder.up_blocks.{stage}.resnets.{slot}.{field}.{rest.split('.', 1)[1]}"
+        elif kind == "shortcut" and slot is not None:
+            return f"decoder.up_blocks.{stage}.resnets.{slot}.conv_shortcut.{rest}"
+        elif kind == "resample" and slot is None:
+            return f"decoder.up_blocks.{stage}.upsamplers.0.resample.{rest}"
+        elif kind == "time_conv" and slot is None:
+            return f"decoder.up_blocks.{stage}.upsamplers.0.time_conv.{rest}"
+    return None
 
 
 class WanCausalCacheBackend:
@@ -442,9 +560,15 @@ class Wan22DiffusersAdapter(ModelAdapter):
             return Path(str(override["path"])).expanduser()
         root = str(self.config.pretrained_dir or "")
         if not root:
+            # Optional components (transformer_2, the CLIP tower) may simply be
+            # absent: a single-expert model lists every component but only sets
+            # paths for the ones it has. Required components still need a root.
+            required = {comp: req for comp, _, _, req in self._COMPONENT_LOADERS}
+            if not required.get(name, False):
+                return None
             raise ValueError(
                 "model.pretrained_dir is required (a Diffusers-style directory holding "
-                f"{', '.join(name for name, *_ in self._COMPONENT_LOADERS)}/), or set "
+                f"{', '.join(comp for comp, *_ in self._COMPONENT_LOADERS)}/), or set "
                 f"model.components.{name}.path for every component individually"
             )
         return Path(root).expanduser() / name
@@ -461,7 +585,7 @@ class Wan22DiffusersAdapter(ModelAdapter):
         out: dict[str, Any] = {}
         for name in names:
             path = self._component_dir(name)
-            if path.is_dir():
+            if path is not None and path.is_dir():
                 out[name] = path
                 continue
             if required.get(name, False):
@@ -496,7 +620,171 @@ class Wan22DiffusersAdapter(ModelAdapter):
         # no dtype; the weight-bearing modules load directly in the compute dtype.
         if name in ("tokenizer", "image_processor", "scheduler"):
             return loader.from_pretrained(str(path))
+        # A directory already in the loader's own snapshot layout loads as-is. A bare
+        # weight file — the EdenLive layout keeps one file per component next to its
+        # ``config.json`` — needs the single-file path, which converts the original
+        # Wan key names when the file is not already in that layout.
+        weight_file = self._component_weight_file(path, module_name)
+        if weight_file is not None:
+            # The VAE ships as Wan's original ``.pth``. diffusers' own
+            # ``convert_wan_vae_to_diffusers`` mishandles the Wan 2.2 residual
+            # layout, so the VAE is converted here and checked strictly.
+            if name == "vae":
+                return self._load_vae_from_original(loader, weight_file, path, dtype)
+            return loader.from_single_file(str(weight_file), config=str(path), torch_dtype=dtype)
+        # The finetuned DiT stores a patch embedding widened by the proxy control
+        # channels, while its config.json keeps the base channel count. diffusers
+        # rejects that shape mismatch, so the embedding is widened to the file's
+        # shape before the weights are applied. The channel-concat pass that runs
+        # right after swaps it for the RMSNorm wrapper and keeps these weights.
+        if name in ("transformer", "transformer_2"):
+            return self._load_widened_transformer(loader, path, dtype)
         return loader.from_pretrained(str(path), torch_dtype=dtype)
+
+    @staticmethod
+    def _load_widened_transformer(loader, path, dtype):
+        """Load a DiT whose ``patch_embedding`` is wider than ``config.in_channels``.
+
+        The finetuned weights append the proxy control channels to the patch
+        embedding, so the tensor in the file is wider than the base model the
+        config describes. The embedding is rebuilt at the file's width first and
+        the checkpoint is then applied with ``assign=True``, which replaces
+        parameters instead of copying into them and so tolerates the one
+        mismatch. Every other key must match exactly.
+        """
+
+        import os
+
+        import torch
+        from safetensors import safe_open
+
+        weight = os.path.join(str(path), "diffusion_pytorch_model.safetensors")
+        with safe_open(weight, framework="pt") as handle:
+            patch_shape = handle.get_slice("patch_embedding.weight").get_shape()
+            has_condition_norm = "patch_embedding.condition_norm.weight" in handle.keys()
+
+        config = loader.load_config(str(path))
+        with torch.device("meta"):
+            model = loader.from_config(config)
+
+        embedding = model.patch_embedding
+        widened = embedding.__class__(
+            patch_shape[1],
+            embedding.out_channels,
+            kernel_size=embedding.kernel_size,
+            stride=embedding.stride,
+            padding=embedding.padding,
+        )
+        if has_condition_norm:
+            # Present only so its key loads. Marked below so the channel-concat
+            # pass swaps this plain Conv3d for the fp32 RMSNorm wrapper the
+            # forward actually uses, carrying this parameter over.
+            widened.condition_norm = torch.nn.RMSNorm(patch_shape[1] - config["in_channels"])
+        model.patch_embedding = widened
+        model._eden_loaded_widened = True
+
+        state = {}
+        with safe_open(weight, framework="pt") as handle:
+            for key in handle.keys():
+                state[key] = handle.get_tensor(key)
+        incompatible = model.load_state_dict(state, strict=False, assign=True)
+        if incompatible.missing_keys or incompatible.unexpected_keys:
+            raise RuntimeError(
+                f"DiT weights in {weight} do not match the model: "
+                f"{len(incompatible.missing_keys)} missing, "
+                f"{len(incompatible.unexpected_keys)} unexpected"
+            )
+        # ``assign=True`` only replaces parameters present in the file. The rotary
+        # frequency tables are non-persistent buffers, so they stay on the meta
+        # device the model was built on and have to be recomputed for real.
+        rope = model.rope
+        rebuilt = rope.__class__(
+            rope.attention_head_dim, tuple(rope.patch_size), rope.max_seq_len
+        )
+        rope.freqs_cos = rebuilt.freqs_cos
+        rope.freqs_sin = rebuilt.freqs_sin
+        # diffusers' own loader keeps ``_keep_in_fp32_modules`` (time embedder,
+        # norms, scale-shift tables) in fp32 and only casts the rest. Match it.
+        if dtype is not None:
+            kept = set(getattr(loader, "_keep_in_fp32_modules", None) or [])
+            for param_name, param in model.named_parameters():
+                if any(piece in param_name.split(".") for piece in kept):
+                    continue
+                param.data = param.data.to(dtype)
+        return model.eval()
+
+    @staticmethod
+    def _load_vae_from_original(loader, weight_file, config_dir, dtype):
+        """Load an original Wan ``.pth`` VAE into ``AutoencoderKLWan``, strictly.
+
+        Key names are translated with the inverse of the diffusers-to-native
+        remap the realtime tree keeps for the same checkpoint. Every key must
+        land on a parameter of the same shape; anything else is an error rather
+        than a silently dropped weight.
+        """
+
+        import torch
+
+        converted = {}
+        original = torch.load(weight_file, map_location="cpu", weights_only=True, mmap=True)
+        for key, value in original.items():
+            converted[_remap_wan_vae_key(key) or key] = value
+
+        config = loader.load_config(str(config_dir))
+        with torch.device("meta"):
+            model = loader.from_config(config)
+        # The Wan 2.2 TI2V VAE folds each RGB frame into ``patch_size**2``
+        # channels before the encoder and unfolds after the decoder, and its
+        # checkpoint stores those folded convolutions. This diffusers build
+        # folds inside ``_encode``/``_decode`` but builds the convolutions from
+        # the raw channel count, so only the two convolutions are rebuilt folded
+        # here. The config keeps the raw count: the forward patchify reads it.
+        patch_size = model.config.patch_size or 1
+        if patch_size > 1:
+            folded = model.config.in_channels * patch_size**2
+            model.encoder.conv_in = model.encoder.conv_in.__class__(
+                folded, model.encoder.conv_in.weight.shape[0], 3, padding=1
+            )
+            model.decoder.conv_out = model.decoder.conv_out.__class__(
+                model.decoder.conv_out.weight.shape[1], model.config.out_channels * patch_size**2, 3, padding=1
+            )
+        incompatible = model.load_state_dict(converted, strict=False, assign=True)
+        if incompatible.missing_keys or incompatible.unexpected_keys:
+            raise RuntimeError(
+                f"VAE weights in {weight_file} do not match the converted model: "
+                f"{len(incompatible.missing_keys)} missing, "
+                f"{len(incompatible.unexpected_keys)} unexpected"
+            )
+        return model.to(dtype).eval()
+
+    @staticmethod
+    def _component_weight_file(path, library):
+        """Return the lone weight file in a component directory, if it has one.
+
+        ``None`` when the directory is already a snapshot in the layout the loader's
+        library reads, so those keep going through ``from_pretrained``. The two
+        libraries disagree on the name: transformers reads ``model.safetensors``,
+        diffusers reads ``diffusion_pytorch_model.safetensors``.
+        """
+
+        import os
+
+        if not os.path.isdir(path):
+            return None
+        names = set(os.listdir(path))
+        snapshot_name = (
+            "diffusion_pytorch_model.safetensors" if library == "diffusers" else "model.safetensors"
+        )
+        if snapshot_name in names:
+            return None
+        if any(name.endswith(".safetensors.index.json") for name in names):
+            return None
+        weights = sorted(
+            name for name in names if name.endswith((".safetensors", ".pth", ".ckpt", ".bin"))
+        )
+        if len(weights) != 1:
+            return None
+        return os.path.join(str(path), weights[0])
 
     def _assemble_pipeline(
         self,

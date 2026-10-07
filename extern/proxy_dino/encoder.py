@@ -105,7 +105,12 @@ def create_checkpoint_dinov3_encoder(
         projection_dim=projection_dim,
         patchify_factor=patchify_factor,
     )
-    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=True, mmap=True)
+    if checkpoint_path.endswith(".safetensors"):
+        from safetensors.torch import load_file
+
+        checkpoint = load_file(checkpoint_path, device="cpu")
+    else:
+        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=True, mmap=True)
     state = checkpoint["model"] if isinstance(checkpoint, dict) and "model" in checkpoint else checkpoint
     if not isinstance(state, dict):
         raise TypeError("DINO checkpoint must be a state dictionary or contain a 'model' state dictionary")

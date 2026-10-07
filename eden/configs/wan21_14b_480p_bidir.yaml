@@ -19,7 +19,21 @@ model:
   # A directory holding one subdirectory per component, Diffusers-style:
   #   vae/ text_encoder/ tokenizer/ scheduler/ transformer/ image_encoder/ image_processor/
   # No model_index.json is read; each component's loader class is fixed by the adapter.
-  pretrained_dir: /path/to/eden-wan21-14b-480p
+  components:
+    vae:
+      path: /mnt/workspace/models/EdenLive/vae-14b
+    text_encoder:
+      path: /mnt/workspace/models/EdenLive/umt5/text_encoder
+    tokenizer:
+      path: /mnt/workspace/models/EdenLive/umt5/tokenizer
+    scheduler:
+      path: /mnt/workspace/models/EdenLive/scheduler-14b
+    image_encoder:
+      path: /mnt/workspace/models/EdenLive/clip/image_encoder
+    image_processor:
+      path: /mnt/workspace/models/EdenLive/clip/image_processor
+    transformer:
+      path: /mnt/workspace/models/EdenLive/dit-14b-bidir
   # Point any single component somewhere else — this is how the DiT is swapped without
   # restaging the rest of the tree:
   #   components:
@@ -45,8 +59,11 @@ model:
     cfg_unconditional_control: same
     # The newly added control slice of the patch embedding starts at zero so the model is
     # numerically the released I2V model before finetuning.
+    # The finetuned weights ship a trained RMSNorm over the proxy channels
+    # (patch_embedding.condition_norm); without it that parameter is dropped.
+    channel_concat_rmsnorm: true
     channel_concat_zero_init: true
-    checkpoint_path: /path/to/proxy-dino/best.pt
+    checkpoint_path: /mnt/workspace/models/EdenLive/vision-encoder/projection.safetensors
     control_dim: 1024
     enabled: true
     # The frozen patch projection was finetuned at this size; the adapter resamples
@@ -55,7 +72,7 @@ model:
     - 288
     - 512
     local_files_only: true
-    model_path: /path/to/dinov3-vitl16-pretrain-lvd1689m
+    model_path: /mnt/workspace/models/EdenLive/vision-encoder/backbone
     patchify_factor: 2
     # Offline inference decodes RGB source clips; cached target latents are training-only.
     use_cached_latents: false
@@ -149,8 +166,6 @@ inference:
   strategy: diffusion
   outputs:
   - video
-  checkpoint: /path/to/ckpts/14b_480p/bidir
-  checkpoint_source: ema
   output_dir: inference/wan21_14b_480p_bidir
   max_batches: 0
   num_samples: 1

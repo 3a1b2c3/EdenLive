@@ -40,6 +40,7 @@ from einops import rearrange
 from loguru import logger
 from torch import Tensor
 
+from eden.model_root import EDEN_MODEL_ROOT
 from flashdreams.core.checkpoint.load import load_checkpoint
 from flashdreams.infra.compile import compile_module
 from flashdreams.infra.cuda_graph import CUDAGraphWrapper, set_or_copy
@@ -56,10 +57,9 @@ from flashdreams.infra.encoder import (
 
 # Upstream's native single-file checkpoint. Its key names match the
 # ``WanVAE`` module tree one-to-one, so it loads with no key remap and is
-# the production default for the Wan 2.2 TI2V 5B configs below.
-WAN22_TI2V_5B_VAE_PATH = (
-    "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B/resolve/main/Wan2.2_VAE.pth"
-)
+# the production default for the Wan 2.2 TI2V 5B configs below. The local
+# copy ships in the EdenLive weight tree.
+WAN22_TI2V_5B_VAE_PATH = f"{EDEN_MODEL_ROOT}/vae-5b/Wan2.2_VAE.pth"
 
 # The same VAE re-exported in the diffusers ``AutoencoderKLWan`` layout.
 # Loadable via :func:`wan22_ti2v_5b_vae_state_dict_transform`, which
@@ -69,7 +69,7 @@ WAN22_TI2V_5B_VAE_DIFFUSERS_PATH = "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B
 
 AVAILABLE_WAN_VAE_CHECKPOINT_PATHS = {
     "lightvae": "https://huggingface.co/lightx2v/Autoencoders/resolve/main/lightvaew2_1.pth",
-    "vae": "https://huggingface.co/lightx2v/Autoencoders/resolve/main/Wan2.1_VAE.pth",
+    "vae": f"{EDEN_MODEL_ROOT}/vae-14b/Wan2.1_VAE.pth",
 }
 """Checkpoint paths for the Wan VAE encoder."""
 

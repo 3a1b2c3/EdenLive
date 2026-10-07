@@ -64,11 +64,11 @@ class Game14BTransformerConfig(Wan21TransformerConfig):
     )
 
     dcp_checkpoint_path: str | None = None
-    """Training DCP directory (FSDP2 ``get_model_state_dict`` layout).
+    """Published safetensors file, holding the DiT with Diffusers keys.
 
     Loaded after construction with the Diffusers key remap. Distinct from
-    the base ``checkpoint_path``, which only handles safetensors/pt files
-    whose keys already match the network.
+    the base ``checkpoint_path``, which only handles files whose keys
+    already match the network.
     """
 
 
@@ -88,7 +88,7 @@ class Game14BTransformer(Wan21Transformer):
 
     @staticmethod
     def _setup_network(config: Game14BTransformerConfig) -> Game14BDiTNetwork:
-        """Build the network and load the DCP weights before compile.
+        """Build the network and load the weights before compile.
 
         Loading here rather than in ``__init__`` keeps it ahead of
         ``torch.compile`` and the CUDA-graph wrappers the base constructor
@@ -103,9 +103,8 @@ class Game14BTransformer(Wan21Transformer):
             f"expected a Game14BDiTNetwork, got {type(network).__name__}"
         )
         if config.dcp_checkpoint_path is not None:
-            # The heaviest single step of startup: the DCP directory holds the
-            # full training state and only the ``model.*`` tensors are read
-            # out of it, but that is still the whole 14B DiT.
+            # The heaviest single step of startup: the whole 14B DiT off a
+            # network filesystem.
             logger.info(
                 "Loading Game2V 14B DiT weights from {}", config.dcp_checkpoint_path
             )

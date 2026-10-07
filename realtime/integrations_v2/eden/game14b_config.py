@@ -31,16 +31,13 @@ from eden.impl.game14b.encoder import Game14BCtrlEncoderConfig
 from eden.impl.game14b.network import Game14BDiTNetworkConfig
 from eden.impl.game14b.pipeline import Game14BInferencePipelineConfig
 from eden.impl.game14b.transformer import Game14BTransformerConfig
+from eden.model_root import EDEN_MODEL_ROOT
 
-GAME2V_EDEN_WORLD_V2_14B_CHECKPOINT_PATH = (
-    "/root/cache/dit/2026-09-22-14b-ar-tf-full-20e1c566/step_008000"
-)
-"""AR teacher-forced 14B DCP checkpoint, as staged by ``copy_models_cache.sh``.
-
-A torch distributed checkpoint directory (32 shards + ``.metadata``) written
-by FSDP2, so it is read through
-:func:`eden.impl.game14b.checkpoint.load_game14b_dit_state_dict` rather than
-the stock safetensors loader.
+GAME2V_EDEN_WORLD_V2_14B_CHECKPOINT_PATH = f"{EDEN_MODEL_ROOT}/dit-14b/model.safetensors"
+"""AR teacher-forced 14B DiT, published as a single safetensors file with
+Diffusers keys. Read through
+:func:`eden.impl.game14b.checkpoint.load_game14b_dit_state_dict`, which applies
+the shared Diffusers remap plus the CLIP-branch and control-norm keys.
 """
 
 # Latent frames per AR chunk. Combined with the VAE's 4x temporal ratio this

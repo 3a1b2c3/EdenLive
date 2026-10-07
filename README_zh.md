@@ -36,22 +36,34 @@ Eden 从三个输入生成视频：**文本 prompt**、**首帧**，以及一段
 
 ## 安装
 
-需要 Python 3.10-3.12、CUDA，5B 在 720p 下需要一张 40GB 以上显存的 GPU。
+| | 要求 |
+| --- | --- |
+| Python | 3.10 – 3.12（`>=3.10,<3.13`） |
+| PyTorch | >= 2.6，CUDA 版本与驱动匹配 |
+| GPU | 一张 NVIDIA 显卡；5B 在 720p 下需要 40GB 以上显存 |
+| 操作系统 | Linux x86-64 |
+
+PyTorch 必须先单独装：选哪个 wheel 取决于你驱动的 CUDA 版本，交给项目依赖去解析
+会拉到不对的构建。
 
 ```bash
 git clone xxx
 cd eden
 
-# 先安装与驱动匹配的 CUDA 版 PyTorch。
+# 这里用 cu128，按自己的驱动换成对应的 CUDA 构建。
 pip install torch --index-url https://download.pytorch.org/whl/cu128
 
 pip install -e ".[data]"
 ```
 
 `[data]` 会带上 `decord`（视频解码）和 `pandas`/`pyarrow`（读 manifest），
-manifest 驱动的推理路径需要它们。
+manifest 驱动的推理路径需要它们。不装的话只有 prompt 驱动那条路
+（`inference.use_prompt_loader`）能用。
 
-可选：FlashAttention 4，提供最快的 teacher-forcing 注意力。它对版本敏感 ——
+`realtime/` 下的实时流式服务是独立的 uv workspace，要求更高（CUDA 13.x、
+PyTorch 2.11、80GB 显存）—— 见 [`realtime/README.md`](realtime/README.md)。
+
+可选：FlashAttention 4，提供最快的注意力算子。它对版本敏感 ——
 `flash_attn` 与 `cutlass` 不匹配时报
 `AttributeError: module 'cutlass.cute.core' has no attribute 'ThrMma'`。
 此时用 `model.teacher_forcing_attention_backend=triton` 回退。
@@ -92,7 +104,6 @@ torchrun --nproc_per_node=2 -m eden.scripts.infer \
   data.dataset.params.path=examples/samples/manifest.csv \
   data.dataset.params.root=examples/samples \
   runtime.sequence_parallel.size=2 \
-  inference.checkpoint=/path/to/ckpts/14b_480p/bidir
 ```
 
 **Few-step** —— 分块自回归，每块 4 步，准实时：
@@ -103,14 +114,43 @@ torchrun --nproc_per_node=2 -m eden.scripts.infer \
   data.dataset.params.path=examples/samples/manifest.csv \
   data.dataset.params.root=examples/samples \
   runtime.sequence_parallel.size=2 \
-  inference.checkpoint=/path/to/ckpts/14b_480p/few_step
 ```
 
-**流式服务** —— 交互式实时推理：
+**流式服务** —— 交互式实时推理。proxy 不再来自录好的文件，而是浏览器里实时跑的游戏，
+生成出来的帧通过 WebRTC 边生成边推给页面。这条路径在 [`realtime/`](realtime/) 下：
 
 ```bash
-# TODO
+cd realtime
+uv sync --package flashdreams-eden --extra runners
+
+# 1. TURN 中继。媒体流需要 UDP 通路，而打开页面本身不需要，
+#    所以跨网段的浏览器没有它就收不到视频。
+bash turn_server.sh
+
+# 2. FLUX worker。渲染每局开始时那张写实首帧。
+bash workbench_flux.sh
+
+# 3. 模型服务。权重要放在 HF_HOME 下，脚本会设 HF_HUB_OFFLINE=1。
+NPROC=2 bash launch.sh          # 一张卡一个 rank
 ```
+
+然后打开 `http://<host>:8089`。页面是一个工作台：先进首页，列出所有游戏，
+**没选游戏之前不会开始渲染**。选中一个游戏就开始加载并推流；一局结束后可以
+重开一局，或者回首页换一个。`NPROC` 决定 `torchrun` 起多少个 rank（一张卡一个），
+按你想用的卡数填。
+
+还有第四个服务 `workbench_bridge.sh`，只在要用一段文字描述**生成新游戏**时才需要，
+它跑在装了 `claude` CLI 的机器上。只玩
+[`realtime/games/registry.json`](realtime/games/registry.json) 里已有的游戏用不到它。
+
+| 模型 | 应用 slug |
+| --- | --- |
+| 5B | `game2v-eden-world-v2-5b-taehv` |
+| 14B | `game2v-eden-world-v2-14b-taehv` |
+
+两者都用 TAEHV 解码器而不是 Wan VAE，牺牲一些画质换延迟。`realtime/` 是独立的 uv
+workspace，有自己的 `eden` 包，和仓库根目录的 `eden/` 无关 —— 服务拓扑、不带工作台的
+老启动脚本、以及开发指南见 [`realtime/README.md`](realtime/README.md)。
 
 生成结果与所用条件一起写到 `<output_dir>/save/inference/<step>/`：生成的 `.mp4`、
 proxy 控制视频、首帧、prompt —— 足以复核模型实际收到了什么。
@@ -140,59 +180,7 @@ python -m eden.scripts.infer --config CONFIG.yaml \
 > 后者会以 *"Proxy-DINO source timeline is shorter than latent chunk"* 中止，
 > 而不是静默地重复使用最后一帧 proxy。
 
-## 配置
-
-`eden/configs/` 下每个配置都是一个自包含的 YAML 文件（无 include、无分组组合），
-配合命令行 dotlist 覆盖。四个块：`model:` 指定 adapter 和权重目录，`runtime:` 指定并行与
-缓存，`data:` 指定 manifest 和抽帧方式，`inference:` 指定采样本身：
-
-```yaml
-model:
-  adapter: wan22_diffusers
-  # Diffusers 风格的组件目录根：vae/ text_encoder/ tokenizer/ scheduler/ transformer/
-  pretrained_dir: /path/to/eden-wan22-5b-720p
-  pipeline_class: WanPipeline
-  torch_dtype: bfloat16
-
-runtime:
-  sequence_parallel: {enabled: true, size: 1, axis: temporal, layout: balanced_blocks}
-
-data:
-  dataset:
-    name: manifest
-    params:
-      path: /path/to/proxy_manifest.csv
-      root: /path/to/proxy_dataset
-
-inference:
-  strategy: chunk_causal      # 或 diffusion
-  checkpoint: /path/to/ckpts/step_013000
-  height: 704
-  width: 1280
-  num_frames: 117
-  chunk_size: 3               # 仅 chunk_causal
-  num_inference_steps: 30
-  guidance_scale: 3.0
-  seed: 42
-```
-
-值得了解的键：
-
-| 键 | 含义 |
-| --- | --- |
-| `inference.strategy` | `diffusion`（双向）或 `chunk_causal`（自回归） |
-| `inference.checkpoint` | 分片 DCP 目录，或单个 `.pt` 文件 |
-| `inference.checkpoint_source` | `model`（默认）或 `ema`（载入保存的 EMA 权重） |
-| `inference.use_prompt_loader` | 跳过数据集，直接用 `inference.prompt` 生成 |
-| `inference.guidance_scale` | 文本 CFG 强度 |
-| `inference.guidance_scale_proxy` | proxy 控制流的独立 CFG 强度 |
-| `inference.chunk_size` | 每个自回归块的 latent 帧数 |
-| `runtime.sequence_parallel.size` | 把一个样本的序列切到 N 张卡 |
-| `runtime.kv_cache.context.max_latent_frames` | 长 rollout 的滑动 KV 窗口 |
-| `model.teacher_forcing_attention_backend` | `triton` 或 `flash4` |
-
-任何键都可以按位覆盖：
-`inference.num_frames=241 runtime.kv_cache.context.max_latent_frames=21`。
+## 配置检查
 
 要确认随仓库发布的每个配置仍然能组合成一次可派发的运行 —— 能加载、指向已注册的
 策略与适配器、请求的输出是适配器能产出的 —— 无需权重也无需 GPU：
@@ -229,6 +217,11 @@ python -m eden.scripts.check
 🤗 [Diffusers](https://github.com/huggingface/diffusers) 和
 [DINOv3](https://github.com/facebookresearch/dinov3) 构建。
 
+`realtime/` 下的实时流式服务基于
+[NVIDIA FlashDreams](https://github.com/NVIDIA/flashdreams)。
+
 ## 许可
 
 Apache 2.0 —— 见 [LICENSE](LICENSE)。模型权重与上游 Wan checkpoint 各自适用其自身许可。
+`realtime/` 同为 Apache 2.0，保留自己的 [LICENSE](realtime/LICENSE) 与
+[NOTICE](realtime/NOTICE)。

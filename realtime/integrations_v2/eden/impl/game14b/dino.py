@@ -34,16 +34,16 @@ import torch.nn.functional as F
 from loguru import logger
 from torch import Tensor, nn
 
+from eden.model_root import EDEN_MODEL_ROOT
 from flashdreams.infra.config import InstantiateConfig
 
 # ImageNet statistics, as used by the reference encoder.
 DINOV3_IMAGE_MEAN = (0.485, 0.456, 0.406)
 DINOV3_IMAGE_STD = (0.229, 0.224, 0.225)
 
-DEFAULT_DINOV3_REPO = "facebook/dinov3-vitl16-pretrain-lvd1689m"
-DEFAULT_DINOV3_PROJECTION_PATH = (
-    "vision-encoders/dinov3l16-screened-completed-v2-p2-d1024-lr5e5/best.pt"
-)
+DEFAULT_DINOV3_REPO = f"{EDEN_MODEL_ROOT}/vision-encoder/backbone"
+"""Local snapshot of ``facebook/dinov3-vitl16-pretrain-lvd1689m``."""
+DEFAULT_DINOV3_PROJECTION_PATH = f"{EDEN_MODEL_ROOT}/vision-encoder/projection.safetensors"
 
 
 def _resolve_projection_path(path: str) -> str:
@@ -186,10 +186,12 @@ class ProxyDinoEncoderConfig(InstantiateConfig):
     )
 
     backbone_repo: str = DEFAULT_DINOV3_REPO
-    """HF repo id of the DINOv3 backbone (resolved offline from ``HF_HOME``)."""
+    """Local directory holding the DINOv3 backbone (``model.safetensors`` +
+    ``config.json``), read by ``AutoModel.from_pretrained``."""
 
     projection_path: str = DEFAULT_DINOV3_PROJECTION_PATH
-    """Finetuned projection checkpoint; relative paths resolve under ``HF_HOME``."""
+    """Finetuned projection checkpoint. A ``.safetensors`` file is read flat;
+    relative paths still resolve under ``HF_HOME``."""
 
     projection_dim: int = 1024
     patchify_factor: int = 2
@@ -224,12 +226,20 @@ class ProxyDinoControlEncoder:
             projection_dim=config.projection_dim,
             patchify_factor=config.patchify_factor,
         )
-        checkpoint = torch.load(
-            _resolve_projection_path(config.projection_path),
-            map_location="cpu",
-            weights_only=True,
-            mmap=True,
-        )
+        projection_path = _resolve_projection_path(config.projection_path)
+        if projection_path.endswith(".safetensors"):
+            from safetensors.torch import load_file
+
+            # The published file is flat: every key already carries its
+            # ``model.module.`` prefix, so there is no "model" dict to unwrap.
+            checkpoint = load_file(projection_path, device="cpu")
+        else:
+            checkpoint = torch.load(
+                projection_path,
+                map_location="cpu",
+                weights_only=True,
+                mmap=True,
+            )
         state = (
             checkpoint["model"]
             if isinstance(checkpoint, dict) and "model" in checkpoint

@@ -25,6 +25,7 @@ import torch
 import tyro
 from torch import Tensor
 
+from eden.model_root import EDEN_MODEL_ROOT
 from flashdreams.infra.decoder import DecoderConfig, StreamingVideoDecoder
 from flashdreams.infra.encoder import EncoderConfig, StreamingVideoEncoder
 from flashdreams.recipes.taehv.checkpoint import (
@@ -37,7 +38,7 @@ from flashdreams.recipes.taehv.impl import TAEHV, TAEHVCache, TAEHVEncoderCache
 
 AVAILABLE_TAEHV_CHECKPOINT_PATHS = {
     "lighttae": "https://huggingface.co/lightx2v/Autoencoders/resolve/main/lighttaew2_1.pth",
-    "lighttae_wan22": "https://huggingface.co/lightx2v/Autoencoders/resolve/main/lighttaew2_2.pth",
+    "lighttae_wan22": f"{EDEN_MODEL_ROOT}/decoder-5b/lighttaew2_2.pth",
     "hy1_5": "https://huggingface.co/Overworld-Models/taehv1_5/resolve/main/taehv1_5.pth",
 }
 """Checkpoint paths for the TAEHV decoder."""
