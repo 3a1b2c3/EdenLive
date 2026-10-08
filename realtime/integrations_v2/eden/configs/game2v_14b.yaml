@@ -1,0 +1,77 @@
+# Game2V realtime pipeline — Wan 2.1 I2V-14B, proxy-DINO conditioned, AR.
+#
+# Loaded by eden.game14b_config into Game14BInferencePipelineConfig. The app
+# entry point "game2v-eden-world-v2-14b-taehv" serves the `taehv` variant below;
+# the base pipeline is the same model with the full Wan VAE decoder.
+#
+# Chunk size comes from the recipe's AR teacher-forcing config; the sampling
+# schedule and the attention window are copied from LingBot-World v2 14B
+# causal-fast. The frame is 480x832, fixed by the app defaults rather than here.
+#
+name: game2v-eden-world-v2-14b
+
+# Directory holding the published weight tree (dit-14b/, vae-14b/, umt5/,
+# clip/, vision-encoder/, ...). Every relative path under `components`
+# resolves against it; an absolute path or a URL there is used as written.
+#
+# `null` takes the directory from the EDEN_MODEL_ROOT environment variable,
+# which is what launch.sh sets. Point this at a local tree to pin it here
+# instead.
+model_root: null
+
+# Latent frames per AR chunk. At the VAE's 4x temporal ratio this is 9 decoded
+# frames on the first chunk and 12 after, which is what the renderer paces its
+# capture against.
+len_t: 3
+# Sliding window copied from LingBot-World v2 14B causal-fast
+# (`--local_attn_size 18`). No sink: the window simply slides.
+window_size_t: 18
+sink_size_t: 0
+
+# CFG off: one conditional KV stream, the proxy control encoded once per chunk.
+guidance_scale: 1.0
+seed: 42
+
+# Channel-concat I2V: a 4-channel mask plus the first-frame latent ride next to
+# the noisy latent, which is the Wan 2.1 conditioning path rather than the 5B's
+# clean-latent stamp.
+stamp_image_latent: false
+concat_image_mask_to_latent: true
+compile_network: true
+
+# LingBot-World v2 14B causal-fast distilled schedule: timesteps_index
+# [0, 250, 500, 750] warped through the shift-10 sigma table, stored as int64
+# the way upstream Wan keeps scheduler.timesteps.
+scheduler:
+  num_inference_steps: 4
+  denoising_timesteps: [1000, 750, 500, 250]
+  warp_denoising_step: true
+  shift: 10.0
+  sigma_max: 0.999
+  sigma_min: 0.0
+  extra_one_step: true
+  num_train_timesteps: 1000
+  timestep_dtype: int64
+
+components:
+  # AR teacher-forced 14B DiT, single safetensors, Diffusers keys.
+  transformer: dit-14b/model.safetensors
+  # Wan 2.1 VAE, shared by the encoder and the full decoder.
+  vae: vae-14b/Wan2.1_VAE.pth
+  # UMT5 text encoder; the directory holds text_encoder/ and tokenizer/.
+  text_encoder: umt5
+  # Wan 2.1 I2V CLIP vision tower; the directory holds image_encoder/ and
+  # image_processor/ side by side.
+  image_encoder: clip
+  # DINOv3 backbone (model.safetensors + config.json) and the finetuned
+  # projection that maps its patch tokens onto the DiT's control channels.
+  vision_encoder: vision-encoder/backbone
+  vision_projection: vision-encoder/projection.safetensors
+
+# Same model and schedule with the Wan VAE decoder swapped for the LightTAE tiny
+# decoder. Its ratios (temporal 4, spatial 8) and 16 latent channels match the
+# Wan 2.1 VAE, so frame counts and capture pacing do not change. The weights are
+# fetched by URL rather than staged in the local tree.
+taehv:
+  name: game2v-eden-world-v2-14b-taehv
+  decoder: https://huggingface.co/lightx2v/Autoencoders/resolve/main/lighttaew2_1.pth

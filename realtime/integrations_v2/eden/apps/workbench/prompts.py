@@ -9,12 +9,12 @@ from functools import cache
 from pathlib import Path
 from types import ModuleType
 
-CAPTION_SCRIPT = Path(
-    os.environ.get(
-        "EDEN_FLUX_CAPTION_SCRIPT",
-        "/mnt/pub_share/wangpeng/repos/ft-flux/skills/run-flux-coarse-to-fine/scripts/refine_prompts_comet.py",
-    )
-)
+CAPTION_SCRIPT = Path(os.environ.get("EDEN_FLUX_CAPTION_SCRIPT", ""))
+"""The coarse-to-fine skill's caption script.
+
+Set ``EDEN_FLUX_CAPTION_SCRIPT`` to it. There is no default: the script lives
+in the FLUX fine-tuning repo, which is not vendored here.
+"""
 
 
 @cache
@@ -24,6 +24,11 @@ def caption_rules() -> ModuleType:
     Its ``IMAGE_INSTRUCTIONS`` is what the LoRA's training captions were
     written to, so the caption Claude writes follows the same text verbatim.
     """
+    if not str(CAPTION_SCRIPT):
+        raise RuntimeError(
+            "set EDEN_FLUX_CAPTION_SCRIPT to the coarse-to-fine skill's "
+            "refine_prompts_comet.py"
+        )
     spec = importlib.util.spec_from_file_location("flux_c2f_captions", CAPTION_SCRIPT)
     if spec is None or spec.loader is None:
         raise ImportError(f"Cannot import {CAPTION_SCRIPT}")

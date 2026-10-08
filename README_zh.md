@@ -60,8 +60,8 @@ pip install -e ".[data]"
 manifest 驱动的推理路径需要它们。不装的话只有 prompt 驱动那条路
 （`inference.use_prompt_loader`）能用。
 
-`realtime/` 下的实时流式服务是独立的 uv workspace，要求更高（CUDA 13.x、
-PyTorch 2.11、80GB 显存）—— 见 [`realtime/README.md`](realtime/README.md)。
+`realtime/` 下的实时流式服务用 `wm` conda 环境运行（80GB 显存）—— 见
+[`realtime/README.md`](realtime/README.md)。
 
 可选：FlashAttention 4，提供最快的注意力算子。它对版本敏感 ——
 `flash_attn` 与 `cutlass` 不匹配时报
@@ -121,23 +121,33 @@ torchrun --nproc_per_node=2 -m eden.scripts.infer \
 
 ```bash
 cd realtime
-uv sync --package flashdreams-eden --extra runners
 
-# 1. TURN 中继。媒体流需要 UDP 通路，而打开页面本身不需要，
-#    所以跨网段的浏览器没有它就收不到视频。
+# 权重位置、地址、端口、卡数这些都写在 deploy.conf 里。改一次就行，
+# 下面的脚本都从它读，不用在命令行传参。
+
+# 1. TURN 中继，在 GPU 机器上。媒体流需要 UDP 通路，而打开页面本身不需要，
+#    所以跨网段的浏览器没有它就收不到视频。先在 deploy.conf 里设好
+#    TURN_SECRET，再把这条命令打印出来的地址填回 TURN_HOST。
+#    TURN_HOST 留空就不走中继，只在浏览器和服务同网段时可行。
 bash turn_server.sh
 
-# 2. FLUX worker。渲染每局开始时那张写实首帧。
-bash workbench_flux.sh
+# 2. 工作台 bridge，在装了 `claude` CLI 的机器上。用一段文字描述生成新游戏
+#    靠它。只玩 games/registry.json 里已有的游戏可以不启。`claude` 要在 PATH 上，
+#    并且已经登录（`claude auth login`）、过了首次信任确认 —— bridge 以无人值守
+#    方式跑它（`--dangerously-skip-permissions`），自己不带任何 key。
+#    可执行文件不叫 `claude` 时设 EDEN_WORKBENCH_CLAUDE。
+bash workbench_bridge.sh
 
-# 3. 模型服务。权重要放在 HF_HOME 下，脚本会设 HF_HUB_OFFLINE=1。
-NPROC=2 bash launch.sh          # 一张卡一个 rank
+# 3. 模型服务，在 GPU 机器上。页面先开在工作台，选了游戏才开始渲染。
+#    launch.sh 会自己拉起 FLUX worker（渲染每局开始时那张写实首帧），
+#    权重从 MODEL_ROOT 加载，不用准备 HF_HOME。先激活你自己的 Python 环境。
+bash launch.sh
 ```
 
-然后打开 `http://<host>:8089`。页面是一个工作台：先进首页，列出所有游戏，
-**没选游戏之前不会开始渲染**。选中一个游戏就开始加载并推流；一局结束后可以
-重开一局，或者回首页换一个。`NPROC` 决定 `torchrun` 起多少个 rank（一张卡一个），
-按你想用的卡数填。
+然后打开 `http://<host>:8089`（端口是 deploy.conf 里的 `APP_PORT`）。页面是一个
+工作台：先进首页，列出所有游戏，**没选游戏之前不会开始渲染**。选中一个游戏就
+开始加载并推流；一局结束后可以重开一局，或者回首页换一个。`NPROC` 决定
+`torchrun` 起多少个 rank（一张卡一个），按你想用的卡数填。
 
 还有第四个服务 `workbench_bridge.sh`，只在要用一段文字描述**生成新游戏**时才需要，
 它跑在装了 `claude` CLI 的机器上。只玩
@@ -148,8 +158,8 @@ NPROC=2 bash launch.sh          # 一张卡一个 rank
 | 5B | `game2v-eden-world-v2-5b-taehv` |
 | 14B | `game2v-eden-world-v2-14b-taehv` |
 
-两者都用 TAEHV 解码器而不是 Wan VAE，牺牲一些画质换延迟。`realtime/` 是独立的 uv
-workspace，有自己的 `eden` 包，和仓库根目录的 `eden/` 无关 —— 服务拓扑、不带工作台的
+两者都用 TAEHV 解码器而不是 Wan VAE，牺牲一些画质换延迟。`realtime/` 有自己的 `eden`
+包，和仓库根目录的 `eden/` 无关 —— 服务拓扑、不带工作台的
 老启动脚本、以及开发指南见 [`realtime/README.md`](realtime/README.md)。
 
 生成结果与所用条件一起写到 `<output_dir>/save/inference/<step>/`：生成的 `.mp4`、

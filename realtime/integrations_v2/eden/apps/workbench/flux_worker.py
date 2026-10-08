@@ -26,12 +26,12 @@ from loguru import logger
 
 from eden.model_root import EDEN_MODEL_ROOT
 
-SKILL_SCRIPT = Path(
-    os.environ.get(
-        "EDEN_FLUX_C2F_SCRIPT",
-        "/mnt/pub_share/wangpeng/repos/ft-flux/skills/run-flux-coarse-to-fine/scripts/infer_coarse_to_fine.py",
-    )
-)
+SKILL_SCRIPT = Path(os.environ.get("EDEN_FLUX_C2F_SCRIPT", ""))
+"""The coarse-to-fine skill's inference script.
+
+Set ``EDEN_FLUX_C2F_SCRIPT`` to it. There is no default: the script lives in
+the FLUX fine-tuning repo, which is not vendored here.
+"""
 WIDTH, HEIGHT = 1024, 576
 """The LoRA's training resolution (the skill's defaults)."""
 STEPS, GUIDANCE = 28, 4.0
@@ -39,6 +39,11 @@ STEPS, GUIDANCE = 28, 4.0
 
 def load_skill_module(path: Path = SKILL_SCRIPT) -> ModuleType:
     """Import the skill's inference script for its constants, without running it."""
+    if not str(path):
+        raise RuntimeError(
+            "set EDEN_FLUX_C2F_SCRIPT to the coarse-to-fine skill's "
+            "infer_coarse_to_fine.py"
+        )
     spec = importlib.util.spec_from_file_location("flux_c2f_infer", path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Cannot import {path}")

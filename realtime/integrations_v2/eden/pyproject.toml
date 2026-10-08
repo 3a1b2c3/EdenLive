@@ -52,6 +52,9 @@ dev = [
 "game2v-eden-world-v2-14b-taehv" = "eden.apps.game2v.adapter:create_app_v2_14b_taehv"
 "game2v-eden-world-v2-5b-taehv" = "eden.apps.game2v.adapter:create_app_v2_5b_taehv"
 
+[tool.setuptools.package-data]
+eden = ["configs/*.yaml"]
+
 [tool.setuptools]
 packages = [
     "eden",

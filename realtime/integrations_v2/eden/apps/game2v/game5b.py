@@ -47,7 +47,8 @@ def make_game5b_control_stream(
     2.2 TI2V-5B VAE's 16x spatial ratio, so the features land on the DiT's grid
     without a second resample at consume time.
     """
-    from eden.game5b_config import GAME2V_5B_LEN_T
+    from eden.game5b_config import GAME2V_5B_LEN_T, _SPEC
+    from eden.pipeline_yaml import component_path
 
     pixel_width = config.model_video_width or session_desc.video_width
     pixel_height = config.model_video_height or session_desc.video_height
@@ -61,6 +62,8 @@ def make_game5b_control_stream(
         )
     return ProxyDinoControlStream(
         ProxyDinoEncoderConfig(
+            backbone_repo=component_path(_SPEC, "vision_encoder"),
+            projection_path=component_path(_SPEC, "vision_projection"),
             device=str(config.device),
             compile_encoder=getattr(config, "compile_control_encoder", True),
         ),

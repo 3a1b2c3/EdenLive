@@ -38,7 +38,6 @@ import torch
 from loguru import logger
 from torch import Tensor
 
-from eden.model_root import EDEN_MODEL_ROOT
 from flashdreams.infra.encoder.image.clip import CLIPImageEncoderConfig
 from flashdreams.infra.encoder.text.umt5 import UMT5TextEncoderConfig
 from flashdreams.recipes.wan.pipeline import (
@@ -64,25 +63,14 @@ class Game14BInferencePipelineConfig(WanInferencePipelineConfig):
     )
     """Condition encoder: first-frame latent slices + proxy-DINO control."""
 
-    image_encoder: CLIPImageEncoderConfig | None = field(
-        default_factory=lambda: CLIPImageEncoderConfig(
-            model_id_or_local_path=f"{EDEN_MODEL_ROOT}/clip"
-        )
-    )
-    """Wan 2.1 I2V ships a CLIP vision tower; the recipe keeps it enabled.
+    image_encoder: CLIPImageEncoderConfig | None = None
+    """Wan 2.1 I2V CLIP vision tower. The directory must hold ``image_encoder/``
+    and ``image_processor/`` side by side. Set by the pipeline YAML; there is no
+    built-in default path."""
 
-    Read from the published tree's ``clip/`` directory (``image_encoder/`` and
-    ``image_processor/`` side by side) rather than the Wan 2.1 I2V repo the
-    base default points at.
-    """
-
-    text_encoder: UMT5TextEncoderConfig | None = field(
-        default_factory=lambda: UMT5TextEncoderConfig(
-            model_id_or_local_path=f"{EDEN_MODEL_ROOT}/umt5"
-        )
-    )
-    """The same UMT5 the 5B pipeline uses. The base default points at the
-    Wan 2.1 1.3B repo, which is not part of the published weight tree."""
+    text_encoder: UMT5TextEncoderConfig | None = None
+    """UMT5 text encoder, laid out as ``text_encoder/`` and ``tokenizer/`` side
+    by side. Set by the pipeline YAML; there is no built-in default path."""
 
     rollout_latent_frames: int | None = None
     """Latent frames the one-shot first-frame condition clip covers.

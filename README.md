@@ -62,9 +62,8 @@ pip install -e ".[data]"
 the manifest-driven inference path needs. Without it, only the prompt-driven path
 (`inference.use_prompt_loader`) works.
 
-The real-time streaming service under `realtime/` is a separate uv workspace with
-heavier requirements of its own (CUDA 13.x, PyTorch 2.11, 80 GB VRAM) — see
-[`realtime/README.md`](realtime/README.md).
+The real-time streaming service under `realtime/` runs from the `wm` conda env
+(80 GB VRAM) — see [`realtime/README.md`](realtime/README.md).
 
 Optional: FlashAttention 4 for the fastest attention kernel. It is version
 sensitive — a `flash_attn`/`cutlass` mismatch surfaces as
@@ -182,24 +181,37 @@ they are generated. This path lives in [`realtime/`](realtime/):
 
 ```bash
 cd realtime
-uv sync --package flashdreams-eden --extra runners
 
-# 1. TURN relay. Media needs a UDP path the page load does not, so a browser on
-#    another subnet cannot receive video without it.
+# Settings — weight tree, addresses, ports, GPU count — live in deploy.conf.
+# Edit it once; the scripts read it and take no arguments of their own.
+
+# 1. TURN relay, on the GPU host. Media needs a UDP path the page load does
+#    not, so a browser on another subnet cannot receive video without it. Set
+#    TURN_SECRET in deploy.conf first, then TURN_HOST to the address this
+#    prints. Leave TURN_HOST empty to skip the relay, which only works when
+#    the browser shares the server's subnet.
 bash turn_server.sh
 
-# 2. FLUX worker. Renders the photoreal first frame each session starts from.
-bash workbench_flux.sh
+# 2. Workbench bridge, on the machine that has the `claude` CLI. This is what
+#    makes a new game from a text description. Skip it to only play the games
+#    already in games/registry.json. `claude` must be on PATH, already logged in
+#    (`claude auth login`) and past the first-run trust prompt — the bridge runs
+#    it unattended with `--dangerously-skip-permissions` and has no key of its
+#    own. Set EDEN_WORKBENCH_CLAUDE if the binary is not named `claude`.
+bash workbench_bridge.sh
 
-# 3. The model app. HF_HOME must hold the weights; the script sets HF_HUB_OFFLINE=1.
-NPROC=2 bash launch.sh          # one rank per GPU
+# 3. The model app, on the GPU host. The page opens on the workbench and
+#    renders nothing until a game is picked. launch.sh starts the FLUX worker
+#    itself (the photoreal first frame) and loads weights from MODEL_ROOT, so
+#    no HF_HOME setup is needed. Activate your Python environment first.
+bash launch.sh
 ```
 
-Open `http://<host>:8089`. The page is a workbench: it starts on a home screen
-listing the games, and nothing renders until you pick one. Choosing a game loads it
-and begins streaming; when a round ends you can replay it or go back and switch.
-`NPROC` sets how many ranks `torchrun` starts — one per GPU, so set it to the number
-you want to use.
+Open `http://<host>:8089` (`APP_PORT` in `deploy.conf`). The page is a workbench: it
+starts on a home screen listing the games, and nothing renders until you pick one.
+Choosing a game loads it and begins streaming; when a round ends you can replay it or
+go back and switch. `NPROC` sets how many ranks `torchrun` starts — one per GPU, so
+set it to the number you want to use.
 
 A fourth service, `workbench_bridge.sh`, is only needed to *generate* new games from
 a text description; it runs where the `claude` CLI is installed. Playing the games
@@ -212,7 +224,7 @@ need it.
 | 14B | `game2v-eden-world-v2-14b-taehv` |
 
 Both decode with the TAEHV decoder rather than the Wan VAE, trading some fidelity for
-latency. `realtime/` is a separate uv workspace with its own `eden` package, unrelated to
+latency. `realtime/` carries its own `eden` package, unrelated to
 the `eden/` package at the repo root — see [`realtime/README.md`](realtime/README.md) for
 the service topology, the older non-workbench launcher, and the developer guides.
 

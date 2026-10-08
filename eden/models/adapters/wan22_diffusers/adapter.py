@@ -544,6 +544,26 @@ class Wan22DiffusersAdapter(ModelAdapter):
 
     _PIPELINE_CLASSES = ("WanPipeline", "WanImageToVideoPipeline")
 
+    def _under_pretrained_dir(self, path: str) -> str:
+        """Resolve one configured path against ``model.pretrained_dir``.
+
+        Absolute paths and URLs are used as written, so a config can point a
+        single file outside the tree; everything else is read relative to the
+        root, which keeps machine-specific prefixes out of the config.
+        """
+
+        from pathlib import Path
+
+        if not path or path.startswith(("http://", "https://")):
+            return path
+        expanded = Path(path).expanduser()
+        if expanded.is_absolute():
+            return str(expanded)
+        root = str(self.config.pretrained_dir or "")
+        if not root:
+            return str(expanded)
+        return str(Path(root).expanduser() / expanded)
+
     def _component_dir(self, name: str):
         """Resolve one component's directory.
 
@@ -557,7 +577,9 @@ class Wan22DiffusersAdapter(ModelAdapter):
         if isinstance(override, str):
             override = {"path": override}
         if isinstance(override, dict) and override.get("path"):
-            return Path(str(override["path"])).expanduser()
+            # A relative override is read under the root, so a config can name
+            # `dit-14b` rather than repeating the whole tree prefix.
+            return Path(self._under_pretrained_dir(str(override["path"])))
         root = str(self.config.pretrained_dir or "")
         if not root:
             # Optional components (transformer_2, the CLIP tower) may simply be
@@ -1784,8 +1806,8 @@ class Wan22DiffusersAdapter(ModelAdapter):
 
     def _load_proxy_dino(self, *, device, dtype):
         cfg = self.config.proxy_dino
-        model_path = str(cfg.get("model_path", ""))
-        checkpoint_path = str(cfg.get("checkpoint_path", ""))
+        model_path = self._under_pretrained_dir(str(cfg.get("model_path", "")))
+        checkpoint_path = self._under_pretrained_dir(str(cfg.get("checkpoint_path", "")))
         if not model_path or not checkpoint_path:
             raise ValueError(
                 "model.proxy_dino.model_path and model.proxy_dino.checkpoint_path are required when enabled"

@@ -147,6 +147,21 @@ def _turn_host() -> str | None:
     return os.environ.get(_TURN_HOST_ENV) or None
 
 
+def _turn_credential() -> str:
+    """Return the configured TURN credential.
+
+    No default: a shared fallback secret would be published with the source and
+    would silently authenticate against anyone's relay.
+    """
+    credential = os.environ.get(_TURN_CREDENTIAL_ENV)
+    if not credential:
+        raise RuntimeError(
+            f"{_TURN_CREDENTIAL_ENV} is unset but {_TURN_HOST_ENV} names a TURN "
+            "relay; set the relay's credential, or unset the host to disable TURN."
+        )
+    return credential
+
+
 def _server_ice_servers() -> list[RTCIceServer] | None:
     """Return the TURN relay the server allocates over the VPC, if configured."""
     host = _turn_host()
@@ -157,7 +172,7 @@ def _server_ice_servers() -> list[RTCIceServer] | None:
         RTCIceServer(
             f"turn:{host}:{port}",
             username=os.environ.get(_TURN_USERNAME_ENV, "flashdreams"),
-            credential=os.environ.get(_TURN_CREDENTIAL_ENV, "turnsecret"),
+            credential=_turn_credential(),
         )
     ]
 
@@ -172,7 +187,7 @@ def _browser_ice_servers() -> list[dict[str, str]]:
         {
             "urls": f"turn:{host}:{port}?transport=tcp",
             "username": os.environ.get(_TURN_USERNAME_ENV, "flashdreams"),
-            "credential": os.environ.get(_TURN_CREDENTIAL_ENV, "turnsecret"),
+            "credential": _turn_credential(),
         }
     ]
 

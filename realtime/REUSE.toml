@@ -40,7 +40,12 @@ path = [
     "pyproject.toml",
     "uv.lock",
     "start.sh",
-    "copy_models_cache.sh",
+    "launch.sh",
+    "turn_server.sh",
+    "workbench_bridge.sh",
+    "workbench_flux.sh",
+    "_common.sh",
+    "deploy.conf",
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved."

@@ -69,7 +69,8 @@ class TeahvVAEDecoderConfig(DecoderConfig):
     )
 
     checkpoint_path: str = AVAILABLE_TAEHV_CHECKPOINT_PATHS["lighttae"]
-    """Path to a pretrained TAEHV checkpoint. Defaults to the ``lighttae`` weights."""
+    """Path to a pretrained TAEHV checkpoint. Defaults to the ``lighttae``
+    weights; the Game2V pipelines override it from their YAML."""
 
     state_dict_transform: StateDictTransform | None = lighttae_state_dict_transform
     """Pre-load state-dict remap. Defaults to
@@ -255,7 +256,8 @@ class TeahvVAEWan22DecoderConfig(TeahvVAEDecoderConfig):
     )
 
     checkpoint_path: str = AVAILABLE_TAEHV_CHECKPOINT_PATHS["lighttae_wan22"]
-    """Path to the ``lighttaew2_2`` weights."""
+    """Path to the ``lighttaew2_2`` weights; the Game2V 5B pipeline overrides it
+    from its YAML."""
 
 
 class TeahvVAEWan22Decoder(TeahvVAEDecoder):

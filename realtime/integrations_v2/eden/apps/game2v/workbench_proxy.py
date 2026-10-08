@@ -5,7 +5,7 @@ Rank zero only. ``api/*`` is forwarded to the workbench bridge on the
 ``claude`` host with the shared token; ``render`` calls the FLUX worker on this
 pod. Images come straight from ``games/`` on the shared filesystem.
 
-    EDEN_WORKBENCH_BRIDGE   bridge base URL, e.g. http://localhost:8091
+    EDEN_WORKBENCH_BRIDGE   bridge base URL, e.g. http://<bridge-host>:8091
     EDEN_WORKBENCH_TOKEN    shared secret the bridge requires
     EDEN_WORKBENCH_FLUX     FLUX worker base URL (default http://127.0.0.1:8092)
 

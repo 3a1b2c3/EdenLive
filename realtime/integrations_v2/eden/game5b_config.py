@@ -3,15 +3,16 @@
 
 """Config for the proxy-DINO conditioned rollout-DMD Wan 2.2 TI2V-5B Game2V model.
 
-Ported from the reference inference recipe
+The values live in :file:`configs/game2v_5b.yaml`, which this module loads and
+maps onto the dataclasses. They were ported from the reference inference recipe
 ``easyvideo/configs/inference/wan22_5b_proxy_dino_to_real/proxy_dino-video-tiv2v-rollout_dmd_chunkar.yaml``
-and the Stage-3 SGF training config it defaults onto. Every number below traces
-to one of those two files:
+and the Stage-3 SGF training config it defaults onto; the YAML comments record
+which number traces to which:
 
 * ``chunk_size: 3`` -> :data:`GAME2V_5B_LEN_T`.
 * ``num_inference_steps: 4`` with ``scheduler.timesteps
   [1000, 937.5, 833.3333333333, 625]``, ``shift: 5.0`` and
-  ``stochastic_sampling: true`` -> the :class:`FlowMatchSchedulerConfig` below.
+  ``stochastic_sampling: true`` -> the :class:`FlowMatchSchedulerConfig`.
 * ``guidance_scale: 1.0`` -> CFG off, one conditional KV stream.
 * ``kv_cache.context {max_latent_frames: 18, sink_latent_frames: 6}`` ->
   :data:`GAME2V_5B_WINDOW_SIZE_T` / :data:`GAME2V_5B_SINK_SIZE_T`.
@@ -47,6 +48,7 @@ from __future__ import annotations
 from flashdreams.infra.config import derive_config
 from flashdreams.infra.diffusion.model import DiffusionModelConfig
 from flashdreams.infra.diffusion.scheduler import FlowMatchSchedulerConfig
+from flashdreams.infra.encoder.text.umt5 import UMT5TextEncoderConfig
 from flashdreams.recipes.taehv import TeahvVAEWan22DecoderConfig
 from flashdreams.recipes.wan.autoencoder.vae import (
     Wan22TI2V5BVAEDecoderConfig,
@@ -56,97 +58,75 @@ from eden.impl.game5b.encoder import Game5BCtrlEncoderConfig
 from eden.impl.game5b.network import Game5BDiTNetworkConfig
 from eden.impl.game5b.pipeline import Game5BInferencePipelineConfig
 from eden.impl.game5b.transformer import Game5BTransformerConfig
-from eden.model_root import EDEN_MODEL_ROOT
+from eden.pipeline_yaml import (
+    component_path,
+    load_pipeline_yaml,
+    resolve_path,
+    scheduler_kwargs,
+)
 
-GAME2V_EDEN_WORLD_V2_5B_CHECKPOINT_PATH = f"{EDEN_MODEL_ROOT}/dit-5b/model.safetensors"
+# Every number below comes from configs/game2v_5b.yaml; the provenance of each
+# one is documented there. This module only maps them onto the dataclasses.
+_SPEC = load_pipeline_yaml("game2v_5b")
+
+GAME2V_EDEN_WORLD_V2_5B_CHECKPOINT_PATH = component_path(_SPEC, "transformer")
 """The distilled EMA of the cfgsame Stage-3 run (``step_000400``), published as
 a single safetensors file with Diffusers keys. Read through
 :func:`eden.impl.game5b.checkpoint.load_game5b_dit_state_dict`, which applies
 the shared Diffusers remap.
 """
 
-# Latent frames per AR chunk (``chunk_size: 3``). Combined with the VAE's 4x
-# temporal ratio this is 9 decoded frames at AR 0 and 12 after, which is what
-# the game renderer paces its capture against.
-GAME2V_5B_LEN_T = 3
-
-# ``kv_cache.context.max_latent_frames: 18`` is the *total* attention budget
-# upstream, with ``sink_latent_frames: 6`` carved out of it (see
-# ``_select_cache_window_ranges``: the recent window gets
-# ``max_attention_tokens - sink_attention_tokens``). FlashDreams instead sizes
-# the arena as ``sink_size_t + window_size_t``, so the same 18-frame budget is
-# 6 sink + 12 rolling.
-GAME2V_5B_SINK_SIZE_T = 6
-GAME2V_5B_WINDOW_SIZE_T = 12
-
-# The reference renders and generates at 704x1280 (``height``/``width``). This
-# is not a free choice here; see the module docstring.
-GAME2V_5B_PIXEL_HEIGHT = 704
-GAME2V_5B_PIXEL_WIDTH = 1280
-
-# ``fps: 24`` upstream. The renderer paces its capture against this, so it is
-# the model's own frame rate rather than a presentation preference.
-GAME2V_5B_FPS = 24
+GAME2V_5B_LEN_T = _SPEC["len_t"]
+GAME2V_5B_SINK_SIZE_T = _SPEC["sink_size_t"]
+GAME2V_5B_WINDOW_SIZE_T = _SPEC["window_size_t"]
+GAME2V_5B_PIXEL_HEIGHT = _SPEC["pixel_height"]
+GAME2V_5B_PIXEL_WIDTH = _SPEC["pixel_width"]
+GAME2V_5B_FPS = _SPEC["fps"]
 
 PIPELINE_GAME2V_EDEN_WORLD_V2_5B = Game5BInferencePipelineConfig(
-    name="game2v-eden-world-v2-5b",
+    name=_SPEC["name"],
     encoder=Game5BCtrlEncoderConfig(
-        encoder=Wan22TI2V5BVAEEncoderConfig(),
+        encoder=Wan22TI2V5BVAEEncoderConfig(
+            checkpoint_path=component_path(_SPEC, "vae"),
+        ),
     ),
-    decoder=Wan22TI2V5BVAEDecoderConfig(),
+    decoder=Wan22TI2V5BVAEDecoderConfig(
+        checkpoint_path=component_path(_SPEC, "vae"),
+    ),
     # Wan 2.2 TI2V-5B has no CLIP vision tower; the first frame is conditioned
     # through the clean-latent stamp instead.
     image_encoder=None,
+    text_encoder=UMT5TextEncoderConfig(
+        model_id_or_local_path=component_path(_SPEC, "text_encoder"),
+    ),
     diffusion_model=DiffusionModelConfig(
-        seed=42,
-        # ``context_noise_sigma: 0.0`` upstream: the AR cache is committed from
-        # the clean latent, so the cache-update forward runs at t=0.
-        context_noise=0,
+        seed=_SPEC["seed"],
+        # The AR cache is committed from the clean latent, so the cache-update
+        # forward runs at t=0.
+        context_noise=_SPEC["context_noise"],
         transformer=Game5BTransformerConfig(
             network=Game5BDiTNetworkConfig(),
             dcp_checkpoint_path=GAME2V_EDEN_WORLD_V2_5B_CHECKPOINT_PATH,
             # Single-rollout layout: no leading batch dim.
             batch_shape=(),
             len_t=GAME2V_5B_LEN_T,
-            # CFG off (``guidance_scale: 1.0``). With no unconditional branch
-            # the DINO control is encoded once per chunk.
-            guidance_scale=1.0,
+            guidance_scale=_SPEC["guidance_scale"],
             window_size_t=GAME2V_5B_WINDOW_SIZE_T,
             sink_size_t=GAME2V_5B_SINK_SIZE_T,
-            # ``pack_first_frame: true``: the cover's latent rides inside the
-            # first denoising chunk rather than being committed ahead of it. The
-            # stamp re-injects it before every forward and the per-token
-            # timestep holds those tokens at t=0 while the rest of the chunk
-            # denoises. Wan 2.2 TI2V seeds the first frame this way rather than
-            # by channel-concatenating a mask, so no mask channels are appended.
-            stamp_image_latent=True,
-            ti2v_first_frame_per_token_timestep=True,
-            concat_image_mask_to_latent=False,
-            compile_network=True,
+            # The cover's latent rides inside the first denoising chunk rather
+            # than being committed ahead of it. The stamp re-injects it before
+            # every forward and the per-token timestep holds those tokens at t=0
+            # while the rest of the chunk denoises. Wan 2.2 TI2V seeds the first
+            # frame this way rather than by channel-concatenating a mask, so no
+            # mask channels are appended.
+            stamp_image_latent=_SPEC["stamp_image_latent"],
+            ti2v_first_frame_per_token_timestep=_SPEC[
+                "ti2v_first_frame_per_token_timestep"
+            ],
+            concat_image_mask_to_latent=_SPEC["concat_image_mask_to_latent"],
+            compile_network=_SPEC["compile_network"],
         ),
-        # The reference's explicit 4-step grid, reached through the warped
-        # sigma table rather than restated: ``denoising_timesteps`` index the
-        # shift-5 table at ``1000 - t``, which yields
-        # ``[1000, 937.5, 833.3333, 625]`` -- the upstream ``timesteps`` list
-        # exactly (verified in fp32 against the reference values).
-        #
-        # ``stochastic_sampling: true`` is this scheduler's own loop: each step
-        # converts the flow to x0 and re-noises at the next sigma, rather than
-        # taking a deterministic Euler step. ``terminal_sigma: 0.0`` upstream
-        # means the last call returns x0 directly, which is what it does here.
-        #
-        # Timesteps stay fp32 (not the int64 the 14B pins): easy-video feeds
-        # this model float timesteps, and 937.5 would quantize to 937 in int64.
-        scheduler=FlowMatchSchedulerConfig(
-            num_inference_steps=4,
-            denoising_timesteps=[1000, 750, 500, 250],
-            warp_denoising_step=True,
-            shift=5.0,
-            sigma_max=1.0,
-            sigma_min=0.0,
-            extra_one_step=True,
-            num_train_timesteps=1000,
-        ),
+        scheduler=FlowMatchSchedulerConfig(**scheduler_kwargs(_SPEC)),
     ),
 )
 """Proxy-DINO conditioned rollout-DMD 5B pipeline for the Game2V app."""
@@ -161,8 +141,10 @@ PIPELINE_GAME2V_EDEN_WORLD_V2_5B = Game5BInferencePipelineConfig(
 # latent has to live in the same space the DiT was trained on.
 PIPELINE_GAME2V_EDEN_WORLD_V2_5B_TAEHV = derive_config(
     PIPELINE_GAME2V_EDEN_WORLD_V2_5B,
-    name="game2v-eden-world-v2-5b-taehv",
-    decoder=TeahvVAEWan22DecoderConfig(),
+    name=_SPEC["taehv"]["name"],
+    decoder=TeahvVAEWan22DecoderConfig(
+        checkpoint_path=resolve_path(_SPEC, _SPEC["taehv"]["decoder"]),
+    ),
 )
 """The 5B pipeline with the LightTAE Wan 2.2 decoder instead of the Wan VAE."""
 

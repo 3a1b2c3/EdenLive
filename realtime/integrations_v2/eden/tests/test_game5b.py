@@ -225,6 +225,8 @@ def test_taehv_variant_reads_the_wan22_tiny_weights() -> None:
 
     config = PIPELINE_GAME2V_EDEN_WORLD_V2_5B_TAEHV.decoder
     assert isinstance(config, TeahvVAEWan22DecoderConfig)
+    # The variant reads the path the pipeline YAML names, which is the same
+    # ``lighttaew2_2`` checkpoint the registry points at.
     assert config.checkpoint_path == AVAILABLE_TAEHV_CHECKPOINT_PATHS[
         "lighttae_wan22"
     ]

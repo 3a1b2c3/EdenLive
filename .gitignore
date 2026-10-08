@@ -163,6 +163,8 @@ nsysoutput/
 # project
 /data
 outputs/
+# Offline inference writes here (inference.output_dir in eden/configs/*.yaml)
+inference/
 
 # the realtime game UIs ship their own config.json; the rule above is for checkpoints
 !realtime/games/*/ui/config.json

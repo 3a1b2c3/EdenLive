@@ -27,9 +27,8 @@ full documentation, and the developer guides, use upstream.
 
 - NVIDIA GPU with **80 GB VRAM or more** (e.g. H100 80GB), see notes below.
 - NVIDIA driver from the **R580 series or newer** (default compatible with CUDA 13.x)
-- **CUDA 13.x by default** (PyTorch `2.11.0+cu130` and the `nvidia-*-cu13` libraries are
-  resolved by `uv sync`. A system CUDA toolkit is needed only for the
-  developer extras and is included in `nvidia/cuda:13.2.1-cudnn-devel-ubuntu24.04`)
+- **CUDA 13.x** (PyTorch `2.11.0+cu130` and the `nvidia-*-cu13` libraries, as installed
+  in the `wm` conda env the launch scripts use)
 - **Python >= 3.10**
 - **PyTorch >= 2.11.0+cu130** (`>= 2.9` for bare PyPI library install)
 - Linux x86-64 or arm64
@@ -45,55 +44,17 @@ full documentation, and the developer guides, use upstream.
 
 ## Quickstart
 
-The complete setup is in
-[the installation guide](https://nvidia.github.io/flashdreams/main/quickstart/index.html#install).
-Assuming `uv` is [installed](https://docs.astral.sh/uv/getting-started/installation), the shortest viable path is:
+Activate a Python environment with the runtime dependencies first: the launch
+scripts call whatever `python` and `torchrun` are on `PATH`, and set up nothing
+of their own.
 
-```bash
-cd realtime          # from the Eden repository root
-uv sync --extra runners
-export HF_TOKEN=<your-hf-token>
-uv run flashdreams-run --help
-```
+Everything deployment-specific -- where the weights are, which addresses and
+ports the services bind, how many GPUs to use -- lives in
+[`deploy.conf`](deploy.conf). Edit it once; the scripts read it and take no
+arguments. Point `EDEN_DEPLOY_CONF` at a different file to keep more than one
+deployment side by side.
 
-Note for developers/maintainers you would want to run `uv sync --extra dev --extra runners` instead.
-
-### Select CUDA Version
-
-FlashDreams defaults to the CUDA 13 PyTorch stack (the `cuda13` dependency
-group is activated automatically via `default-groups`):
-
-- **Linux:** `uv sync` pulls `torch>=2.9` from PyPI, whose Linux wheels are
-  the CUDA 13 build (the `+cu130` local-version tag is just stripped on
-  PyPI).
-- **Windows:** `uv sync` pulls torch from NVIDIA's `cu130` index
-  (`https://download.pytorch.org/whl/cu130`) — PyPI's Windows torch wheel
-  is CPU-only.
-
-CUDA 12.8 is available as an opt-in side profile (Linux only) via the
-`cuda12` dependency group:
-
-```bash
-uv sync --group cuda12 --extra runners
-```
-
-The two groups are declared mutually exclusive in `pyproject.toml`, so uv
-deactivates the default `cuda13` group automatically when `--group cuda12`
-is passed.
-
-Then launch a game session with `start.sh` (see below), or drive `run.py`
-directly:
-
-```bash
-uv run --project integrations_v2/eden \
-    flashdreams-run-v2 game2v-eden-world-v2-5b-taehv -- --help
-```
-
-You can also install FlashDreams as a library from PyPI:
-
-```bash
-pip install flashdreams
-```
+Weights come from `MODEL_ROOT` in that file (see below), not from Hugging Face.
 
 ### Launch the workbench
 
@@ -103,31 +64,44 @@ Four services, in this order -- the first three are independent of each other,
 the app wants them up first.
 
 ```bash
-# 1. TURN relay, on the GPU pod. A browser outside the pod's subnet has no
-#    direct UDP path to it, and its connection stalls without the relay.
+# 1. TURN relay, on the GPU host. A browser outside the server's subnet has no
+#    direct UDP path to it, and its connection stalls without the relay. Set
+#    TURN_SECRET in deploy.conf first; this prints the address to put in
+#    TURN_HOST.
 bash turn_server.sh
 
-# 2. Workbench bridge, on the host that has the `claude` CLI (the DSW notebook).
-#    It runs the game-generation jobs. Writes the shared token both sides use.
+# 2. Workbench bridge, on the host that has the `claude` CLI. It runs the
+#    game-generation jobs. `claude` must be on PATH, already logged in
+#    (`claude auth login`) and past the first-run trust prompt: the bridge runs
+#    it unattended with `--dangerously-skip-permissions` and has no key of its
+#    own. Set EDEN_WORKBENCH_CLAUDE if the binary is not named `claude`.
+#    The bridge writes the shared token both sides use to .workbench/token;
+#    this prints the address to put in BRIDGE_HOST.
 bash workbench_bridge.sh
 
-# 3. FLUX worker, on the GPU pod. Renders the photoreal first frame.
-bash workbench_flux.sh            # FLUX_GPU=<n> to place it
+# 3. FLUX worker, on the GPU host. Renders the photoreal first frame.
+bash workbench_flux.sh            # or `bash workbench_flux.sh <gpu>`
 
-# 4. The model app, on the GPU pod. Starts the FLUX worker itself if step 3
+# 4. The model app, on the GPU host. Starts the FLUX worker itself if step 3
 #    was skipped.
-NPROC=2 bash launch.sh            # one rank per GPU; default 2
+bash launch.sh
 ```
 
-Then open `http://<pod>:8089/`. `NPROC` sets how many ranks `torchrun` starts,
-one per GPU -- set it to the number of GPUs you want to use. `GAME` picks which
-cover the session falls back to; the slugs come from
+Then open `APP_PORT` (8089 by default) on the GPU host. `NPROC` sets how many
+ranks `torchrun` starts, one per GPU -- set it to the number of GPUs you want to
+use. `GAME` picks which cover the session falls back to; the slugs come from
 [`games/registry.json`](games/registry.json) and default to `subway-run`.
 
-Weights live in one directory, `EDEN_MODEL_ROOT` (default
-`/mnt/workspace/models/EdenLive`, or `/mnt/workspace/models/EdenLive`
-inside the GPU pod — the same CPFS mount). `launch.sh` and `start.sh` pick
-whichever exists. The tree is the Hugging Face repo layout: `dit-5b/`,
+When the bridge and the app are on different hosts, copy `.workbench/token`
+from the bridge to the app's `realtime/` directory: both sides authenticate
+with it, and the app refuses to start without it.
+
+Weights live in one directory, `MODEL_ROOT` in [`deploy.conf`](deploy.conf),
+which defaults to `models/EdenLive` under the repository root. A relative path
+there is read from the repository root. The realtime pipeline configs
+([`integrations_v2/eden/configs/`](integrations_v2/eden/configs)) can pin the
+tree themselves with their own `model_root`, which wins over `deploy.conf`. The
+tree is the Hugging Face repo layout: `dit-5b/`,
 `dit-14b/`, `dit-5b-bidir/`, `dit-14b-bidir/`, `umt5/`, `vae-5b/`, `vae-14b/`,
 `decoder-5b/`, `vision-encoder/`, `flux-c2f/` and `clip/`. The two `*-bidir/`
 directories hold the bidirectional base DiT weights; no serving config loads
@@ -141,25 +115,26 @@ takes a few seconds. `launch.sh` logs to `.eden_app.log`.
 ### How the four services fit together
 
 ```
-browser ──8089──> model app (GPU pod, rank 0)
+browser ──8089──> model app (GPU server, rank 0)
                     │  /ext/workbench/  proxied, token-authenticated
-                    ├──8091──> bridge      (DSW notebook: runs `claude` jobs)
-                    └──8092──> FLUX worker (GPU pod: first-frame render)
-browser <──3478──── TURN relay (GPU pod: media path for off-subnet clients)
+                    ├──8091──> bridge      (host with the `claude` CLI)
+                    └──8092──> FLUX worker (GPU server: first-frame render)
+browser <──3478──── TURN relay (media path for off-subnet clients)
 ```
 
 Rank zero owns the browser-facing side: the page, the Chromium proxy render,
-and the `/ext/workbench/` proxy. The bridge lives on the notebook because that
-is where the `claude` CLI is, and it is reached with a shared token written to
-`.workbench/token` on its first run (`launch.sh` reads the same file).
+and the `/ext/workbench/` proxy. The bridge runs wherever the `claude` CLI is
+installed, which need not be the GPU server, and it is reached with a shared
+token written to `.workbench/token` on its first run (`launch.sh` reads the
+same file).
 
 The TURN relay is the one that fails quietly. Media needs a UDP path the page
-load does not, so a client on another subnet has no route to the pod without
+load does not, so a client on another subnet has no route to the server without
 it. An address pointing at a relay that is not there is worse than none: the
 browser stalls in "gathering candidates" for ten seconds and then fails,
-instead of falling back. Both launchers default to the pod's own coturn, and
-`turn_server.sh` is not supervised -- it needs starting again after a pod
-restart.
+instead of falling back. `turn_server.sh` is not supervised -- it needs
+starting again after a host restart. Leave `TURN_HOST` unset to skip the relay
+entirely, which only works when the browser and the server share a subnet.
 
 ### Without the workbench
 
@@ -167,11 +142,11 @@ restart.
 screen and no generation, and needs neither the bridge nor the FLUX worker.
 
 ```bash
-NPROC=8 bash start.sh eden-game2v-5b-taehv        # or eden-game2v-14b-taehv
+bash start.sh eden-game2v-5b-taehv      # or eden-game2v-14b-taehv
 ```
 
-A second argument of `off` disables transformer compilation, for when only
-time-to-first-chunk matters. `EDEN_GAME` selects the game.
+It reads the same `deploy.conf`. A second argument of `off` disables transformer
+compilation, for when only time-to-first-chunk matters.
 
 ## Supported models
 

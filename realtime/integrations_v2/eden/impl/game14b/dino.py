@@ -34,24 +34,19 @@ import torch.nn.functional as F
 from loguru import logger
 from torch import Tensor, nn
 
-from eden.model_root import EDEN_MODEL_ROOT
 from flashdreams.infra.config import InstantiateConfig
 
 # ImageNet statistics, as used by the reference encoder.
 DINOV3_IMAGE_MEAN = (0.485, 0.456, 0.406)
 DINOV3_IMAGE_STD = (0.229, 0.224, 0.225)
 
-DEFAULT_DINOV3_REPO = f"{EDEN_MODEL_ROOT}/vision-encoder/backbone"
-"""Local snapshot of ``facebook/dinov3-vitl16-pretrain-lvd1689m``."""
-DEFAULT_DINOV3_PROJECTION_PATH = f"{EDEN_MODEL_ROOT}/vision-encoder/projection.safetensors"
-
 
 def _resolve_projection_path(path: str) -> str:
     """Resolve a projection checkpoint path against ``HF_HOME``.
 
-    Absolute paths pass through. Relative paths are read out of the offline
-    HF cache root so the same config works on any node that ran
-    ``copy_models_cache.sh``.
+    Absolute paths pass through. Relative paths are read out of the offline HF
+    cache root, so a config can name a checkpoint inside that cache instead of
+    spelling out a host-specific prefix.
     """
     if os.path.isabs(path):
         return path
@@ -185,13 +180,16 @@ class ProxyDinoEncoderConfig(InstantiateConfig):
         default_factory=lambda: ProxyDinoControlEncoder
     )
 
-    backbone_repo: str = DEFAULT_DINOV3_REPO
+    backbone_repo: str = ""
     """Local directory holding the DINOv3 backbone (``model.safetensors`` +
-    ``config.json``), read by ``AutoModel.from_pretrained``."""
+    ``config.json``), read by ``AutoModel.from_pretrained``. The Game2V apps
+    pass the path from their pipeline YAML; empty is rejected at construction
+    rather than resolved to a built-in location."""
 
-    projection_path: str = DEFAULT_DINOV3_PROJECTION_PATH
+    projection_path: str = ""
     """Finetuned projection checkpoint. A ``.safetensors`` file is read flat;
-    relative paths still resolve under ``HF_HOME``."""
+    relative paths still resolve under ``HF_HOME``. The Game2V apps pass the
+    path from their pipeline YAML; empty is rejected at construction."""
 
     projection_dim: int = 1024
     patchify_factor: int = 2
@@ -209,6 +207,11 @@ class ProxyDinoControlEncoder:
     def __init__(self, config: ProxyDinoEncoderConfig) -> None:
         from transformers import AutoModel
 
+        if not config.backbone_repo or not config.projection_path:
+            raise ValueError(
+                "ProxyDinoEncoderConfig needs backbone_repo and projection_path; "
+                "both come from the pipeline YAML's components block."
+            )
         self.config = config
         # First time through this runs during the first chunk, so it shows up
         # as a stall in front of the first frame rather than during startup.
@@ -338,8 +341,6 @@ def _dynamo_compile_lock() -> AbstractContextManager[object]:
 
 
 __all__ = [
-    "DEFAULT_DINOV3_PROJECTION_PATH",
-    "DEFAULT_DINOV3_REPO",
     "ProxyDinoControlEncoder",
     "ProxyDinoEncoder",
     "ProxyDinoEncoderConfig",

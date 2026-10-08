@@ -45,7 +45,6 @@ from flashdreams.recipes.wan.pipeline import (
     WanInferencePipelineConfig,
 )
 
-from eden.model_root import EDEN_MODEL_ROOT
 from flashdreams.infra.encoder.text.umt5 import UMT5TextEncoderConfig
 
 from .encoder import Game5BCtrlEncoderConfig, Game5BCtrlInput
@@ -82,18 +81,10 @@ class Game5BInferencePipelineConfig(WanInferencePipelineConfig):
     cannot switch on a DiT cross-attention branch these weights do not have.
     """
 
-    text_encoder: UMT5TextEncoderConfig | None = field(
-        default_factory=lambda: UMT5TextEncoderConfig(
-            model_id_or_local_path=f"{EDEN_MODEL_ROOT}/umt5"
-        )
-    )
-    """UMT5 from the Wan 2.2 TI2V-5B snapshot, not the 1.3B donor.
-
-    The 5B release carries its own T5 and tokenizer, so a node that staged only
-    the 5B set can run without the Wan 2.1 1.3B repo the base default points at.
-    The directory holds ``text_encoder/`` and ``tokenizer/`` side by side, which
-    is the layout both ``from_pretrained`` calls read.
-    """
+    text_encoder: UMT5TextEncoderConfig | None = None
+    """UMT5 text encoder. The directory must hold ``text_encoder/`` and
+    ``tokenizer/`` side by side, which is the layout both ``from_pretrained``
+    calls read. Set by the pipeline YAML; there is no built-in default path."""
 
 
 class Game5BInferencePipeline(WanInferencePipeline):

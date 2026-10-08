@@ -56,9 +56,9 @@ from flashdreams.infra.encoder import (
 )
 
 # Upstream's native single-file checkpoint. Its key names match the
-# ``WanVAE`` module tree one-to-one, so it loads with no key remap and is
-# the production default for the Wan 2.2 TI2V 5B configs below. The local
-# copy ships in the EdenLive weight tree.
+# ``WanVAE`` module tree one-to-one, so it loads with no key remap. The local
+# copy ships in the EdenLive weight tree; the Game2V pipelines pass their own
+# path from the pipeline YAML instead of relying on this default.
 WAN22_TI2V_5B_VAE_PATH = f"{EDEN_MODEL_ROOT}/vae-5b/Wan2.2_VAE.pth"
 
 # The same VAE re-exported in the diffusers ``AutoencoderKLWan`` layout.

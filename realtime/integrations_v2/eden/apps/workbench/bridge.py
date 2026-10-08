@@ -6,7 +6,7 @@ on the GPU pod, so this service runs there. The pod's ``/ext/workbench/``
 proxy forwards ``/api/*`` here with a shared token; FLUX rendering stays on the
 pod and the bridge only records its results.
 
-    EDEN_WORKBENCH_TOKEN=... python -m eden.apps.workbench.bridge --host localhost --port 8091
+    EDEN_WORKBENCH_TOKEN=... python -m eden.apps.workbench.bridge --host <bind-ip> --port 8091
 
 Jobs are serialized: one Claude run at a time. Job state lives in memory and
 in ``<state>/jobs/<id>.json`` so a page reload can pick a job back up.

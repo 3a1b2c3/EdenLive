@@ -12,17 +12,20 @@ model:
   # A directory holding one subdirectory per component, Diffusers-style:
   #   vae/ text_encoder/ tokenizer/ scheduler/ transformer/
   # No model_index.json is read; each component's loader class is fixed by the adapter.
+  # Root of the component tree. Every path below is relative to it; an absolute
+  # path there is used as written. Point this at your staged weights.
+  pretrained_dir: models/EdenLive
   components:
     vae:
-      path: /mnt/workspace/models/EdenLive/vae-5b
+      path: vae-5b
     text_encoder:
-      path: /mnt/workspace/models/EdenLive/umt5/text_encoder
+      path: umt5/text_encoder
     tokenizer:
-      path: /mnt/workspace/models/EdenLive/umt5/tokenizer
+      path: umt5/tokenizer
     scheduler:
-      path: /mnt/workspace/models/EdenLive/scheduler-5b
+      path: scheduler-5b
     transformer:
-      path: /mnt/workspace/models/EdenLive/dit-5b-bidir
+      path: dit-5b-bidir
   # Point any single component somewhere else — this is how the DiT is swapped without
   # restaging the rest of the tree:
   #   components:
@@ -51,7 +54,7 @@ model:
     # checkpoint-loaded DINO patch projection). Zero-init keeps the model numerically
     # equivalent to base Wan before finetuning.
     channel_concat_zero_init: true
-    checkpoint_path: /mnt/workspace/models/EdenLive/vision-encoder/projection.safetensors
+    checkpoint_path: vision-encoder/projection.safetensors
     control_dim: 1024
     enabled: true
     image_size:
@@ -59,7 +62,7 @@ model:
     - 512
     local_files_only: true
     # Override these paths for the local DINOv3 backbone and the finetuned proxy.
-    model_path: /mnt/workspace/models/EdenLive/vision-encoder/backbone
+    model_path: vision-encoder/backbone
     patchify_factor: 2
     # Offline inference decodes RGB source clips; cached target latents are training-only.
     use_cached_latents: false

@@ -17,21 +17,24 @@ model:
   # A directory holding one subdirectory per component, Diffusers-style:
   #   vae/ text_encoder/ tokenizer/ scheduler/ transformer/ image_encoder/ image_processor/
   # No model_index.json is read; each component's loader class is fixed by the adapter.
+  # Root of the component tree. Every path below is relative to it; an absolute
+  # path there is used as written. Point this at your staged weights.
+  pretrained_dir: models/EdenLive
   components:
     vae:
-      path: /mnt/workspace/models/EdenLive/vae-14b
+      path: vae-14b
     text_encoder:
-      path: /mnt/workspace/models/EdenLive/umt5/text_encoder
+      path: umt5/text_encoder
     tokenizer:
-      path: /mnt/workspace/models/EdenLive/umt5/tokenizer
+      path: umt5/tokenizer
     scheduler:
-      path: /mnt/workspace/models/EdenLive/scheduler-14b
+      path: scheduler-14b
     image_encoder:
-      path: /mnt/workspace/models/EdenLive/clip/image_encoder
+      path: clip/image_encoder
     image_processor:
-      path: /mnt/workspace/models/EdenLive/clip/image_processor
+      path: clip/image_processor
     transformer:
-      path: /mnt/workspace/models/EdenLive/dit-14b
+      path: dit-14b
   # Point any single component somewhere else — this is how the DiT is swapped without
   # restaging the rest of the tree:
   #   components:
@@ -61,7 +64,7 @@ model:
     # (patch_embedding.condition_norm); the bidirectional weights do not.
     channel_concat_rmsnorm: true
     channel_concat_zero_init: true
-    checkpoint_path: /mnt/workspace/models/EdenLive/vision-encoder/projection.safetensors
+    checkpoint_path: vision-encoder/projection.safetensors
     control_dim: 1024
     enabled: true
     # The frozen patch projection was finetuned at this size; the adapter resamples
@@ -70,7 +73,7 @@ model:
     - 288
     - 512
     local_files_only: true
-    model_path: /mnt/workspace/models/EdenLive/vision-encoder/backbone
+    model_path: vision-encoder/backbone
     patchify_factor: 2
     # Offline inference decodes RGB source clips; cached target latents are training-only.
     use_cached_latents: false

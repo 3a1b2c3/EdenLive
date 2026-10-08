@@ -72,6 +72,40 @@ def _fake_capture(slug: str, path: Path, root: Path) -> None:
     Image.new("RGB", (64, 36), (120, 40, 200)).save(path)
 
 
+# The coarse-to-fine skill lives in the FLUX fine-tuning repo, which is not
+# vendored here, so these stand in for the two scripts the workbench imports.
+# Only the three symbols it reads are needed: the caption rules, the sanitizer
+# (here: drop the words the LoRA's captions never use) and the edit prefix.
+_FAKE_CAPTION_SCRIPT = '''
+IMAGE_INSTRUCTIONS = "Describe the scene plainly."
+
+_BANNED = {"red", "rendered"}
+
+
+def sanitize_caption(caption):
+    return " ".join(w for w in caption.split() if w.lower() not in _BANNED)
+'''
+
+_FAKE_C2F_SCRIPT = 'EDIT_INSTRUCTION = "Make it photoreal."\n'
+
+
+@pytest.fixture
+def flux_skill(tmp_path, monkeypatch):
+    """Point the workbench at stand-ins for the coarse-to-fine skill."""
+    caption = tmp_path / "refine_prompts_comet.py"
+    caption.write_text(_FAKE_CAPTION_SCRIPT)
+    infer = tmp_path / "infer_coarse_to_fine.py"
+    infer.write_text(_FAKE_C2F_SCRIPT)
+    monkeypatch.setattr("eden.apps.workbench.prompts.CAPTION_SCRIPT", caption)
+    monkeypatch.setattr("eden.apps.workbench.flux_worker.SKILL_SCRIPT", infer)
+    # caption_rules() is @cache'd on the module path it imported.
+    from eden.apps.workbench import prompts
+
+    prompts.caption_rules.cache_clear()
+    yield infer
+    prompts.caption_rules.cache_clear()
+
+
 @pytest.fixture
 def games(tmp_path):
     root = tmp_path / "games"
@@ -148,7 +182,7 @@ def test_game_job_reports_claude_failure(games, tmp_path, fake_claude, monkeypat
     _run(body())
 
 
-def test_caption_is_sanitized_and_accept_replaces_cover(games, tmp_path, fake_claude, monkeypatch):
+def test_caption_is_sanitized_and_accept_replaces_cover(games, tmp_path, fake_claude, flux_skill, monkeypatch):
     monkeypatch.setenv("FAKE_CAPTION", "A small courtyard with a bright red pillar and rendered tiles " * 3)
 
     async def body():
@@ -203,8 +237,8 @@ def test_flux_worker_validates_paths(tmp_path, monkeypatch):
     assert calls and calls[0][2] == 1
 
 
-def test_flux_prompt_uses_skill_instruction():
-    skill = flux_worker.load_skill_module()
+def test_flux_prompt_uses_skill_instruction(flux_skill):
+    skill = flux_worker.load_skill_module(flux_skill)
     assert flux_worker.build_prompt(skill, " a yard ") == f"{skill.EDIT_INSTRUCTION} Scene: a yard"
 
 
