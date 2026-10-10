@@ -1,12 +1,10 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Checkpoint loading for the rollout-DMD proxy-DINO 5B DiT.
+"""Checkpoint loading for the proxy-DINO 5B DiT.
 
-The published weights are the distilled EMA subtree of the Stage-3 SGF
-checkpoint, saved with its Diffusers key names and the
-``algorithm.rollout_dmd.ema_transformer.`` prefix already stripped. The live
-generator, the DMD critic and both optimizer states never ship.
+The published weights are the distilled DiT, saved as a single safetensors
+file with its Diffusers key names.
 
 The key surface needs nothing beyond the shared Diffusers remap: this model
 has no CLIP cross-attention branch (Wan 2.2 TI2V 5B never had one) and its

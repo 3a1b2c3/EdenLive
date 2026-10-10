@@ -1,24 +1,19 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Config for the proxy-DINO conditioned rollout-DMD Wan 2.2 TI2V-5B Game2V model.
+"""Config for the proxy-DINO conditioned AR Wan 2.2 TI2V-5B Game2V model.
 
 The values live in :file:`configs/game2v_5b.yaml`, which this module loads and
-maps onto the dataclasses. They were ported from the reference inference recipe
-``easyvideo/configs/inference/wan22_5b_proxy_dino_to_real/proxy_dino-video-tiv2v-rollout_dmd_chunkar.yaml``
-and the Stage-3 SGF training config it defaults onto; the YAML comments record
-which number traces to which:
+maps onto the dataclasses:
 
-* ``chunk_size: 3`` -> :data:`GAME2V_5B_LEN_T`.
-* ``num_inference_steps: 4`` with ``scheduler.timesteps
-  [1000, 937.5, 833.3333333333, 625]``, ``shift: 5.0`` and
-  ``stochastic_sampling: true`` -> the :class:`FlowMatchSchedulerConfig`.
+* chunk size 3 -> :data:`GAME2V_5B_LEN_T`.
+* 4 steps at timesteps ``[1000, 937.5, 833.3333, 625]`` (shift 5.0,
+  stochastic sampling) -> the :class:`FlowMatchSchedulerConfig`.
 * ``guidance_scale: 1.0`` -> CFG off, one conditional KV stream.
-* ``kv_cache.context {max_latent_frames: 18, sink_latent_frames: 6}`` ->
+* An 18-frame attention budget with a 6-frame sink ->
   :data:`GAME2V_5B_WINDOW_SIZE_T` / :data:`GAME2V_5B_SINK_SIZE_T`.
-* ``height: 704, width: 1280`` -> :data:`GAME2V_5B_PIXEL_HEIGHT` / ``_WIDTH``.
-* ``pack_first_frame: true`` (from the Stage-3 ``rollout`` block, which the
-  chunk-AR inference strategy honors) -> the TI2V stamp knobs.
+* 704x1280 -> :data:`GAME2V_5B_PIXEL_HEIGHT` / ``_WIDTH``.
+* The first frame packed into the first chunk -> the TI2V stamp knobs.
 
 Kept out of :mod:`eden.config` because that module's ``PIPELINE_CONFIGS`` is
 typed to the camera-control pipeline; this model conditions on rendered game
@@ -70,8 +65,8 @@ from eden.pipeline_yaml import (
 _SPEC = load_pipeline_yaml("game2v_5b")
 
 GAME2V_EDEN_WORLD_V2_5B_CHECKPOINT_PATH = component_path(_SPEC, "transformer")
-"""The distilled EMA of the cfgsame Stage-3 run (``step_000400``), published as
-a single safetensors file with Diffusers keys. Read through
+"""The distilled 5B DiT, published as a single safetensors file with Diffusers
+keys. Read through
 :func:`eden.impl.game5b.checkpoint.load_game5b_dit_state_dict`, which applies
 the shared Diffusers remap.
 """
@@ -104,8 +99,15 @@ PIPELINE_GAME2V_EDEN_WORLD_V2_5B = Game5BInferencePipelineConfig(
         # The AR cache is committed from the clean latent, so the cache-update
         # forward runs at t=0.
         context_noise=_SPEC["context_noise"],
+        # One rank-0 draw over the whole chunk, broadcast to every shard.
+        noise_from_rank0=_SPEC["noise_from_rank0"],
         transformer=Game5BTransformerConfig(
-            network=Game5BDiTNetworkConfig(),
+            # Cache-slot RoPE: K cached unrotated, rotated by its arena slot.
+            # fp32 AdaLN / LayerNorm / residuals, as the reference runs.
+            network=Game5BDiTNetworkConfig(
+                apply_rope_before_kvcache=_SPEC["apply_rope_before_kvcache"],
+                fp32_adaln=_SPEC["fp32_adaln"],
+            ),
             dcp_checkpoint_path=GAME2V_EDEN_WORLD_V2_5B_CHECKPOINT_PATH,
             # Single-rollout layout: no leading batch dim.
             batch_shape=(),
@@ -129,7 +131,7 @@ PIPELINE_GAME2V_EDEN_WORLD_V2_5B = Game5BInferencePipelineConfig(
         scheduler=FlowMatchSchedulerConfig(**scheduler_kwargs(_SPEC)),
     ),
 )
-"""Proxy-DINO conditioned rollout-DMD 5B pipeline for the Game2V app."""
+"""Proxy-DINO conditioned AR 5B pipeline for the Game2V app."""
 
 
 # Same model and schedule with the Wan 2.2 VAE decoder swapped for the

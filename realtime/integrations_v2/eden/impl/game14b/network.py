@@ -79,6 +79,12 @@ class Game14BDiTNetwork(WanDiTNetwork):
 
         Only the static cross-attention context changes; the self-attention
         KV cache is untouched, so the rollout horizon survives the swap.
+
+        The write goes through :meth:`BlockKVCache.overwrite_kv_` rather than
+        rebinding ``cross_attn.text``, for the reason spelled out on
+        :meth:`Game5BDiTNetwork.replace_text_embeddings`: the forward reads this
+        cache from inside a captured CUDA graph, so the storage address has to
+        survive the swap. See that docstring for the full failure mode.
         """
         assert text_embeddings.shape[-2] == self.text_len, (
             f"text embeddings must have {self.text_len} tokens, got "
@@ -86,7 +92,8 @@ class Game14BDiTNetwork(WanDiTNetwork):
         )
         context_text = self.text_embedding(text_embeddings)
         for block, block_cache in zip(self.blocks, cache.block_caches):
-            block_cache.cross_attn.text = block.cross_attn.compute_kv(context_text)
+            fresh = block.cross_attn.compute_kv(context_text)
+            block_cache.cross_attn.text.overwrite_kv_(*fresh.clone_kv())
 
     def normalize_control_channels(self, control: Tensor) -> Tensor:
         """RMS-normalize a ``[..., T, C, H, W]`` control tensor over ``C``.

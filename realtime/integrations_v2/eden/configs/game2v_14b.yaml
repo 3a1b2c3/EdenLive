@@ -4,9 +4,9 @@
 # entry point "game2v-eden-world-v2-14b-taehv" serves the `taehv` variant below;
 # the base pipeline is the same model with the full Wan VAE decoder.
 #
-# Chunk size comes from the recipe's AR teacher-forcing config; the sampling
-# schedule and the attention window are copied from LingBot-World v2 14B
-# causal-fast. The frame is 480x832, fixed by the app defaults rather than here.
+# 4-step distilled AR rollout: chunk 3 at 480x832, a shift-3 schedule whose
+# warped table yields timesteps [1000, 900, 750, 500], CFG off, and an 18-frame
+# attention budget with 6 frames carved out as a fixed sink.
 #
 name: game2v-eden-world-v2-14b
 
@@ -23,38 +23,63 @@ model_root: null
 # frames on the first chunk and 12 after, which is what the renderer paces its
 # capture against.
 len_t: 3
-# Sliding window copied from LingBot-World v2 14B causal-fast
-# (`--local_attn_size 18`). No sink: the window simply slides.
-window_size_t: 18
-sink_size_t: 0
+# 18-frame attention budget with 6 frames carved out as a fixed sink, so the
+# rolling part is 12. The arena is sized as sink + window.
+window_size_t: 12
+sink_size_t: 6
+
+# Frame size and rate the renderer captures at. The model itself reads no time,
+# so the rate only paces captures and stamps videos; 24 matches the 5B so a
+# recording replays frame for frame on either model.
+pixel_height: 480
+pixel_width: 832
+fps: 24
 
 # CFG off: one conditional KV stream, the proxy control encoded once per chunk.
 guidance_scale: 1.0
 seed: 42
+# The AR cache commits the clean latent, so the cache-update forward runs at t=0.
+context_noise: 0
 
-# Channel-concat I2V: a 4-channel mask plus the first-frame latent ride next to
-# the noisy latent, which is the Wan 2.1 conditioning path rather than the 5B's
-# clean-latent stamp.
-stamp_image_latent: false
+# One rank-0 noise draw over the whole chunk, broadcast to every shard. See the
+# 5B config; needs context_noise: 0.
+noise_from_rank0: true
+
+# Cache-slot RoPE, same as the 5B: K cached unrotated and rotated by its slot in
+# the arena rather than by absolute frame index.
+apply_rope_before_kvcache: false
+
+# AdaLN modulation, LayerNorms and the self-attn / FFN residual adds run in
+# fp32, as Diffusers' WanTransformerBlock and norm_out do.
+fp32_adaln: true
+
+# Wan 2.1 I2V composes both paths: the cover's latent is stamped into the first
+# denoising chunk and held at t=0 per token, and a 4-channel mask plus the
+# first-frame latent are channel-concatenated next to the noisy latent.
+stamp_image_latent: true
+ti2v_first_frame_per_token_timestep: true
 concat_image_mask_to_latent: true
 compile_network: true
 
-# LingBot-World v2 14B causal-fast distilled schedule: timesteps_index
-# [0, 250, 500, 750] warped through the shift-10 sigma table, stored as int64
-# the way upstream Wan keeps scheduler.timesteps.
+# 4-step distilled grid indexed into the shift-3 warped sigma table, which
+# yields timesteps [1000, 900, 750, 500]. sigma_max 1.0 matches the table the
+# model was trained against.
 scheduler:
   num_inference_steps: 4
   denoising_timesteps: [1000, 750, 500, 250]
   warp_denoising_step: true
-  shift: 10.0
-  sigma_max: 0.999
+  shift: 3.0
+  sigma_max: 1.0
   sigma_min: 0.0
   extra_one_step: true
   num_train_timesteps: 1000
-  timestep_dtype: int64
+  timestep_dtype: float32
+  # Timesteps reach the network in fp32; bf16 would round the fractional warped
+  # values while the x0 conversion keeps the exact sigma.
+  network_timestep_dtype: float32
 
 components:
-  # AR teacher-forced 14B DiT, single safetensors, Diffusers keys.
+  # Distilled DiT, single safetensors, Diffusers keys.
   transformer: dit-14b/model.safetensors
   # Wan 2.1 VAE, shared by the encoder and the full decoder.
   vae: vae-14b/Wan2.1_VAE.pth
@@ -70,8 +95,8 @@ components:
 
 # Same model and schedule with the Wan VAE decoder swapped for the LightTAE tiny
 # decoder. Its ratios (temporal 4, spatial 8) and 16 latent channels match the
-# Wan 2.1 VAE, so frame counts and capture pacing do not change. The weights are
-# fetched by URL rather than staged in the local tree.
+# Wan 2.1 VAE, so frame counts and capture pacing do not change. Staged in the
+# local tree like the 5B's decoder (lightx2v/Autoencoders lighttaew2_1.pth).
 taehv:
   name: game2v-eden-world-v2-14b-taehv
-  decoder: https://huggingface.co/lightx2v/Autoencoders/resolve/main/lighttaew2_1.pth
+  decoder: decoder-14b/lighttaew2_1.pth

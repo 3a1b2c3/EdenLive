@@ -175,3 +175,6 @@ node_modules/
 
 # Scratch space for local launch scripts and logs
 .tmp/
+
+# Per-host deployment overrides (hosts, secrets, paths).
+deploy.local.conf

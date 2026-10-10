@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Streaming pipeline for the proxy-DINO rollout-DMD 5B Game2V model.
+"""Streaming pipeline for the proxy-DINO 5B Game2V model.
 
 Differences from the base Wan TI2V pipeline:
 
@@ -49,9 +49,8 @@ from flashdreams.infra.encoder.text.umt5 import UMT5TextEncoderConfig
 
 from .encoder import Game5BCtrlEncoderConfig, Game5BCtrlInput
 
-# The recipe's own negative prompt (``algorithm.negative_prompt`` in the Stage-3
-# config, echoed by the inference config). Unlike Wan's stock Chinese string,
-# this run was trained and validated against the English one.
+# The model's negative prompt. Unlike Wan's stock Chinese string, the 5B was
+# trained and validated against this English one.
 NEGATIVE_PROMPT = (
     "Vibrant colors, overexposed, static, blurry details, subtitles, style, "
     "artwork, painting, image, still, overall grayish, worst quality, low "
@@ -63,7 +62,7 @@ NEGATIVE_PROMPT = (
 
 @dataclass(kw_only=True)
 class Game5BInferencePipelineConfig(WanInferencePipelineConfig):
-    """Config for the proxy-DINO rollout-DMD 5B pipeline."""
+    """Config for the proxy-DINO 5B pipeline."""
 
     _target: type["Game5BInferencePipeline"] = field(
         default_factory=lambda: Game5BInferencePipeline

@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import torch
@@ -81,8 +82,18 @@ class FlowMatchSchedulerConfig(SchedulerConfig):
     ``scheduler.timesteps`` as ``int64`` and lets the embedding upcast to
     ``float64`` internally."""
 
+    network_timestep_dtype: torch.dtype | None = None
+    """Dtype of the timestep passed to ``predict_flow``. ``None`` casts it to
+    the latent dtype. Set ``torch.float32`` when the network embeds fractional
+    timesteps (bf16 rounds 937.5 to 936, 833.3 to 832 and 625 to 624 while
+    the x0 conversion still uses the exact fp32 sigma)."""
+
     enable_tqdm: bool = False
     """Whether to enable tqdm progress bar."""
+
+
+NoiseFn = Callable[[Tensor], Tensor]
+"""``like -> noise``: a standard-normal tensor shaped like ``like``."""
 
 
 class FlowMatchScheduler(Scheduler):
@@ -207,11 +218,16 @@ class FlowMatchScheduler(Scheduler):
             setattr(self, name, original.to(device=target_device))
         return self
 
+    def network_timestep_dtype(self, input_dtype: torch.dtype) -> torch.dtype:
+        configured = self.config.network_timestep_dtype
+        return input_dtype if configured is None else configured
+
     def sample(
         self,
         initial_noise: Tensor,
         predict_flow: FlowPredictor,
         rng: torch.Generator | None = None,
+        noise_fn: NoiseFn | None = None,
     ) -> Tensor:
         """Run the self-forcing flow-match denoising loop.
 
@@ -219,8 +235,14 @@ class FlowMatchScheduler(Scheduler):
         later iterations re-noise the previous ``x0`` estimate to the new
         sigma before the network forward. Schedule arithmetic auto-promotes
         to fp32; the result is cast back to ``initial_noise.dtype``.
+
+        ``noise_fn`` draws the re-noise instead of ``rng``. Under context
+        parallelism it lets every rank take its shard of one rank-0 draw,
+        rather than each rank drawing its shard from an identically seeded
+        generator (which repeats the same noise in every shard).
         """
         input_dtype = initial_noise.dtype
+        timestep_dtype = self.network_timestep_dtype(input_dtype)
         sigmas = self.denoising_sigmas
         timesteps = self.denoising_step_list
 
@@ -233,13 +255,18 @@ class FlowMatchScheduler(Scheduler):
         ):
             sigma = sigmas[i]
             # Schedule buffers are pinned to fp32 (to preserve integer
-            # timestep values under a stray `module.to(bf16)`), but the
-            # network expects timesteps in the input dtype so that
-            # downstream modulation / Linear layers stay consistent.
-            timestep = timesteps[i].to(dtype=input_dtype)
+            # timestep values under a stray `module.to(bf16)`). By default
+            # the network gets them in the input dtype so downstream
+            # modulation / Linear layers stay consistent; see
+            # ``FlowMatchSchedulerConfig.network_timestep_dtype``.
+            timestep = timesteps[i].to(dtype=timestep_dtype)
             if i > 0:
                 assert clean is not None
-                noise = torch.empty_like(noisy).normal_(generator=rng)
+                noise = (
+                    noise_fn(noisy)
+                    if noise_fn is not None
+                    else torch.empty_like(noisy).normal_(generator=rng)
+                )
                 noisy = ((1.0 - sigma) * clean + sigma * noise).to(input_dtype)
             flow = predict_flow(noisy, timestep)
             clean = noisy - sigma * flow

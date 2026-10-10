@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Game2V wiring for the proxy-DINO conditioned rollout-DMD 5B model.
+"""Game2V wiring for the proxy-DINO conditioned 5B model.
 
 The first frame, prompt and step-input hooks are the 14B's: both models read the
 per-game cover and prompt out of ``games/registry.json``, take the encoded render

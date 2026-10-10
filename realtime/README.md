@@ -58,8 +58,13 @@ Weights come from `MODEL_ROOT` in that file (see below), not from Hugging Face.
 
 ### Launch the workbench
 
-The page is a workbench: it opens on a home screen where you pick a game from
-the gallery or describe a new one, and nothing renders until a game is chosen.
+The page is a workbench in three parts, and nothing renders until a game is
+played. The game library (`#/`) lists every registered game. The workbench
+(`#/studio/<id>`) is a conversation: the first message builds a game, later
+ones revise it, and the right side tries the proxy game and renders its
+photoreal first frame. The play window is an overlay that streams the model's
+video and stops rendering when closed. Conversations are stored by the bridge
+in `.workbench/conversations/`.
 Four services, in this order -- the first three are independent of each other,
 the app wants them up first.
 
@@ -85,6 +90,10 @@ bash workbench_flux.sh            # or `bash workbench_flux.sh <gpu>`
 # 4. The model app, on the GPU host. Starts the FLUX worker itself if step 3
 #    was skipped.
 bash launch.sh
+
+# Stop everything this host is running: the app, the FLUX worker,
+# the bridge and the relay. Run it on each host that has services up.
+bash stop.sh
 ```
 
 Then open `APP_PORT` (8089 by default) on the GPU host. `NPROC` sets how many
@@ -108,8 +117,8 @@ directories hold the bidirectional base DiT weights; no serving config loads
 them, the realtime pipelines use `dit-5b/` and `dit-14b/`. Everything is loaded
 with `HF_HUB_OFFLINE=1`.
 
-Making a game takes tens of minutes (an agent writes and plays it), so the
-left column keeps its job log across a page reload. Picking an existing game
+Making or revising a game takes tens of minutes (an agent writes and plays
+it), so the conversation and its job log survive a page reload. Picking an existing game
 takes a few seconds. `launch.sh` logs to `.eden_app.log`.
 
 ### How the four services fit together

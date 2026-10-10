@@ -11,11 +11,9 @@ typed to the camera-control pipeline; this model conditions on rendered game
 frames through DINOv3 instead of Plücker camera volumes, so it is a different
 pipeline type entirely.
 
-The chunk size (``len_t=3`` latent frames at 480x832) comes from the
-recipe's own AR teacher-forcing config. The sampling schedule and the
-attention window are copied from LingBot-World v2 14B causal-fast: a
-4-step distilled flow schedule at shift 10.0 with CFG off, over a
-sliding window of 18 latent frames.
+A 4-step distilled AR rollout: chunk 3 at 480x832, a shift-3 schedule yielding
+timesteps ``[1000, 900, 750, 500]``, CFG off, and an 18-frame attention budget
+split as 6 sink + 12 rolling.
 """
 
 from __future__ import annotations
@@ -46,8 +44,8 @@ from eden.pipeline_yaml import (
 _SPEC = load_pipeline_yaml("game2v_14b")
 
 GAME2V_EDEN_WORLD_V2_14B_CHECKPOINT_PATH = component_path(_SPEC, "transformer")
-"""AR teacher-forced 14B DiT, published as a single safetensors file with
-Diffusers keys. Read through
+"""The distilled 14B DiT, published as a single safetensors file with Diffusers
+keys. Read through
 :func:`eden.impl.game14b.checkpoint.load_game14b_dit_state_dict`, which applies
 the shared Diffusers remap plus the CLIP-branch and control-norm keys.
 """
@@ -77,8 +75,17 @@ PIPELINE_GAME2V_EDEN_WORLD_V2_14B = Game14BInferencePipelineConfig(
     # shorter than the rollout makes a later AR step read past its end.
     diffusion_model=DiffusionModelConfig(
         seed=_SPEC["seed"],
+        # The AR cache commits the clean latent, so the cache-update forward
+        # runs at t=0.
+        context_noise=_SPEC["context_noise"],
+        # One rank-0 draw over the whole chunk, broadcast to every shard.
+        noise_from_rank0=_SPEC["noise_from_rank0"],
         transformer=Game14BTransformerConfig(
-            network=Game14BDiTNetworkConfig(),
+            # Cache-slot RoPE plus fp32 AdaLN, matching the training numerics.
+            network=Game14BDiTNetworkConfig(
+                apply_rope_before_kvcache=_SPEC["apply_rope_before_kvcache"],
+                fp32_adaln=_SPEC["fp32_adaln"],
+            ),
             dcp_checkpoint_path=GAME2V_EDEN_WORLD_V2_14B_CHECKPOINT_PATH,
             # Single-rollout layout: no leading batch dim.
             batch_shape=(),
@@ -86,8 +93,12 @@ PIPELINE_GAME2V_EDEN_WORLD_V2_14B = Game14BInferencePipelineConfig(
             guidance_scale=_SPEC["guidance_scale"],
             window_size_t=GAME2V_WINDOW_SIZE_T,
             sink_size_t=_SPEC["sink_size_t"],
-            # Channel-concat I2V (mask + first-frame latent), not stamping.
+            # Stamp the cover's latent into the first chunk and hold it at t=0,
+            # composed with the Wan 2.1 channel concat of mask + image latent.
             stamp_image_latent=_SPEC["stamp_image_latent"],
+            ti2v_first_frame_per_token_timestep=_SPEC[
+                "ti2v_first_frame_per_token_timestep"
+            ],
             concat_image_mask_to_latent=_SPEC["concat_image_mask_to_latent"],
             compile_network=_SPEC["compile_network"],
         ),

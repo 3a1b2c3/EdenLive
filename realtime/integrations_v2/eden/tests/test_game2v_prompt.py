@@ -211,6 +211,42 @@ def test_other_ranks_receive_the_composed_prompt(monkeypatch):
     assert broadcast.payload is None
 
 
+def test_other_ranks_skip_the_opening_encode_with_rank_zero(monkeypatch):
+    """A peer must make rank zero's skip decision, or the collectives diverge.
+
+    Only rank zero resolves the registry text. A peer that compared the
+    broadcast opening prompt against its own empty copy would join an
+    embeddings broadcast rank zero never makes, and the next collective hangs.
+    """
+    monkeypatch.setenv('RANK', '1')
+    state = _state(rank='1', last_chunk=_chunk([[]]))
+    state.config.dynamic_prompt = True
+    state.pipeline = SimpleNamespace(
+        encode_text=lambda text: pytest.fail('only rank zero encodes'),
+        replace_text_embeddings=lambda cache, embeddings: None,
+    )
+    state.cache = object()
+    broadcasts: list[int] = []
+
+    def broadcast_object_list(payload, src):
+        payload[0] = ('A quiet courtyard.', ())
+
+    monkeypatch.setattr(
+        'eden.apps.game2v.session.is_distributed_initialized', lambda: True
+    )
+    monkeypatch.setattr(
+        'flashdreams.runtime_v2.distributed_sync.dist.broadcast_object_list',
+        broadcast_object_list,
+    )
+    monkeypatch.setattr(
+        'torch.distributed.broadcast', lambda tensor, src: broadcasts.append(src)
+    )
+
+    _compose_chunk_prompt(state)
+    assert broadcasts == []
+    assert state.encoded_prompt == 'A quiet courtyard.'
+
+
 def test_dynamic_prompt_encodes_only_when_the_text_changes(monkeypatch, tmp_path):
     """The text encoder runs on a changed prompt and is skipped on a repeat.
 
@@ -281,3 +317,34 @@ def test_prompt_event_chunks_must_be_a_positive_integer():
         Game2VSessionConfig(**config, prompt_event_chunks=0)
     with pytest.raises(ValueError, match='prompt_event_chunks'):
         Game2VSessionConfig(**config, prompt_event_chunks=True)
+
+
+def test_dynamic_prompt_keeps_the_text_encoder_on_rank_zero(monkeypatch):
+    """The first per-chunk prompt must not reload UMT5 mid-rollout.
+
+    ``initialize_cache`` frees the text encoder by default. Rank zero, the only
+    rank that re-encodes, asks it to stay loaded; the other ranks free theirs,
+    and a static-prompt run keeps the default.
+    """
+    from eden.apps.game2v.session import _text_encoder_kwargs
+
+    class Pipeline:
+        def initialize_cache(self, text, image=None, *, release_oneshot_encoders=True):
+            del text, image, release_oneshot_encoders
+
+    state = _state()
+    state.pipeline = Pipeline()
+
+    state.config.dynamic_prompt = False
+    assert _text_encoder_kwargs(state) == {}
+
+    state.config.dynamic_prompt = True
+    monkeypatch.setenv('RANK', '0')
+    assert _text_encoder_kwargs(state) == {'release_oneshot_encoders': False}
+    monkeypatch.setenv('RANK', '1')
+    assert _text_encoder_kwargs(state) == {}
+
+    # A pipeline that cannot be asked keeps its own behavior.
+    monkeypatch.setenv('RANK', '0')
+    state.pipeline = SimpleNamespace(initialize_cache=lambda text, image=None: None)
+    assert _text_encoder_kwargs(state) == {}

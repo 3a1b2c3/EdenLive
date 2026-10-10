@@ -66,7 +66,7 @@ def create_app_v2_14b_taehv() -> IApplication:
     return Game2VApplication(defaults=GAME2V_EDEN_WORLD_V2_14B_TAEHV_DEFAULTS)
 
 
-# Proxy-DINO conditioned rollout-DMD 5B. Same game-conditioned shell as the 14B,
+# Proxy-DINO conditioned 5B. Same game-conditioned shell as the 14B,
 # but Wan 2.2 TI2V-5B rather than Wan 2.1 14B I2V, which moves three of the
 # defaults: the frame size is 704x1280 (the only size whose token count shards
 # across 8 ranks under the 16x VAE -- see eden.game5b_config), the frame rate is

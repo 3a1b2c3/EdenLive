@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+import threading
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -29,7 +30,9 @@ from eden.apps.game2v.session import (
     Game2VSessionConfig,
     _apply_pending_game_switch,
     _enter_start_gate,
+    _publish_browser_metrics,
     _switch_game,
+    browser_metrics_snapshot,
     request_game_switch,
     request_home,
 )
@@ -219,6 +222,36 @@ def test_panel_home_rearms_the_gate(isolated_extension):
         # listing reports "not started" without waiting for the model thread.
         listed = await client.get("/ext/game2v/games")
         assert (await listed.json())["started"] is False
+
+    asyncio.run(_with_client(body))
+
+
+def test_panel_metrics_reports_completed_chunk_and_clears_on_switch(isolated_extension):
+    state = _state("subway-run")
+    state.browser_metrics_lock = threading.Lock()
+    state.browser_metrics_epoch = 0
+    state.browser_metrics = None
+    session = SimpleNamespace(model_loop=SimpleNamespace(state=state))
+    register_game2v_panel(session)
+
+    async def body(client):
+        empty = await client.get("/ext/game2v/metrics")
+        assert await empty.json() == {"model": None}
+
+        _publish_browser_metrics(state, {"chunk_fps": 12.5, "model_step_wall_s": 2.0}, epoch=0)
+        snapshot = browser_metrics_snapshot(state)
+        assert snapshot["slug"] == "subway-run"
+        snapshot["chunk_fps"] = 0  # A caller cannot mutate the published result.
+        response = await client.get("/ext/game2v/metrics")
+        model = (await response.json())["model"]
+        assert model["chunk_fps"] == 12.5
+        assert model["model_step_ms"] == 2000.0
+        assert model["age_s"] >= 0
+
+        request_game_switch(state, "boxed-in")
+        _publish_browser_metrics(state, {"chunk_fps": 9.0, "model_step_wall_s": 1.0}, epoch=0)
+        cleared = await client.get("/ext/game2v/metrics")
+        assert await cleared.json() == {"model": None}
 
     asyncio.run(_with_client(body))
 

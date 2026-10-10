@@ -3,7 +3,7 @@
 
 """Wan 2.2 TI2V-5B DiT widened for the proxy-DINO channel-concat control.
 
-The rollout-DMD recipe appends the 1024-channel proxy-DINO control to the 5B's
+The 5B recipe appends the 1024-channel proxy-DINO control to the model's
 own 48 latent channels, giving a ``[3072, 1072, 1, 2, 2]`` patch embedding
 (confirmed against the checkpoint's ``.metadata``). Two things follow from that
 shape, and both are why this model needs no network subclass of its own:
@@ -63,6 +63,20 @@ class Game5BDiTNetwork(WanDiTNetwork):
 
         Only the static cross-attention context changes; the self-attention KV
         cache is untouched, so the rollout horizon survives the swap.
+
+        The write goes through :meth:`BlockKVCache.overwrite_kv_` rather than
+        rebinding ``cross_attn.text`` to a freshly built cache. The transformer
+        forward reads the cross-attention K/V out of this cache while it runs
+        inside a captured CUDA graph, and a captured kernel holds the *storage
+        address* it was traced against. Rebinding the attribute hands the next
+        eager forward a new allocation while the replayed graph keeps reading
+        the old one -- which, once the old tensor is freed and the allocator
+        reuses it, is whatever now occupies that memory. The dynamic-prompt
+        swap is the only thing that mutates this cache mid-rollout, and it
+        fires exactly when the game raises an event, so the corruption shows up
+        as "the picture breaks the moment the player moves" with compile on.
+        Writing in place keeps the addresses stable, so the graph replays
+        correctly and behaves the same with or without compile / CUDA graphs.
         """
         assert text_embeddings.shape[-2] == self.text_len, (
             f"text embeddings must have {self.text_len} tokens, got "
@@ -70,7 +84,8 @@ class Game5BDiTNetwork(WanDiTNetwork):
         )
         context_text = self.text_embedding(text_embeddings)
         for block, block_cache in zip(self.blocks, cache.block_caches):
-            block_cache.cross_attn.text = block.cross_attn.compute_kv(context_text)
+            fresh = block.cross_attn.compute_kv(context_text)
+            block_cache.cross_attn.text.overwrite_kv_(*fresh.clone_kv())
 
 # The 5B VAE's latent width; the noisy latent occupies these leading channels.
 GAME5B_LATENT_CHANNELS = 48

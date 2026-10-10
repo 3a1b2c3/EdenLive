@@ -1,12 +1,10 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""CPU tests for the proxy-DINO conditioned rollout-DMD 5B Game2V preset.
+"""CPU tests for the proxy-DINO conditioned AR 5B Game2V preset.
 
-Every assertion here traces to the reference recipe
-(``proxy_dino-video-tiv2v-rollout_dmd_chunkar.yaml`` and the Stage-3 SGF config
-it defaults onto) or to the training checkpoint's own tensor shapes, so a drift
-in either is what these are meant to catch.
+Every assertion here traces to the training recipe or to the checkpoint's own
+tensor shapes, so a drift in either is what these are meant to catch.
 """
 
 from __future__ import annotations
@@ -78,7 +76,7 @@ def test_packed_first_frame_uses_the_ti2v_stamp() -> None:
     assert transformer.concat_image_mask_to_latent is False
 
 
-def test_sampling_matches_the_reference_rollout_dmd_schedule() -> None:
+def test_sampling_matches_the_reference_schedule() -> None:
     """CFG off, 4 stochastic steps, and the reference's own timestep grid."""
     pipeline = PIPELINE_GAME2V_EDEN_WORLD_V2_5B
     transformer = pipeline.diffusion_model.transformer
@@ -94,6 +92,12 @@ def test_sampling_matches_the_reference_rollout_dmd_schedule() -> None:
     assert scheduler.warp_denoising_step is True
     # ``context_noise_sigma: 0.0``: the AR cache commits the clean latent.
     assert pipeline.diffusion_model.context_noise == 0
+    # One rank-0 noise draw over the whole chunk, broadcast to every shard.
+    assert pipeline.diffusion_model.noise_from_rank0 is True
+    # Cache-slot RoPE: K cached unrotated, rotated by its arena slot.
+    assert transformer.network.apply_rope_before_kvcache is False
+    # Timesteps reach the network in fp32 so bf16 does not round them.
+    assert scheduler.network_timestep_dtype == torch.float32
 
 
 def test_denoising_timesteps_reproduce_the_reference_timestep_list() -> None:

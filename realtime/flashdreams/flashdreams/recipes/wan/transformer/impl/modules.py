@@ -55,17 +55,36 @@ def sinusoidal_embedding_1d(dim: int, position: Tensor) -> Tensor:
     return out
 
 
-class MLPProj(torch.nn.Module):
-    """Project conditioning embeddings with a small normalized MLP."""
+class FP32LayerNorm(nn.LayerNorm):
+    """``LayerNorm`` computed in fp32 and cast back, as Diffusers' ``FP32LayerNorm``."""
 
-    def __init__(self, in_dim: int, out_dim: int) -> None:
+    def forward(self, x: Tensor) -> Tensor:
+        origin_dtype = x.dtype
+        return nn.functional.layer_norm(
+            x.float(),
+            self.normalized_shape,
+            self.weight.float() if self.weight is not None else None,
+            self.bias.float() if self.bias is not None else None,
+            self.eps,
+        ).to(origin_dtype)
+
+
+class MLPProj(torch.nn.Module):
+    """Project conditioning embeddings with a small normalized MLP.
+
+    ``fp32_norm`` runs both LayerNorms in fp32, as Diffusers'
+    ``WanImageEmbedding`` does. Parameter names are the same either way.
+    """
+
+    def __init__(self, in_dim: int, out_dim: int, fp32_norm: bool = False) -> None:
         super().__init__()
+        norm = FP32LayerNorm if fp32_norm else torch.nn.LayerNorm
         self.proj = torch.nn.Sequential(
-            torch.nn.LayerNorm(in_dim),
+            norm(in_dim),
             torch.nn.Linear(in_dim, in_dim),
             torch.nn.GELU(),
             torch.nn.Linear(in_dim, out_dim),
-            torch.nn.LayerNorm(out_dim),
+            norm(out_dim),
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -84,12 +103,14 @@ class Head(nn.Module):
         out_dim: int,
         patch_size: tuple[int, int, int],
         eps: float = 1e-6,
+        fp32_adaln: bool = False,
     ) -> None:
         super().__init__()
         self.dim = dim
         self.out_dim = out_dim
         self.patch_size = patch_size
         self.eps = eps
+        self.fp32_adaln = fp32_adaln
 
         # Output projection
         out_dim = math.prod(patch_size) * out_dim
@@ -138,7 +159,14 @@ class Head(nn.Module):
         # hidden state. Scalar-mode arithmetic is bit-identical to the
         # pre-change ``[..., 1, D]`` * ``[..., L, D]`` broadcast.
         e_chunks = [c.squeeze(-2) for c in (self.modulation + e).chunk(2, dim=-2)]
-        x = self.norm(x) * (1 + e_chunks[1]) + e_chunks[0]  # [..., L, D]
+        if self.fp32_adaln:
+            # Diffusers ``norm_out`` path: the shift/scale sum stays in the
+            # parameter dtype, the LayerNorm and the affine run in fp32.
+            x = (
+                self.norm(x.float()) * (1 + e_chunks[1]) + e_chunks[0]
+            ).type_as(x)
+        else:
+            x = self.norm(x) * (1 + e_chunks[1]) + e_chunks[0]  # [..., L, D]
         x = self.head(x)
         return x
 
@@ -513,6 +541,7 @@ class Block(nn.Module):
         i2v: bool = False,
         apply_rope_before_kvcache: bool = True,
         cp_method: Literal["ring", "ulysses"] = "ring",
+        fp32_adaln: bool = False,
     ) -> None:
         super().__init__()
         self.dim = dim
@@ -520,6 +549,7 @@ class Block(nn.Module):
         self.num_heads = num_heads
         self.cross_attn_norm = cross_attn_norm
         self.eps = eps
+        self.fp32_adaln = fp32_adaln
 
         # Core submodules
         self.norm1 = nn.LayerNorm(dim, eps=eps, elementwise_affine=False)
@@ -643,6 +673,8 @@ class Block(nn.Module):
         # which both broadcast elementwise with ``x``'s ``[..., L, D]``.
         # Scalar-mode arithmetic is bit-identical to the pre-change
         # ``[..., 1, D]`` * ``[..., L, D]`` broadcast.
+        if self.fp32_adaln:
+            return self._forward_fp32_adaln(x, e, cache, rope_freqs)
         e_chunks = [c.squeeze(-2) for c in (self.modulation + e).chunk(6, dim=-2)]
 
         y = self.norm1(x) * (1 + e_chunks[1]) + e_chunks[0]  # [..., L, D]
@@ -661,3 +693,56 @@ class Block(nn.Module):
         y = self.ffn(y)
         x = x + (y * e_chunks[5])  # [..., L, D]
         return x
+
+    def _forward_fp32_adaln(
+        self,
+        x: Tensor,
+        e: Tensor,
+        cache: BlockCache,
+        rope_freqs: Tensor,
+    ) -> Tensor:
+        """The Diffusers ``WanTransformerBlock`` precision path.
+
+        Modulation is ``modulation + e.float()`` (fp32); every LayerNorm runs
+        on an fp32 copy of the residual stream; the shift/scale affine and the
+        self-attention and FFN residual adds happen in fp32 before casting back.
+        The cross-attention residual is added in the stream dtype, as upstream.
+        Attention and FFN matmuls stay in the stream dtype.
+        """
+        e_chunks = [
+            c.squeeze(-2) for c in (self.modulation + e.float()).chunk(6, dim=-2)
+        ]
+
+        y = (_layer_norm_fp32(self.norm1, x) * (1 + e_chunks[1]) + e_chunks[0]).type_as(x)
+        y = self.self_attn(
+            y,
+            rope_freqs=rope_freqs,
+            kv_cache=cache.self_attn,
+        )
+        x = (x.float() + y * e_chunks[2]).type_as(x)
+
+        x = x + self.cross_attn(
+            _layer_norm_fp32(self.norm3, x).type_as(x),
+            kv_cache=cache.cross_attn,
+        )
+        y = (_layer_norm_fp32(self.norm2, x) * (1 + e_chunks[4]) + e_chunks[3]).type_as(x)
+        y = self.ffn(y)
+        x = (x.float() + y.float() * e_chunks[5]).type_as(x)
+        return x
+
+
+def _layer_norm_fp32(norm: nn.Module, x: Tensor) -> Tensor:
+    """Apply ``norm`` to ``x`` in fp32 (Diffusers ``FP32LayerNorm``).
+
+    ``nn.Identity`` (no cross-attn norm) passes an fp32 copy through, so the
+    caller's ``.type_as`` round-trips it unchanged.
+    """
+    if not isinstance(norm, nn.LayerNorm):
+        return norm(x.float())
+    return torch.nn.functional.layer_norm(
+        x.float(),
+        norm.normalized_shape,
+        None if norm.weight is None else norm.weight.float(),
+        None if norm.bias is None else norm.bias.float(),
+        norm.eps,
+    )

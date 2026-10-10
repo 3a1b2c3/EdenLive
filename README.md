@@ -207,10 +207,19 @@ bash workbench_bridge.sh
 bash launch.sh
 ```
 
-Open `http://<host>:8089` (`APP_PORT` in `deploy.conf`). The page is a workbench: it
-starts on a home screen listing the games, and nothing renders until you pick one.
-Choosing a game loads it and begins streaming; when a round ends you can replay it or
-go back and switch. `NPROC` sets how many ranks `torchrun` starts — one per GPU, so
+Open `http://<host>:8089` (`APP_PORT` in `deploy.conf`). The page has three parts,
+and nothing renders until you press play:
+
+- **Game library** -- every registered game as a card. Clicking one opens it in the
+  play window; games made in the workbench can also be reopened there.
+- **Workbench** -- a chat on the left and the result on the right. The first message
+  describes a game and builds it; later messages revise the same game. The right side
+  has a tab to try the proxy game in the browser and a tab to caption and render its
+  photoreal first frame. **New game** starts a new conversation.
+- **Play window** -- an overlay over the page that streams the model's video. Closing
+  it stops rendering; when a round ends you can replay or close.
+
+`NPROC` sets how many ranks `torchrun` starts — one per GPU, so
 set it to the number you want to use.
 
 A fourth service, `workbench_bridge.sh`, is only needed to *generate* new games from

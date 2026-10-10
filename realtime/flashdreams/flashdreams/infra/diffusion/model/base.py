@@ -69,6 +69,18 @@ class DiffusionModelConfig(InstantiateConfig):
     patchify. Slower than the default patchified path; useful when matching
     another implementation's RNG sequence."""
 
+    noise_from_rank0: bool = False
+    """Draw every noise tensor (initial and scheduler re-noise) once, on rank
+    0, at the full unpatchified chunk shape, broadcast it, then let each rank
+    take its context-parallel shard.
+
+    The default path has each rank draw only its own shard from a generator
+    seeded identically on every rank, so under CP every shard receives the
+    *same* noise and the chunk's noise repeats ``cp_size`` times along the
+    token axis. This flag gives the single-GPU distribution at any CP size.
+    Bypasses ``Transformer.initial_noise`` and needs a scheduler whose
+    ``sample`` accepts ``noise_fn`` (``FlowMatchScheduler``)."""
+
 
 class DiffusionModel(nn.Module, Generic[TransformerCacheT]):
     """Autoregressive diffusion model (scheduler + transformer).
@@ -105,6 +117,15 @@ class DiffusionModel(nn.Module, Generic[TransformerCacheT]):
 
     def __init__(self, config: DiffusionModelConfig) -> None:
         super().__init__()
+        # Validate before building the transformer, which may load weights.
+        if config.noise_from_rank0 and config.noise_in_unpatchified_shape:
+            raise ValueError(
+                "noise_from_rank0 already draws in the unpatchified shape; "
+                "do not also set noise_in_unpatchified_shape"
+            )
+        if config.noise_from_rank0 and config.context_noise > 0:
+            # ``finalize``'s ``add_noise`` still draws per rank.
+            raise ValueError("noise_from_rank0 requires context_noise == 0")
         self.config = config
         self.transformer = cast(
             Transformer[TransformerCacheT], self.config.transformer.setup()
@@ -141,6 +162,38 @@ class DiffusionModel(nn.Module, Generic[TransformerCacheT]):
     def latent_shape(self) -> tuple[int, ...]:
         return self.transformer.latent_shape
 
+    def _rank0_noise(self, like: Tensor) -> Tensor:
+        """This rank's shard of one standard-normal draw over the full chunk.
+
+        ``like`` is a patchified per-rank latent. Rank 0 draws the whole
+        unpatchified chunk from ``self.rng`` and broadcasts it; every rank then
+        patchifies and keeps its CP shard, so the shards are disjoint slices of
+        a single sample exactly as on one GPU. See
+        ``DiffusionModelConfig.noise_from_rank0``.
+        """
+        # Recover the full-chunk shape through the transformer's own inverse so
+        # any CP layout works. It is a (tiny) collective that every rank makes
+        # at the same point; not cached, since the rollout's height/width can
+        # change between sessions without changing the shard shape.
+        full_shape = tuple(
+            self.transformer.unpatchify_and_maybe_gather_cp(
+                torch.empty_like(like)
+            ).shape
+        )
+        distributed = (
+            torch.distributed.is_initialized()
+            and torch.distributed.get_world_size() > 1
+        )
+        if not distributed or torch.distributed.get_rank() == 0:
+            full = torch.randn(
+                full_shape, device=like.device, dtype=like.dtype, generator=self.rng
+            )
+        else:
+            full = torch.empty(full_shape, device=like.device, dtype=like.dtype)
+        if distributed:
+            torch.distributed.broadcast(full, src=0)
+        return self.transformer.patchify_and_maybe_split_cp(full)
+
     def generate(
         self,
         autoregressive_index: int,
@@ -164,7 +217,12 @@ class DiffusionModel(nn.Module, Generic[TransformerCacheT]):
             input = self.transformer.patchify_and_maybe_split_cp(input)
         cache.start(autoregressive_index)
 
-        if self.config.noise_in_unpatchified_shape:
+        noise_fn = self._rank0_noise if self.config.noise_from_rank0 else None
+        if noise_fn is not None:
+            initial_noise = noise_fn(
+                torch.empty(self.latent_shape, device=self.device, dtype=self.dtype)
+            )
+        elif self.config.noise_in_unpatchified_shape:
             # Draw noise at the unpatchified shape so the RNG sequence matches
             # implementations that sample before patchify; ``self.latent_shape``
             # is patchified, so go through ``unpatchify_and_maybe_gather_cp``
@@ -208,10 +266,16 @@ class DiffusionModel(nn.Module, Generic[TransformerCacheT]):
                 output = self.transformer.unpatchify_and_maybe_gather_cp(output)
             return output
 
+        # Only schedulers that support it take ``noise_fn``; leave the others'
+        # signature untouched.
+        sample_kwargs: dict[str, Any] = (
+            {"noise_fn": noise_fn} if noise_fn is not None else {}
+        )
         clean_latent = self.scheduler.sample(
             initial_noise=initial_noise,
             predict_flow=predict_flow,
             rng=self.rng,
+            **sample_kwargs,
         )
 
         if self.config.noise_in_unpatchified_shape:
@@ -253,7 +317,13 @@ class DiffusionModel(nn.Module, Generic[TransformerCacheT]):
         schedule has no ``t=0`` entry).
         """
         context_noise = self.config.context_noise
-        timestep = torch.tensor(context_noise, device=self.device, dtype=self.dtype)
+        # Same dtype the scheduler hands the denoising forwards, so a CUDA graph
+        # shared by both sees one staged timestep dtype.
+        timestep = torch.tensor(
+            context_noise,
+            device=self.device,
+            dtype=self.scheduler.network_timestep_dtype(self.dtype),
+        )
         if context_noise > 0.0:
             clean_latent = final_state.clean_latent
             # Round-trip patchify/unpatchify around ``add_noise`` so the

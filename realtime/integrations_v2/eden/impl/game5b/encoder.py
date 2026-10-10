@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Per-AR-step condition encoder for the proxy-DINO rollout-DMD 5B model.
+"""Per-AR-step condition encoder for the proxy-DINO 5B model.
 
 Two conditions are assembled here:
 

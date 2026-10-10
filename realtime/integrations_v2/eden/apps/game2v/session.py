@@ -10,6 +10,7 @@ import time
 import os
 import threading
 from collections import deque
+from contextlib import nullcontext
 from concurrent.futures import Future
 import numpy as np
 from collections.abc import Callable, Mapping
@@ -412,6 +413,11 @@ class Game2VModelState:
     ui_loop: Cam2VSlangPyUILoop | None = None
     """Registered UI-loop handle used only through ``invoke_async``."""
 
+    browser_metrics_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+    browser_metrics: dict[str, float | int | str] | None = None
+    browser_metrics_epoch: int = 0
+    """Small, locked snapshot for the HTTP dashboard; never expose model state."""
+
     def __post_init__(self) -> None:
         """Expose decomposed input state behind the legacy constructor field."""
         keyboard_resampler = self.keyboard_resampler
@@ -463,6 +469,7 @@ class Game2VModelLoop(IModelLoop[Game2VModelState]):
                 text=[_opening_prompt(state, conditioning.prompt)],
                 image=_anchor_frame(state),
                 **_rollout_cache_kwargs(state),
+                **_text_encoder_kwargs(state),
             )
         assert state.cache is not None
 
@@ -514,6 +521,7 @@ class Game2VModelLoop(IModelLoop[Game2VModelState]):
                 text=[_opening_prompt(state, conditioning.prompt)],
                 image=_anchor_frame(state),
                 **_rollout_cache_kwargs(state),
+                **_text_encoder_kwargs(state),
             )
             state.pending_game_chunk = _begin_game_chunk(
                 state, ar_index, duration_s=0.0
@@ -598,6 +606,9 @@ class Game2VModelLoop(IModelLoop[Game2VModelState]):
                 "Game2V: generating the first chunk; the compiled DiT traces "
                 "its input shape here, so this step is much slower than later ones"
             )
+        browser_metrics_lock = getattr(state, "browser_metrics_lock", None)
+        with browser_metrics_lock if browser_metrics_lock is not None else nullcontext():
+            browser_metrics_epoch = getattr(state, "browser_metrics_epoch", 0)
         generate_started_at = time.perf_counter()
         frames = state.config.generate_step(
             state.pipeline,
@@ -740,6 +751,7 @@ class Game2VModelLoop(IModelLoop[Game2VModelState]):
                 metrics["chunk_fps"],
             )
         _publish_ui_status(state, metrics)
+        _publish_browser_metrics(state, metrics, epoch=browser_metrics_epoch)
         # The text was composed, and encoded when per-chunk prompts are on,
         # before the generate above. The event lines still travel on their own
         # so the client shows exactly this chunk's set, replaced wholesale when
@@ -1079,6 +1091,12 @@ def _compose_chunk_prompt(state: Game2VModelState) -> tuple[str, tuple[str, ...]
         dist.broadcast_object_list(payload, src=0)
         static, event_lines = payload[0]
         event_lines = tuple(event_lines)
+        # Only rank zero resolves the registry text, yet every rank's
+        # ``_encode_chunk_prompt`` decides from it whether to join the
+        # embeddings broadcast. A peer left with an empty copy would see the
+        # opening text as changed and broadcast alone, deadlocking the next
+        # collective.
+        state.static_prompt = static
     state.active_prompt = " ".join(part for part in (static, *event_lines) if part)
     state.active_event_lines = event_lines
     _encode_chunk_prompt(state)
@@ -1151,6 +1169,26 @@ def _rollout_cache_kwargs(state: "Game2VModelState") -> dict[str, int]:
         return {}
     len_t = int(pipeline.diffusion_model.transformer.config.len_t)
     return {"rollout_latent_frames": state.config.total_blocks * len_t}
+
+
+def _text_encoder_kwargs(state: "Game2VModelState") -> dict[str, bool]:
+    """Keep the text encoder loaded on the rank that will re-encode prompts.
+
+    ``initialize_cache`` frees the text encoder once the opening prompt is
+    encoded. With ``dynamic_prompt`` the first changed prompt would then reload
+    UMT5 from disk mid-rollout, which stalls that chunk for seconds. Rank zero is
+    the only rank that encodes per-chunk prompts, so it keeps the encoder that
+    startup already loaded; the other ranks still free theirs.
+    """
+    if not getattr(state.config, "dynamic_prompt", False):
+        return {}
+    if int(os.environ.get("RANK", "0")) != 0:
+        return {}
+    if "release_oneshot_encoders" not in inspect.signature(
+        state.pipeline.initialize_cache
+    ).parameters:
+        return {}
+    return {"release_oneshot_encoders": False}
 
 
 def _opening_prompt(state: Game2VModelState, fallback: str) -> str:
@@ -1330,6 +1368,7 @@ def _end_rollout(state: Game2VModelState) -> None:
     state too, so it goes with the rest -- a step that resumed while a stale
     encode was still queued for its AR index would fail outright.
     """
+    _reset_browser_metrics(state)
     _discard_pending_game_chunk(state)
     control_stream = getattr(state, "control_stream", None)
     if control_stream is not None:
@@ -1451,6 +1490,7 @@ def request_game_switch(state: Game2VModelState, slug: str, *, restart: bool = F
     ``restart`` asks for a full rewind even when ``slug`` is already current, so
     "play again" begins the same game from its first frame.
     """
+    _reset_browser_metrics(state)
     state.start_requested = True
     state.pending_home = False
     state.pending_game_restart = bool(restart)
@@ -1467,7 +1507,55 @@ def request_home(state: Game2VModelState) -> None:
     Re-arms the ``wait_for_start`` gate through :func:`_enter_start_gate`, which
     broadcasts the decision so every rank stops on the same step.
     """
+    _reset_browser_metrics(state)
     state.pending_home = True
+
+
+def _reset_browser_metrics(state: Game2VModelState) -> None:
+    lock = getattr(state, "browser_metrics_lock", None)
+    if lock is None:  # Legacy test states constructed without dataclass defaults.
+        return
+    with lock:
+        state.browser_metrics_epoch += 1
+        state.browser_metrics = None
+
+
+def browser_metrics_snapshot(state: Game2VModelState) -> dict[str, float | int | str] | None:
+    """Copy the latest completed step without reading mutable model fields."""
+    lock = getattr(state, "browser_metrics_lock", None)
+    if lock is None:
+        return None
+    with lock:
+        snapshot = state.browser_metrics
+        return dict(snapshot) if snapshot is not None else None
+
+
+def _publish_browser_metrics(
+    state: Game2VModelState, metrics: Mapping[str, float | int], *, epoch: int,
+) -> None:
+    lock = getattr(state, "browser_metrics_lock", None)
+    if lock is None:
+        return
+    snapshot: dict[str, float | int | str] = {
+        "slug": state.config.game_slug,
+        "chunk_fps": float(metrics["chunk_fps"]),
+        "model_step_ms": float(metrics["model_step_wall_s"]) * 1000.0,
+        "completed_blocks": state.blocks_generated,
+        "sampled_at": time.monotonic(),
+    }
+    # Device-wide used/total memory, sampled on the model thread after a
+    # completed chunk. This is memory consumption, not GPU utilization.
+    device = state.config.device
+    if device.type == "cuda":
+        try:
+            free_bytes, total_bytes = torch.cuda.mem_get_info(device)
+            snapshot["gpu_memory_used_gib"] = (total_bytes - free_bytes) / 2**30
+            snapshot["gpu_memory_total_gib"] = total_bytes / 2**30
+        except (RuntimeError, OSError):
+            pass
+    with lock:
+        if epoch == state.browser_metrics_epoch:
+            state.browser_metrics = snapshot
 
 
 def _restart_rollout(state: Game2VModelState) -> bool:
@@ -1499,6 +1587,7 @@ def _restart_rollout(state: Game2VModelState) -> bool:
     if not restarted:
         return False
 
+    _reset_browser_metrics(state)
     logger.info(
         "Game2V restart: round changed to {}; clearing the rollout cache and "
         "regenerating from the first frame.",

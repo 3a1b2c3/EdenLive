@@ -4,20 +4,22 @@
 """Frozen proxy-DINO (DINOv3 ViT-L/16) control encoder.
 
 Ported from the reference recipe's ``extern/proxy_dino/encoder.py`` so the
-inference numerics match: bilinear+antialias resize to 288x512, ImageNet
-normalization, bf16 autocast backbone, 2x2 patch grouping, fp32 projection,
-L2 normalization, then a trilinear resample onto the DiT's latent grid.
+inference numerics match. This is the profile both presets (5B and 14B)
+were trained against: bilinear+antialias resize to 480x832, ImageNet
+normalization, bf16 autocast backbone, native 16px patches (no grouping), patch
+projection and L2 normalization under the same autocast, then a trilinear
+resample onto the DiT's latent grid.
 
 Per-frame independence is what makes the overlap in
 :mod:`eden.apps.game2v.session` sound: a chunk's features depend only on
 that chunk's rendered frames, so the encode can start the moment the render
 finishes and be awaited just before the consuming chunk denoises.
 
-Acceleration notes (measured shapes, not guesses): the DINO sequence is
-18x32 = 576 patch tokens, far too short for sequence parallelism to pay for
-its collectives — the recipe's own launch keeps DINO replicated. What does
-pay off is that every chunk presents an identical input shape
-``[len_t, 3, 288, 512]``, so ``torch.compile`` and CUDA-graph replay both
+Acceleration notes: the DINO sequence is 30x52 = 1560 patch tokens, too short
+for sequence parallelism to pay for its collectives — the recipe's own launch
+keeps DINO replicated. What does pay off is that every chunk presents an
+identical input shape ``[len_t, 3, 480, 832]``, so ``torch.compile`` and
+CUDA-graph replay both
 see one static shape. Rank 0 encodes and broadcasts, which keeps the cost
 off the other ranks entirely.
 """
@@ -42,21 +44,14 @@ DINOV3_IMAGE_STD = (0.229, 0.224, 0.225)
 
 
 def _resolve_projection_path(path: str) -> str:
-    """Resolve a projection checkpoint path against ``HF_HOME``.
+    """The projection checkpoint path, checked to exist.
 
-    Absolute paths pass through. Relative paths are read out of the offline HF
-    cache root, so a config can name a checkpoint inside that cache instead of
-    spelling out a host-specific prefix.
+    The pipeline YAML already joins it onto the weight tree, so it is used as
+    given.
     """
-    if os.path.isabs(path):
-        return path
-    hf_home = os.environ.get("HF_HOME")
-    if not hf_home:
-        raise ValueError(
-            f"proxy-DINO projection path {path!r} is relative but HF_HOME is unset; "
-            "set HF_HOME or give an absolute path."
-        )
-    return os.path.join(hf_home, path)
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"proxy-DINO projection checkpoint is missing: {path}")
+    return path
 
 
 def extract_shared_encoder_state_dict(
@@ -92,18 +87,14 @@ class ProxyDinoEncoder(nn.Module):
         backbone: nn.Module,
         *,
         projection_dim: int = 1024,
-        patchify_factor: int = 2,
     ) -> None:
         super().__init__()
         self.backbone = backbone
-        self.patchify_factor = int(patchify_factor)
-        if self.patchify_factor < 1:
-            raise ValueError("patchify_factor must be positive")
         hidden_size = int(backbone.config.hidden_size)
         self.global_projection = nn.Linear(hidden_size, int(projection_dim))
-        self.patch_projection = nn.Linear(
-            hidden_size * self.patchify_factor**2, int(projection_dim)
-        )
+        # Native 16px patches: one token maps to one projected vector
+        # (patch_projection is (1024, 1024)).
+        self.patch_projection = nn.Linear(hidden_size, int(projection_dim))
         self.feature_dim = int(projection_dim)
 
     @property
@@ -115,41 +106,35 @@ class ProxyDinoEncoder(nn.Module):
         return int(getattr(self.backbone.config, "num_register_tokens", 0))
 
     def _patch_grid(self, tokens: Tensor, image_shape: tuple[int, int]) -> Tensor:
-        """Group ``[L, D]`` patch tokens into a ``[h/f, w/f, D*f*f]`` grid."""
+        """Arrange ``[L, D]`` patch tokens into a ``[h, w, D]`` grid."""
         height = int(image_shape[0]) // self.patch_size
         width = int(image_shape[1]) // self.patch_size
-        factor = self.patchify_factor
-        if height % factor or width % factor:
-            raise ValueError(
-                f"DINO patch grid {height}x{width} is not divisible by "
-                f"patchify_factor={factor}"
-            )
         patch_start = 1 + self.num_register_tokens
         patch_tokens = tokens[patch_start : patch_start + height * width]
         if int(patch_tokens.shape[0]) != height * width:
             raise ValueError(
                 "DINO output does not contain the expected number of patch tokens"
             )
-        patch_grid = patch_tokens.reshape(height, width, -1)
-        patch_grid = patch_grid.reshape(
-            height // factor, factor, width // factor, factor, -1
-        )
-        return patch_grid.permute(0, 2, 1, 3, 4).flatten(2)
+        return patch_tokens.reshape(height, width, -1)
 
     @torch.no_grad()
     def forward(
         self,
         images: Tensor,
         *,
-        image_size: tuple[int, int] = (288, 512),
+        image_size: tuple[int, int] = (480, 832),
     ) -> Tensor:
         """Encode ``[N, 3, H, W]`` RGB in ``[0, 1]`` to ``[N, C, h, w]``."""
         if images.ndim != 4 or int(images.shape[1]) != 3:
             raise ValueError(
                 f"DINO control images must be [N,3,H,W], got {tuple(images.shape)}"
             )
+        # Contiguous before the resample, whatever layout came in: an offline
+        # permute of HWC frames arrives channels-last, the live stream NCHW, and
+        # the resample and the backbone conv both pick kernels by memory format,
+        # ~1e-3 apart -- enough for the rollout to diverge from its first chunk.
         pixel_values = F.interpolate(
-            images.float(),
+            images.float().contiguous(),
             size=tuple(image_size),
             mode="bilinear",
             align_corners=False,
@@ -166,9 +151,10 @@ class ProxyDinoEncoder(nn.Module):
                 for tokens in output.last_hidden_state
             ]
         )
-        # The projection stays in fp32 even under the bf16 backbone autocast,
-        # matching the reference encoder.
-        projected = F.normalize(self.patch_projection(grids.float()), p=2, dim=-1)
+        # The projection and the L2 normalization run under the same autocast,
+        # then hand back fp32.
+        with torch.autocast("cuda", dtype=torch.bfloat16, enabled=grids.is_cuda):
+            projected = F.normalize(self.patch_projection(grids), p=2, dim=-1).float()
         return projected.permute(0, 3, 1, 2).contiguous()
 
 
@@ -187,13 +173,12 @@ class ProxyDinoEncoderConfig(InstantiateConfig):
     rather than resolved to a built-in location."""
 
     projection_path: str = ""
-    """Finetuned projection checkpoint. A ``.safetensors`` file is read flat;
-    relative paths still resolve under ``HF_HOME``. The Game2V apps pass the
-    path from their pipeline YAML; empty is rejected at construction."""
+    """Finetuned projection checkpoint. A ``.safetensors`` file is read flat.
+    The Game2V apps pass the path from their pipeline YAML; empty is rejected
+    at construction."""
 
     projection_dim: int = 1024
-    patchify_factor: int = 2
-    image_size: tuple[int, int] = (288, 512)
+    image_size: tuple[int, int] = (480, 832)
     """Encoder input resolution the projection was trained at."""
 
     device: str = "cuda"
@@ -224,11 +209,7 @@ class ProxyDinoControlEncoder:
         backbone = AutoModel.from_pretrained(
             config.backbone_repo, local_files_only=True
         )
-        encoder = ProxyDinoEncoder(
-            backbone,
-            projection_dim=config.projection_dim,
-            patchify_factor=config.patchify_factor,
-        )
+        encoder = ProxyDinoEncoder(backbone, projection_dim=config.projection_dim)
         projection_path = _resolve_projection_path(config.projection_path)
         if projection_path.endswith(".safetensors"):
             from safetensors.torch import load_file

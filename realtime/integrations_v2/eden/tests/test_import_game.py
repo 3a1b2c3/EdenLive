@@ -301,3 +301,32 @@ def test_overlay_has_restart_button(tmp_path):
     assert "Test Game" in js
     css = (tmp_path / "hud" / "overlay.css").read_text()
     assert ".result" in css
+
+
+def test_event_prompts_come_from_the_game_source(tmp_path):
+    """A game that emits typed events gets a sentence per type without being told.
+
+    The chunk-event panel shows `event.prompt`, and a skill game's snapshot
+    carries only the type, so the sentence has to be derived at import. A table
+    passed in explicitly still wins, and a type built dynamically is skipped.
+    """
+    from eden.apps.game2v.import_game import event_prompts_from_source, registry_entry
+
+    project = _write_project(tmp_path)
+    run = project / "runs" / "step3" / "final"
+    (run / "game.mjs").write_text(
+        "emit('race.checkpoint', {n});\n"
+        "emit(state === 'WON' ? 'round.won' : 'round.lost', {reason});\n"
+        "emit(kind, {});\n",
+        encoding="utf-8",
+    )
+    derived = event_prompts_from_source(run)
+    assert derived == {
+        "race.checkpoint": "race checkpoint",
+        "round.lost": "round lost",
+        "round.won": "round won",
+    }
+    entry = registry_entry(project, run, "test-game")
+    assert entry["event_prompts"] == derived
+    explicit = registry_entry(project, run, "test-game", event_prompts={"race.checkpoint": "A checkpoint."})
+    assert explicit["event_prompts"] == {"race.checkpoint": "A checkpoint."}

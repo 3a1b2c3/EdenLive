@@ -118,7 +118,52 @@ def _vendor(project: Path) -> dict[str, str]:
     return dependencies
 
 
+# An event line the runtime shows names its type in words: `race.checkpoint`
+# becomes "race checkpoint". The game's own snapshot carries no sentence, so
+# the sentence has to come from the registry's event_prompts table.
+_EVENT_CALL = re.compile(
+    r"""(?:\bemit|\bpushEvent|\b_emit)\(\s*([^,\n]{1,240}?)\s*[,)]"""
+)
+_EVENT_TYPE = re.compile(r"^[a-z][a-z0-9]*(\.[a-z][a-z0-9_]*)+$")
+_EVENT_LITERAL = re.compile(r"""^['"`]([^'"`]+)['"`]$""")
+_EVENT_TERNARY = re.compile(
+    r"""^[^?:]*\?\s*['"`]([^'"`]+)['"`]\s*:\s*['"`]([^'"`]+)['"`]$"""
+)
+
+
+def _event_type_text(event_type: str) -> str:
+    """One readable line for an event type, e.g. `round.won` -> "round won"."""
+    return event_type.replace(".", " ").replace("_", " ")
+
+
+def event_prompts_from_source(run: Path) -> dict[str, str]:
+    """Sentences for the event types a game's scripts emit.
+
+    Covers the two shapes the skill's games actually emit with: a string
+    literal, and a ternary choosing between two. A type built any other way is
+    left out rather than guessed, and the caller's own table wins over these.
+    """
+    found: list[str] = []
+    for path in sorted(run.rglob("*")):
+        if "evidence" in path.relative_to(run).parts or path.suffix not in {".js", ".mjs"}:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            continue
+        for call in _EVENT_CALL.finditer(text):
+            argument = " ".join(call.group(1).split())
+            literal = _EVENT_LITERAL.match(argument)
+            candidates = [literal.group(1)] if literal else []
+            ternary = _EVENT_TERNARY.match(argument)
+            if ternary:
+                candidates = [ternary.group(1), ternary.group(2)]
+            found.extend(candidate for candidate in candidates if _EVENT_TYPE.match(candidate))
+    return {event_type: _event_type_text(event_type) for event_type in sorted(set(found))}
+
+
 def _restart_keys(run: Path) -> list[str]:
+
     """Keys the game's own strategy uses to restart, so overlay clicks can press them."""
     path = run / "strategy.json"
     if not path.is_file():
@@ -245,7 +290,7 @@ def registry_entry(
         "controls": [str(line) for line in meta.get("controls") or ()],
         "modules": [str(module) for module in meta.get("modules") or ()],
         "restart_keys": _restart_keys(run),
-        "event_prompts": dict(event_prompts or {}),
+        "event_prompts": dict(event_prompts if event_prompts is not None else event_prompts_from_source(run)),
         "source": {"skill": "game-prototype-turbo", "run": run.relative_to(project).as_posix()},
     }
 
@@ -284,8 +329,14 @@ def import_game(
     allow_incomplete: bool = False,
     replace: bool = False,
     capture=capture_cover,
+    run: Path | None = None,
 ) -> dict[str, Any]:
-    """Copy the project into ``<root>/<slug>/`` and register it. Returns the entry."""
+    """Copy the project into ``<root>/<slug>/`` and register it. Returns the entry.
+
+    ``run`` names the run directory to import instead of the accepted one. A
+    revision of a passed game lives in a run of its own, which the acceptance
+    record does not point at.
+    """
     project = project.resolve()
     root = (root or games_root()).resolve()
     if not _SLUG.fullmatch(slug) or slug in _RESERVED_SLUGS:
@@ -302,7 +353,12 @@ def import_game(
     if existing and existing[0].get("host") != STANDALONE_HOST:
         raise GameImportError(f"{slug!r} is a hand-ported game, not an import; refusing to replace it")
 
-    run = accepted_run(project, allow_incomplete=allow_incomplete)
+    if run is None:
+        run = accepted_run(project, allow_incomplete=allow_incomplete)
+    else:
+        run = run.resolve()
+        if not run.is_relative_to(project) or not (run / "index.html").is_file():
+            raise GameImportError(f"Run {run} is not a runnable directory inside {project}")
     entry = registry_entry(
         project, run, slug,
         prompt=prompt, cover_prompt=cover_prompt, event_prompts=event_prompts,

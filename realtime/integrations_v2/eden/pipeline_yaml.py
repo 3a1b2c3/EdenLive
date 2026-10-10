@@ -79,16 +79,20 @@ def component_path(spec: dict[str, Any], key: str) -> str:
     return resolve_path(spec, raw)
 
 
+def _dtype(name: str, value: str) -> torch.dtype:
+    try:
+        return _DTYPES[value]
+    except KeyError:
+        raise ValueError(
+            f"unknown {name} {value!r}; expected one of {sorted(_DTYPES)}"
+        ) from None
+
+
 def scheduler_kwargs(spec: dict[str, Any]) -> dict[str, Any]:
-    """The ``scheduler`` block, with ``timestep_dtype`` turned into a dtype."""
+    """The ``scheduler`` block, with its dtype names turned into dtypes."""
     block = dict(spec.get("scheduler") or {})
-    dtype = block.get("timestep_dtype")
-    if isinstance(dtype, str):
-        try:
-            block["timestep_dtype"] = _DTYPES[dtype]
-        except KeyError:
-            raise ValueError(
-                f"unknown timestep_dtype {dtype!r}; expected one of "
-                f"{sorted(_DTYPES)}"
-            ) from None
+    for name in ("timestep_dtype", "network_timestep_dtype"):
+        value = block.get(name)
+        if isinstance(value, str):
+            block[name] = _dtype(name, value)
     return block

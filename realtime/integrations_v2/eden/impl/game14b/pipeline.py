@@ -5,22 +5,24 @@
 
 Differences from the base Wan I2V pipeline:
 
-* ``initialize_cache`` runs the ``independent`` first-frame encode: the cover
-  frame once, spliced onto a grey tail that is encoded once per resolution and
-  reused, so per-chunk conditioning is a slice rather than a VAE call.
+* The first-frame condition is built per chunk, never for the whole rollout:
+  AR step 0 hands the cover to the encoder, which encodes it alone and splices
+  it onto a grey tail encoded once per resolution (latent frames 1-17, reused
+  from 15-17 once the attention arena is full). See
+  :mod:`eden.impl.game14b.encoder`.
 * ``generate`` takes the already-encoded proxy-DINO features for the chunk.
   Computing them is the caller's job precisely so the cost can be overlapped
   with the previous chunk's denoising.
-* The CFG negative prompt is the official Wan 2.1 I2V string, not Eden's
-  camera-model prompt.
+* The CFG negative prompt is the T2V string with a leading ``镜头晃动，``.
+  See :data:`GAME14B_NEGATIVE_PROMPT`.
 * ``encode_text`` keeps the text encoder resident and
   ``replace_text_embeddings`` swaps the resulting embeddings into the
   transformer's cross-attention caches, which is the per-chunk prompt path.
   The static prompt is encoded once at startup and the text encoder is then
   released, so a rollout that never asks for a per-chunk prompt pays nothing.
 
-The one-shot encoders (UMT5 text, CLIP vision) and the first-frame condition
-latent are reused across rollouts. The Game2V session re-runs
+The one-shot encoders' outputs (UMT5 text, CLIP vision) and the cover latent
+are reused across rollouts. The Game2V session re-runs
 ``initialize_cache`` on every restart, and reloading both encoders from disk
 plus re-encoding a prompt that has not changed is the whole of the stall a
 restart shows. A prompt or anchor frame that actually changes recomputes only
@@ -39,15 +41,22 @@ from loguru import logger
 from torch import Tensor
 
 from flashdreams.infra.encoder.image.clip import CLIPImageEncoderConfig
-from flashdreams.infra.encoder.text.umt5 import UMT5TextEncoderConfig
 from flashdreams.recipes.wan.pipeline import (
     WanInferencePipeline,
     WanInferencePipelineCache,
     WanInferencePipelineConfig,
 )
-from flashdreams.recipes.wan.transformer.constants import NEGATIVE_PROMPT
-
 from .encoder import Game14BCtrlEncoderConfig, Game14BCtrlInput
+
+GAME14B_NEGATIVE_PROMPT = (
+    "镜头晃动，色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，"
+    "静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，"
+    "画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，"
+    "静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
+)
+"""The 14B CFG negative prompt: the T2V ``NEGATIVE_PROMPT`` with a leading
+``镜头晃动，``; the shared constant is left as is because the
+other Wan pipelines use it."""
 
 
 @dataclass(kw_only=True)
@@ -63,24 +72,10 @@ class Game14BInferencePipelineConfig(WanInferencePipelineConfig):
     )
     """Condition encoder: first-frame latent slices + proxy-DINO control."""
 
-    image_encoder: CLIPImageEncoderConfig | None = None
-    """Wan 2.1 I2V CLIP vision tower. The directory must hold ``image_encoder/``
-    and ``image_processor/`` side by side. Set by the pipeline YAML; there is no
-    built-in default path."""
-
-    text_encoder: UMT5TextEncoderConfig | None = None
-    """UMT5 text encoder, laid out as ``text_encoder/`` and ``tokenizer/`` side
-    by side. Set by the pipeline YAML; there is no built-in default path."""
-
-    rollout_latent_frames: int | None = None
-    """Latent frames the one-shot first-frame condition clip covers.
-
-    The condition latent is encoded once and sliced per chunk, so it must
-    span the whole rollout (``total_blocks * len_t`` frames) or a later AR
-    step reads past its end. ``None`` derives that span from the session's
-    ``total_blocks`` passed to :meth:`initialize_cache`; set it only to pin
-    the clip to a fixed length.
-    """
+    image_encoder: CLIPImageEncoderConfig | None = field(
+        default_factory=CLIPImageEncoderConfig
+    )
+    """Wan 2.1 I2V ships a CLIP vision tower; the recipe keeps it enabled."""
 
 
 class Game14BInferencePipeline(WanInferencePipeline):
@@ -106,11 +101,6 @@ class Game14BInferencePipeline(WanInferencePipeline):
         self._text_cache: tuple[tuple[str, ...], Tensor] | None = None
         self._negative_text_cache: Tensor | None = None
         self._image_cache: tuple[Tensor, Tensor | None] | None = None
-        # The first-frame condition depends only on the anchor frame, so it is
-        # encoded once and copied into each new rollout. The grey tail it
-        # splices on is cached one level down, on the encoder, and outlives
-        # even an anchor-frame change.
-        self._condition_cache: tuple[Tensor, int, Tensor] | None = None
         # Set while the base ``initialize_cache`` runs, so the encoder
         # overrides below know which inputs the outputs belong to.
         self._pending_text: tuple[str, ...] | None = None
@@ -118,8 +108,8 @@ class Game14BInferencePipeline(WanInferencePipeline):
 
     @staticmethod
     def _negative_prompt() -> str:
-        """Official Wan 2.1 I2V negative prompt (the recipe's own CFG text)."""
-        return NEGATIVE_PROMPT
+        """The 14B negative prompt (see :data:`GAME14B_NEGATIVE_PROMPT`)."""
+        return GAME14B_NEGATIVE_PROMPT
 
     @torch.no_grad()
     def initialize_cache(
@@ -130,16 +120,13 @@ class Game14BInferencePipeline(WanInferencePipeline):
         height: int | None = None,
         width: int | None = None,
         release_oneshot_encoders: bool = True,
-        rollout_latent_frames: int | None = None,
     ) -> WanInferencePipelineCache:
-        """Build the rollout cache and precompute the first-frame condition.
+        """Build the rollout cache.
 
-        The condition latent is the cover frame's own latent followed by the
-        grey tail, which the encoder computes once per resolution.
-        ``rollout_latent_frames`` overrides the config; with neither set, the
-        transformer's ``len_t`` is used, which only covers the first chunk.
+        The first-frame condition is not built here: AR step 0 encodes the
+        cover, and the grey tail is cached on the encoder per resolution.
 
-        The text and CLIP embeddings, and the condition clip, are cached
+        The text and CLIP embeddings are cached
         against their inputs. A restart that re-runs this method with the
         same prompt and anchor frame reuses them, so the UMT5 and CLIP
         encoders are loaded exactly once per process instead of once per
@@ -155,9 +142,8 @@ class Game14BInferencePipeline(WanInferencePipeline):
         reusing = text_embeddings is not None and (
             image is None or image_embeddings is not None
         )
-        # The first call loads UMT5-XXL and CLIP from disk and encodes the
-        # whole-rollout condition clip; a restart with the same inputs skips
-        # all of it. The two look identical from the outside otherwise.
+        # The first call loads UMT5-XXL and CLIP from disk; a restart with the
+        # same inputs skips all of it. The two look identical from the outside otherwise.
         logger.info(
             "Game2V 14B: {} the rollout cache",
             "reusing cached encoder outputs for" if reusing else "building",
@@ -191,16 +177,6 @@ class Game14BInferencePipeline(WanInferencePipeline):
             "``initialize_cache``."
         )
         assert cache.encoder_cache is not None  # invariant: encoder configured
-        latent_frames = (
-            rollout_latent_frames
-            if rollout_latent_frames is not None
-            else self.config.rollout_latent_frames
-        )
-        if latent_frames is None:
-            latent_frames = int(self.diffusion_model.transformer.config.len_t)
-        self._ensure_first_frame_condition(
-            cache.image, latent_frames, cache.encoder_cache
-        )
         logger.info(
             "Game2V 14B: rollout cache ready in {:.2f}s ({})",
             time.perf_counter() - cache_started,
@@ -387,30 +363,6 @@ class Game14BInferencePipeline(WanInferencePipeline):
             image=image,
         )
 
-    def _ensure_first_frame_condition(
-        self,
-        image: Tensor,
-        latent_frames: int,
-        encoder_cache: Any,
-    ) -> None:
-        """Encode the condition clip once and copy it into later rollouts."""
-        cached = self._condition_cache
-        if (
-            cached is not None
-            and cached[0] is image
-            and cached[1] == latent_frames
-        ):
-            encoder_cache.condition_latent = cached[2]
-            return
-        ratio = self.encoder.temporal_compression_ratio
-        num_frames = 1 + (latent_frames - 1) * ratio
-        latent = self.encoder.encode_first_frame_condition(
-            image,
-            num_frames=num_frames,
-            cache=encoder_cache,
-        )
-        self._condition_cache = (image, latent_frames, latent)
-
     @torch.no_grad()
     def generate(  # type: ignore[override]
         self,
@@ -430,12 +382,16 @@ class Game14BInferencePipeline(WanInferencePipeline):
         Returns:
             Decoded video ``[*batch_shape, T, C, H, W]`` in ``[-1, 1]``.
         """
+        assert cache.image is not None, "initialize_cache() must be called first"
+        # The packed first frame is encoded at AR 0 only (the cover alone, no
+        # zero padding: the tail comes from the encoder's grey-tail cache).
+        image = cache.image if autoregressive_index == 0 else None
         # Skip ``WanInferencePipeline.generate``: it would rebuild the input
         # from ``cache.image`` and drop the control payload.
         return super(WanInferencePipeline, self).generate(
             autoregressive_index=autoregressive_index,
             cache=cache,
-            input=Game14BCtrlInput(control=input),
+            input=Game14BCtrlInput(image=image, control=input),
         )
 
     @torch.no_grad()

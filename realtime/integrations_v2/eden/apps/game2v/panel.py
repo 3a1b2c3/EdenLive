@@ -12,6 +12,7 @@ import asyncio
 import json
 import mimetypes
 import re
+import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
@@ -26,7 +27,7 @@ from flashdreams.runtime_v2.serving.extensions import (
 
 from .game_renderer import STANDALONE_HOST, registered_game_slugs
 from .import_game import GameImportError, _SLUG, games_root, import_game
-from .session import request_game_switch, request_home
+from .session import browser_metrics_snapshot, request_game_switch, request_home
 
 EXTENSION_NAME = "game2v"
 _STATIC = Path(__file__).resolve().parent / "static"
@@ -76,6 +77,9 @@ def _public_games(current: str) -> dict[str, Any]:
 def _rewrite_play_page(slug: str, html: str, entry: dict[str, Any]) -> str:
     """Serve a live-preview page. Capture still uses the Playwright rewrite."""
     if entry.get("host") == STANDALONE_HOST:
+        # The standalone game drives its own requestAnimationFrame loop.
+        # standalone.js replaces that clock for frame-by-frame capture, so it
+        # must only be injected by game_renderer.standalone_page().
         return html
     return html.replace(
         '<script type="module" src="/shared/host/play-page.js"></script>',
@@ -120,6 +124,13 @@ async def handle_game2v(request: web.Request, tail: str) -> web.StreamResponse:
         body = _public_games(current)
         body["started"] = _started(session)
         return web.json_response(body)
+    if tail == "metrics" and request.method == "GET":
+        snapshot = browser_metrics_snapshot(_session_state(session)) if session is not None else None
+        if snapshot is None:
+            return web.json_response({"model": None})
+        sampled_at = float(snapshot.pop("sampled_at"))
+        snapshot["age_s"] = max(0.0, time.monotonic() - sampled_at)
+        return web.json_response({"model": snapshot})
     if tail == "switch" and request.method == "POST":
         return await _handle_switch(request, session)
     if tail == "home" and request.method == "POST":
@@ -236,8 +247,75 @@ def _handle_play(slug: str) -> web.Response:
     # Must run after the slug rewrite above, which would otherwise double the
     # /game/ prefix in the mapped target.
     html = _map_game_assets(slug, html)
+    # A game is embedded in a responsive 16:9 preview iframe.  The original
+    # game pages are also used by the full-size recorder and several of them
+    # keep a fixed 1280px ``#view-big`` plus a side rail.  Leaving that shell
+    # in the iframe makes the renderer's drawing buffer use the iframe size
+    # while the canvas CSS box keeps the old fixed size, which stretches the
+    # proxy image.  Give the preview its own viewport contract: the game
+    # surface fills the iframe, the side rail is removed, and both CSS and
+    # the runtime see the same dimensions.  This is injected before the game
+    # module runs, so its initial ``layout(innerWidth, innerHeight)`` is
+    # already correct.
+    preview_css = """<style data-eden-proxy-preview>
+html, body { width: 100% !important; height: 100% !important; margin: 0 !important; overflow: hidden !important; }
+body { display: block !important; position: relative !important; min-width: 0 !important; }
+#view-big { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; min-width: 0 !important; min-height: 0 !important; overflow: hidden !important; background: #000 !important; }
+/* Proxy frames are produced at 16:9. Keep the game viewport at that ratio;
+   the iframe may be wider or taller, so the unused area becomes letterbox
+   space instead of stretching the scene. */
+#app { position: absolute !important; inset: auto !important; left: 50% !important; top: 50% !important; width: min(100%, 177.7777778vh) !important; height: min(100%, 56.25vw) !important; aspect-ratio: 16 / 9 !important; transform: translate(-50%, -50%) !important; min-width: 0 !important; min-height: 0 !important; overflow: hidden !important; background: #000 !important; }
+/* The canvas is sized by the aspect-lock script below.  Do not let a game's
+   original ``width:100%;height:100%`` rule stretch a fixed drawing buffer. */
+#app canvas { display: block !important; position: absolute !important; left: 50% !important; top: 50% !important; max-width: none !important; max-height: none !important; transform: translate(-50%, -50%) !important; object-fit: fill !important; }
+#right { display: none !important; }
+#view-small, #desc-panel, #record-bar { display: none !important; }
+</style>"""
+    # Runtime games resize their drawing buffer at different times: some do it
+    # during module startup, while others do it after a ResizeObserver fires.
+    # Keep the drawing buffer untouched and derive only its CSS box from the
+    # current container.  This gives every game the same contain/letterbox
+    # contract, including standalone exports and games that write inline CSS.
+    preview_script = """<script data-eden-proxy-aspect-lock>
+(function () {
+  function install() {
+    var host = document.querySelector('#app') || document.body;
+    var canvas = host && (host.querySelector('canvas') || document.querySelector('canvas'));
+    if (!host || !canvas) return false;
+    var apply = function () {
+      var bufferWidth = Number(canvas.width);
+      var bufferHeight = Number(canvas.height);
+      var box = host.getBoundingClientRect();
+      if (!(bufferWidth > 0 && bufferHeight > 0 && box.width > 0 && box.height > 0)) return;
+      var scale = Math.min(box.width / bufferWidth, box.height / bufferHeight);
+      var width = Math.max(1, Math.round(bufferWidth * scale * 100) / 100);
+      var height = Math.max(1, Math.round(bufferHeight * scale * 100) / 100);
+      canvas.style.setProperty('width', width + 'px', 'important');
+      canvas.style.setProperty('height', height + 'px', 'important');
+    };
+    var resize = typeof ResizeObserver === 'function' ? new ResizeObserver(apply) : null;
+    if (resize) resize.observe(host);
+    new MutationObserver(apply).observe(canvas, {attributes: true, attributeFilter: ['width', 'height']});
+    window.addEventListener('resize', apply, {passive: true});
+    apply();
+    requestAnimationFrame(apply);
+    return true;
+  }
+  function start() {
+    if (install()) return;
+    var observer = new MutationObserver(function () { if (install()) observer.disconnect(); });
+    observer.observe(document.documentElement, {childList: true, subtree: true});
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once: true});
+  else start();
+})();
+</script>"""
     # Relative refs (./style.css) must resolve inside the game, not /ext/.
-    html = html.replace("<head>", f'<head><base href="/game/{slug}/">', 1)
+    html = html.replace("<head>", f'<head>{preview_css}<base href="/game/{slug}/">', 1)
+    # Run after the game's own module has had a chance to create #app canvas;
+    # DOMContentLoaded/MutationObserver in the script handles both ordering
+    # variants without changing the game source.
+    html = html.replace("</body>", f"{preview_script}</body>", 1)
     # The authoring recorder only exists on the skill's dev server.
     html = html.replace('<link rel="stylesheet" href="/shared/recorder/recorder.css">', "")
     return web.Response(text=html, content_type="text/html")

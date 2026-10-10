@@ -8,6 +8,46 @@ const peer = new RTCPeerConnection({
   // host candidates that cannot reach the pod across the network.
   iceTransportPolicy: iceServers.length ? "relay" : "all",
 });
+let previousInboundSample = null;
+// The workbench reads browser-reported transport stats while its play view is
+// open. RTT is network round trip, not glass-to-glass video latency.
+window.flashdreamsWebRTCStats = async () => {
+  if (peer.connectionState !== "connected") {
+    previousInboundSample = null;
+    return {connected: false, rtt_ms: null, receive_fps: null};
+  }
+  const report = await peer.getStats();
+  let rttMs = null;
+  let inbound = null;
+  let selectedPairId = null;
+  report.forEach(stat => {
+    if (stat.type === "transport" && stat.selectedCandidatePairId) {
+      selectedPairId = stat.selectedCandidatePairId;
+    }
+  });
+  report.forEach(stat => {
+    if (stat.type === "candidate-pair" && stat.state === "succeeded" &&
+        (stat.id === selectedPairId || (!selectedPairId && stat.nominated)) &&
+        Number.isFinite(stat.currentRoundTripTime)) {
+      rttMs = stat.currentRoundTripTime * 1000;
+    }
+    if (stat.type === "inbound-rtp" && !stat.isRemote &&
+        (stat.kind === "video" || stat.mediaType === "video") &&
+        (!inbound || stat.mid === "0")) {
+      inbound = stat;
+    }
+  });
+  let receiveFps = Number.isFinite(inbound?.framesPerSecond) ? inbound.framesPerSecond : null;
+  if (receiveFps === null && Number.isFinite(inbound?.framesDecoded)) {
+    const current = {id: inbound.id, frames: inbound.framesDecoded, timestamp: inbound.timestamp};
+    if (previousInboundSample?.id === current.id && current.timestamp > previousInboundSample.timestamp) {
+      receiveFps = Math.max(0, (current.frames - previousInboundSample.frames) * 1000 /
+        (current.timestamp - previousInboundSample.timestamp));
+    }
+    previousInboundSample = current;
+  }
+  return {connected: true, rtt_ms: rttMs, receive_fps: receiveFps};
+};
 const controls = peer.createDataChannel("controls");
 const pointerControls = peer.createDataChannel("pointer-controls");
 peer.addTransceiver("video", {direction: "recvonly"});
@@ -609,6 +649,11 @@ async function connect() {
   showStatus("Gathering WebRTC network candidates…");
   await peer.setLocalDescription(await peer.createOffer());
   await waitForIceGatheringComplete();
+  if (!peer.localDescription.sdp.includes("a=candidate:")) {
+    throw new Error(iceServers.length
+      ? "TURN relay unavailable: no WebRTC relay candidate was gathered. Check the TURN service and TCP port."
+      : "No WebRTC network candidate was gathered. Check the browser's network access.");
+  }
   const response = await fetch(
     "/api/webrtc/offer" + window.location.search,
     {

@@ -108,6 +108,12 @@ class WanDiTNetworkConfig(InstantiateConfig):
     """If True, apply RoPE to keys before storing them in the KV cache."""
     cp_method: Literal["ring", "ulysses"] = "ring"
     """Context-parallel attention method for transformer attention ops."""
+    fp32_adaln: bool = False
+    """Run AdaLN modulation, LayerNorms and the self-attn / FFN residual adds
+    in fp32, as Diffusers' ``WanTransformerBlock`` and ``norm_out`` do, plus
+    the CLIP ``img_emb`` LayerNorms (Diffusers' ``FP32LayerNorm`` in
+    ``WanImageEmbedding``). The default keeps the whole block in the
+    parameter dtype."""
 
 
 @dataclass
@@ -175,6 +181,7 @@ class WanDiTNetwork(nn.Module):
         self.patch_embedding_type = config.patch_embedding_type
         self.apply_rope_before_kvcache = config.apply_rope_before_kvcache
         self.cp_method = config.cp_method
+        self.fp32_adaln = config.fp32_adaln
 
         # Embedding layers
         in_dim = config.in_dim + 1 if self.concat_padding_mask else config.in_dim
@@ -207,14 +214,20 @@ class WanDiTNetwork(nn.Module):
             nn.SiLU(), nn.Linear(self.dim, self.dim * 6)
         )
         if self.cross_attn_enable_img:
-            self.img_emb = MLPProj(1280, self.dim)
+            self.img_emb = MLPProj(1280, self.dim, fp32_norm=self.fp32_adaln)
 
         self.blocks = nn.ModuleList(
             [self._build_block(layer_idx) for layer_idx in range(self.num_layers)]
         )
 
         # Final projection head
-        self.head = Head(self.dim, self.out_dim, self.patch_size, self.eps)
+        self.head = Head(
+            self.dim,
+            self.out_dim,
+            self.patch_size,
+            self.eps,
+            fp32_adaln=self.fp32_adaln,
+        )
 
         self._is_shuffle_op_fused = False
         self._parameters_updated_after_loading_checkpoint = False
@@ -230,6 +243,7 @@ class WanDiTNetwork(nn.Module):
             i2v=self.cross_attn_enable_img,
             apply_rope_before_kvcache=self.apply_rope_before_kvcache,
             cp_method=self.cp_method,
+            fp32_adaln=self.fp32_adaln,
         )
 
     def set_context_parallel_group(self, cp_group: ProcessGroup | None = None) -> None:

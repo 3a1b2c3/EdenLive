@@ -40,77 +40,154 @@ def test_channel_layout_matches_the_checkpoint_patch_embedding() -> None:
     assert network.cross_attn_enable_img is True
 
 
-def test_sampling_matches_the_lingbot_v2_14b_schedule() -> None:
-    """CFG off, 4-step distilled schedule at shift 10.0, window of 18."""
+def test_sampling_matches_the_sgf_v4_14b_schedule() -> None:
+    """CFG off, 4-step distilled schedule at shift 3.0, sink 6 + window 12."""
     pipeline = PIPELINE_GAME2V_EDEN_WORLD_V2_14B
     transformer = pipeline.diffusion_model.transformer
     scheduler = pipeline.diffusion_model.scheduler
-    # CFG off, copied from LingBot-World v2 14B causal-fast.
+    model = pipeline.diffusion_model
+    # CFG off: one conditional KV stream, the control encoded once per chunk.
     assert transformer.guidance_scale == 1.0
     assert transformer.len_t == GAME2V_LEN_T == 3
+    # Wan 2.1 I2V channel concat composed with the clean-latent stamp.
     assert transformer.concat_image_mask_to_latent is True
-    assert transformer.stamp_image_latent is False
-    # Official v2 few-step grid ([0, 250, 500, 750] from timesteps_index).
+    assert transformer.stamp_image_latent is True
+    assert transformer.ti2v_first_frame_per_token_timestep is True
+    # Cache-slot RoPE and fp32 AdaLN, the training numerics.
+    assert transformer.network.apply_rope_before_kvcache is False
+    assert transformer.network.fp32_adaln is True
+    # One rank-0 noise draw broadcast to every shard, clean cache commits.
+    assert model.noise_from_rank0 is True
+    assert model.context_noise == 0
+    # The shift-3 warped table yields the reference's [1000, 900, 750, 500].
     assert scheduler.num_inference_steps == 4
     assert scheduler.denoising_timesteps == [1000, 750, 500, 250]
-    assert scheduler.shift == 10.0
-    assert scheduler.sigma_max == 0.999
-    assert scheduler.timestep_dtype == torch.int64
-    # Sliding window of 18 latent frames, no sink.
-    assert transformer.window_size_t == 18
-    assert transformer.sink_size_t == 0
+    assert scheduler.shift == 3.0
+    assert scheduler.sigma_max == 1.0
+    assert scheduler.timestep_dtype == torch.float32
+    assert scheduler.network_timestep_dtype == torch.float32
+    # 18-frame attention budget: 6 fixed sink + 12 rolling.
+    assert transformer.window_size_t == 12
+    assert transformer.sink_size_t == 6
+    assert transformer.sink_size_t + transformer.window_size_t == 18
 
 
-def test_condition_clip_covers_the_whole_rollout() -> None:
-    """The one-shot condition latent must span every AR step.
+def test_grey_tail_windows_fill_then_reuse_the_last_three() -> None:
+    """The 18-frame arena fills chunk by chunk, then every chunk reuses the tail."""
+    from eden.impl.game14b.encoder import GREY_TAIL_LATENT_FRAMES, grey_tail_window
 
-    It is encoded once and sliced per step, so a clip shorter than
-    ``total_blocks * len_t`` makes a later step read past its end.
-    """
-    from eden.apps.game2v.session import _rollout_cache_kwargs
+    assert GREY_TAIL_LATENT_FRAMES == 18
+    windows = [grey_tail_window(k, 3) for k in range(9)]
+    assert windows == [
+        (0, 3), (3, 6), (6, 9), (9, 12), (12, 15), (15, 18),
+        (15, 18), (15, 18), (15, 18),
+    ]
 
-    # Unpinned: the session sizes the clip from the rollout it will run.
-    assert PIPELINE_GAME2V_EDEN_WORLD_V2_14B.rollout_latent_frames is None
 
-    def _initialize_cache(self, text, rollout_latent_frames=None):
-        del self, text, rollout_latent_frames
+class _FakeVAE:
+    """Streaming-VAE stand-in: one distinct value per latent frame, counted globally."""
 
-    state = SimpleNamespace(
-        pipeline=SimpleNamespace(
-            initialize_cache=_initialize_cache,
-            diffusion_model=SimpleNamespace(
-                transformer=SimpleNamespace(config=SimpleNamespace(len_t=3))
-            ),
-        ),
-        config=SimpleNamespace(total_blocks=20),
-    )
-    assert _rollout_cache_kwargs(state) == {"rollout_latent_frames": 60}
+    temporal_compression_ratio = 4
+    spatial_compression_ratio = 8
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[int, int]] = []
+        self.frames = 0
+
+    def initialize_autoregressive_cache(self) -> dict:
+        return {}
+
+    def get_input_temporal_size(self, autoregressive_index: int, output: int) -> int:
+        if autoregressive_index == 0:
+            return 1 + (output - 1) * 4
+        return output * 4
+
+    def __call__(self, frames, *, autoregressive_index, cache):
+        del cache
+        count = int(frames.shape[-4])
+        self.calls.append((autoregressive_index, count))
+        latent_frames = 1 + (count - 1) // 4 if autoregressive_index == 0 else count // 4
+        values = torch.arange(self.frames, self.frames + latent_frames, dtype=frames.dtype)
+        self.frames += latent_frames
+        return values.view(latent_frames, 1, 1, 1).expand(latent_frames, 16, 2, 2).clone()
+
+
+def _encoder(vae: _FakeVAE):
+    from eden.impl.game14b.encoder import Game14BCtrlEncoder
+
+    encoder = Game14BCtrlEncoder.__new__(Game14BCtrlEncoder)
+    torch.nn.Module.__init__(encoder)
+    encoder.encoder = vae
+    encoder._grey_tail_cache = {}
+    encoder._cover_cache = None
+    return encoder
+
+
+def test_condition_is_cover_then_streamed_grey_tail_per_chunk() -> None:
+    """AR 0 splices the cover onto tail[1:3]; later chunks read the streamed tail."""
+    from eden.impl.game14b.encoder import Game14BCtrlEncoderCache, Game14BCtrlInput
+
+    vae = _FakeVAE()
+    encoder = _encoder(vae)
+    cover = torch.zeros(1, 3, 8, 8)
+    control = torch.zeros(3, 1024, 1, 1)
+    cache = Game14BCtrlEncoderCache(vae={})
+
+    out = encoder(Game14BCtrlInput(image=cover, control=control), 0, cache)
+    # Cover alone (latent 0), then zeros streamed until 18 latent frames.
+    assert vae.calls == [(0, 1), (0, 9)] + [(k, 12) for k in range(1, 6)]
+    tail = [float(v) for v in cache.grey_tail[:, 0, 0, 0]]
+    assert tail == [float(v) for v in range(1, 19)]
+    # Latent frame 0 is the cover's own latent; frames 1-2 come from the tail.
+    assert out.i2v.latent[:, 0, 0, 0].tolist() == [0.0, tail[1], tail[2]]
+    assert out.i2v.mask[:, 0, 0, 0].tolist() == [1.0, 0.0, 0.0]
+
+    for k, expected in [(1, tail[3:6]), (5, tail[15:18]), (6, tail[15:18]), (40, tail[15:18])]:
+        out = encoder(Game14BCtrlInput(image=None, control=control), k, cache)
+        assert out.i2v.latent[:, 0, 0, 0].tolist() == expected
+        assert torch.all(out.i2v.mask == 0)
+    # Nothing past AR 0 touched the VAE.
+    assert len(vae.calls) == 7
+
+    # A restart at the same resolution and anchor encodes nothing new.
+    restart = Game14BCtrlEncoderCache(vae={})
+    encoder(Game14BCtrlInput(image=cover, control=control), 0, restart)
+    assert len(vae.calls) == 7
+    # A new anchor re-encodes only its own frame.
+    encoder(Game14BCtrlInput(image=torch.ones_like(cover), control=control), 0, restart)
+    assert vae.calls[7:] == [(0, 1)]
+
+
+def test_later_chunk_before_ar0_is_rejected() -> None:
+    from eden.impl.game14b.encoder import Game14BCtrlEncoderCache, Game14BCtrlInput
+
+    encoder = _encoder(_FakeVAE())
+    with pytest.raises(ValueError, match="before AR"):
+        encoder(
+            Game14BCtrlInput(image=None, control=torch.zeros(3, 1024, 1, 1)),
+            2,
+            Game14BCtrlEncoderCache(vae={}),
+        )
 
 
 def test_restart_reuses_the_one_shot_encodings() -> None:
-    """A second ``initialize_cache`` must not reload or re-run the encoders.
-
-    The Game2V session rebuilds the rollout cache on every restart. Reloading
-    the released UMT5 and CLIP encoders, and re-encoding the first-frame
-    condition, is what makes that restart stall.
-    """
+    """A second ``initialize_cache`` must not reload or re-run the encoders."""
     from eden.impl.game14b.encoder import Game14BCtrlEncoderCache
     from eden.impl.game14b.pipeline import Game14BInferencePipeline
 
-    calls = {"base": 0, "condition": 0}
+    calls = {"base": 0}
 
     class _Pipeline(Game14BInferencePipeline):
         def _initialize_cache_recording(self, text, image, **kwargs):
             del kwargs
             calls["base"] += 1
-            cache = SimpleNamespace(
+            self._text_cache = (tuple(text), torch.zeros(1, 2))
+            self._image_cache = (image, torch.zeros(1, 2))
+            return SimpleNamespace(
                 image=image,
                 encoder_cache=Game14BCtrlEncoderCache(vae={}),
                 transformer_cache=SimpleNamespace(),
             )
-            self._text_cache = (tuple(text), torch.zeros(1, 2))
-            self._image_cache = (image, torch.zeros(1, 2))
-            return cache
 
         def _initialize_cache_from_embeddings(
             self, text_embeddings, image, image_embeddings, *, height, width
@@ -124,112 +201,21 @@ def test_restart_reuses_the_one_shot_encodings() -> None:
                 transformer_cache=SimpleNamespace(),
             )
 
-    class _Encoder:
-        temporal_compression_ratio = 4
-
-        def encode_first_frame_condition(self, image, *, num_frames, cache):
-            del image
-            calls["condition"] += 1
-            latent_frames = 1 + (num_frames - 1) // self.temporal_compression_ratio
-            latent = torch.zeros(1, latent_frames, 16, 2, 2)
-            cache.condition_latent = latent
-            return latent
-
     pipeline = Game14BInferencePipeline.__new__(_Pipeline)
-    # Bypass ``__init__``: it builds the real encoders and loads checkpoints.
-    # Only the rollout-reuse bookkeeping this test exercises is needed here.
     pipeline._text_cache = None
     pipeline._negative_text_cache = None
     pipeline._image_cache = None
-    pipeline._condition_cache = None
     pipeline._pending_text = None
     pipeline._pending_image = None
-    pipeline.encoder = _Encoder()
-    pipeline.diffusion_model = SimpleNamespace(
-        transformer=SimpleNamespace(config=SimpleNamespace(len_t=3))
-    )
     image = torch.zeros(1, 1, 3, 8, 8)
 
-    first = pipeline.initialize_cache(["a cat"], image, rollout_latent_frames=60)
-    second = pipeline.initialize_cache(["a cat"], image, rollout_latent_frames=60)
-
-    # The encoders and the condition clip run on the first rollout only.
-    assert calls == {"base": 1, "condition": 1}
-    # The restarted rollout gets its own cache but the same condition latent.
+    first = pipeline.initialize_cache(["a cat"], image)
+    second = pipeline.initialize_cache(["a cat"], image)
+    assert calls == {"base": 1}
     assert second is not first
     assert second.encoder_cache is not first.encoder_cache
-    assert second.encoder_cache.condition_latent is first.encoder_cache.condition_latent
-
-    # A prompt that actually changed is re-encoded; the anchor frame did not,
-    # so the condition clip is still reused.
-    pipeline.initialize_cache(["a dog"], image, rollout_latent_frames=60)
-    assert calls == {"base": 2, "condition": 1}
-
-    # The grey tail carries no image, so a new anchor frame re-encodes only its
-    # own first latent frame and reuses the tail.
-    other = torch.ones_like(image)
-    pipeline.initialize_cache(["a cat"], other, rollout_latent_frames=60)
-    assert calls == {"base": 3, "condition": 2}
-
-
-def test_independent_tail_is_encoded_once_and_reused() -> None:
-    """The grey tail is one VAE call per resolution, not one per rollout frame.
-
-    ``independent`` splices the cover's own latent onto frames 1: of an
-    all-zeros clip. That tail depends only on the frame geometry, and the
-    streaming VAE's state is a window over its own input, so an all-zeros input
-    makes every tail frame identical. A 10000-block rollout must therefore cost
-    the same two encodes as a 2-block one.
-    """
-    from eden.impl.game14b.encoder import (
-        Game14BCtrlEncoder,
-        Game14BCtrlEncoderCache,
-    )
-
-    seen: list[tuple[int, int]] = []
-
-    class _FakeVAE:
-        temporal_compression_ratio = 4
-        spatial_compression_ratio = 8
-
-        def initialize_autoregressive_cache(self) -> dict:
-            return {}
-
-        def __call__(
-            self, frames: torch.Tensor, *, autoregressive_index: int, cache: dict
-        ) -> torch.Tensor:
-            del cache
-            count = int(frames.shape[-4])
-            seen.append((autoregressive_index, count))
-            latent_frames = 1 if count == 1 else count // 4
-            # Distinct per call, so a reused tail is detectable by identity of
-            # its values rather than by happening to be zeros.
-            return frames.new_full(
-                (*frames.shape[:-4], latent_frames, 16, 2, 2), float(len(seen))
-            )
-
-    encoder = Game14BCtrlEncoder.__new__(Game14BCtrlEncoder)
-    encoder.encoder = _FakeVAE()
-    encoder._grey_tail_cache = {}
-    image = torch.zeros(1, 1, 3, 8, 8)
-
-    short = encoder.encode_first_frame_condition(
-        image, num_frames=1 + 5 * 4, cache=Game14BCtrlEncoderCache(vae={})
-    )
-    # Cover alone, then the grey clip's seed frame and its first tail chunk.
-    assert seen == [(0, 1), (0, 1), (1, 4)]
-    assert short.shape[-4] == 6
-    # Frame 0 is the cover's own latent; every later frame is the one tail frame.
-    assert torch.all(short[..., :1, :, :, :] == 1)
-    assert torch.all(short[..., 1:, :, :, :] == 3)
-
-    long = encoder.encode_first_frame_condition(
-        image, num_frames=1 + 59 * 4, cache=Game14BCtrlEncoderCache(vae={})
-    )
-    # The tail was cached, so the long rollout encodes only its cover frame.
-    assert seen == [(0, 1), (0, 1), (1, 4), (0, 1)]
-    assert long.shape[-4] == 60
-    assert torch.all(long[..., 1:, :, :, :] == 3)
+    pipeline.initialize_cache(["a dog"], image)
+    assert calls == {"base": 2}
 
 
 def test_taehv_variant_swaps_only_the_decoder() -> None:
@@ -254,19 +240,25 @@ def test_taehv_variant_swaps_only_the_decoder() -> None:
     )
     # Sampling and the attention window are inherited unchanged.
     assert variant.diffusion_model.transformer.len_t == 3
-    assert variant.diffusion_model.transformer.window_size_t == 18
+    assert variant.diffusion_model.transformer.window_size_t == 12
     assert variant.diffusion_model.scheduler.num_inference_steps == 4
 
 
-def test_negative_prompt_is_the_official_wan_string() -> None:
-    """The camera model's v2 prompt must not leak into this recipe's CFG."""
+def test_negative_prompt_is_the_14b_string() -> None:
+    """The 14B CFG text: the T2V string with a leading ``镜头晃动，``.
+
+    The camera model's v2 prompt must not leak in, and the shared recipe
+    constant other Wan pipelines use stays untouched.
+    """
     from flashdreams.recipes.wan.transformer.constants import NEGATIVE_PROMPT
 
     from eden.impl.game14b.pipeline import Game14BInferencePipeline
     from eden.impl.pipeline import EDEN_WORLD_V2_NEGATIVE_PROMPT
 
-    assert Game14BInferencePipeline._negative_prompt() == NEGATIVE_PROMPT
-    assert Game14BInferencePipeline._negative_prompt() != EDEN_WORLD_V2_NEGATIVE_PROMPT
+    negative = Game14BInferencePipeline._negative_prompt()
+    assert negative == "镜头晃动，" + NEGATIVE_PROMPT
+    assert not NEGATIVE_PROMPT.startswith("镜头晃动")
+    assert negative != EDEN_WORLD_V2_NEGATIVE_PROMPT
 
 
 @pytest.mark.parametrize("slug", registered_game_slugs())

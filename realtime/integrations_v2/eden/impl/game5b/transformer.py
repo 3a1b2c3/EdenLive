@@ -54,7 +54,7 @@ from .network import Game5BDiTNetwork, Game5BDiTNetworkConfig
 
 @dataclass(kw_only=True)
 class Game5BTransformerConfig(Wan21TransformerConfig):
-    """Config for the proxy-DINO rollout-DMD 5B transformer."""
+    """Config for the proxy-DINO 5B transformer."""
 
     _target: type["Game5BTransformer"] = field(
         default_factory=lambda: Game5BTransformer

@@ -3,38 +3,33 @@
 
 from __future__ import annotations
 
-import importlib.util
-import os
-from functools import cache
+import re
 from pathlib import Path
-from types import ModuleType
 
-CAPTION_SCRIPT = Path(os.environ.get("EDEN_FLUX_CAPTION_SCRIPT", ""))
-"""The coarse-to-fine skill's caption script.
+from .flux_c2f_rules import IMAGE_INSTRUCTIONS, sanitize_caption as _sanitize
 
-Set ``EDEN_FLUX_CAPTION_SCRIPT`` to it. There is no default: the script lives
-in the FLUX fine-tuning repo, which is not vendored here.
-"""
-
-
-@cache
-def caption_rules() -> ModuleType:
-    """The coarse-to-fine skill's caption script, for its rules and sanitizer.
-
-    Its ``IMAGE_INSTRUCTIONS`` is what the LoRA's training captions were
-    written to, so the caption Claude writes follows the same text verbatim.
-    """
-    if not str(CAPTION_SCRIPT):
-        raise RuntimeError(
-            "set EDEN_FLUX_CAPTION_SCRIPT to the coarse-to-fine skill's "
-            "refine_prompts_comet.py"
-        )
-    spec = importlib.util.spec_from_file_location("flux_c2f_captions", CAPTION_SCRIPT)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Cannot import {CAPTION_SCRIPT}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+CAPTION_STYLES = {
+    "realistic": (
+        "Realistic",
+        "Naturalistic photographic detail, believable surfaces, and restrained lighting.",
+    ),
+    "cinematic": (
+        "Cinematic",
+        "Filmic contrast, atmospheric depth, dramatic but believable lighting, and rich color grading.",
+    ),
+    "storybook": (
+        "Storybook",
+        "Hand-painted illustration, expressive brushwork, warm color harmony, and gentle lighting.",
+    ),
+    "animation": (
+        "Animated film",
+        "Polished animated-film design, cohesive colors, tactile surfaces, and soft lighting.",
+    ),
+    "anime": (
+        "Anime",
+        "Clean linework, controlled cel shading, expressive color, and crisp highlights.",
+    ),
+}
 
 
 def game_prompt(request: str, *, skill: Path, project: Path) -> str:
@@ -57,17 +52,56 @@ Game request from the user:
 End with a short plain-text summary: the game title, controls, and anything you could not finish."""
 
 
-def caption_prompt(image: Path) -> str:
-    """Ask for one coarse-to-fine caption of ``image``, in the skill's words."""
-    rules = caption_rules().IMAGE_INSTRUCTIONS
+
+def revise_prompt(request: str, history: list[tuple[str, str]], *, skill: Path, project: Path) -> str:
+    """Ask for one revision of the game in ``project``, unattended.
+
+    ``history`` is the conversation so far as ``(role, text)`` pairs, oldest
+    first, so a follow-up such as "make it faster" has the game it refers to.
+    """
+    earlier = "\n".join(f"{role}: {' '.join(text.split())}" for role, text in history) or "(none)"
+    return f"""You are running unattended inside a web workbench; nobody will answer questions, so never stop to ask.
+
+The game in {project} was built with the GamePrototypeTurbo skill at {skill}. The user wants to change it.
+Read {skill}/SKILL.md, then follow its "Change a passed game" workflow ({skill}/grimoire/build/revisions.md): copy the affected run to a new run, record the revision in {project}/.state.json, make the change there, and recheck what it affects.
+If the game never passed acceptance, continue its unfinished stage with the change folded in instead.
+
+Conversation so far:
+<history>
+{earlier}
+</history>
+
+Change requested now:
+<request>
+{request.strip()}
+</request>
+
+- Keep {project} as the output root; skill tools stay in {skill}. Leave earlier runs in place.
+- Make every design decision yourself. Keep the change small enough to verify.
+
+End with two things: a line `RUN: <path of the revised run, relative to {project}>`, then a short plain-text summary of what changed and anything you could not finish."""
+
+
+def caption_prompt(image: Path, style: str = "realistic") -> str:
+    """Describe the exact proxy frame, then add the selected appearance style."""
+    label, guidance = CAPTION_STYLES[style]
     return f"""Read the image file {image} (a coarse 3D proxy frame) and caption it.
 
-{rules}
+{IMAGE_INSTRUCTIONS}
 
-Reply with the caption text only: one paragraph, no quotes, no preamble, no markdown."""
+Write two parts. SCENE must follow every rule above and describe only what is visible in the image. STYLE is the only exception to the ban on appearance words: describe how the visible scene should look in the {label} style. Use this direction: {guidance} In STYLE, describe only color, lighting, and surface treatment of elements already named in SCENE. Do not introduce new objects, characters, scenery, text, or actions. Preserve the exact camera and layout.
+
+Reply in English with exactly these two lines, no preamble or markdown:
+SCENE: <45-90 words about the exact image composition>
+STYLE: <one concise sentence about the {label} appearance of visible elements>"""
 
 
-def sanitize_caption(text: str) -> str:
-    """Strip the skill's forbidden terms, as its own captioner does."""
-    text = " ".join(text.strip().strip('"').split())
-    return caption_rules().sanitize_caption(text)
+def sanitize_caption(text: str, style: str = "realistic") -> str:
+    """Keep scene geometry neutral while retaining Claude's selected style."""
+    match = re.search(r"(?im)^\s*STYLE:\s*", text)
+    scene = text[:match.start()] if match else text
+    scene = re.sub(r"^\s*SCENE:\s*", "", scene, flags=re.IGNORECASE)
+    scene = _sanitize(" ".join(scene.strip().strip('"').split()))
+    appearance = " ".join(text[match.end():].strip().strip('"').splitlines()[0].split()) if match else ""
+    appearance = appearance[:300].strip() or CAPTION_STYLES[style][1]
+    return f"{scene} Visual style: {appearance}"

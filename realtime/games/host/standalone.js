@@ -109,15 +109,32 @@
   }
 
   let canvas = null;
+  let pageShot = null;
   let scratch = null;
-  function encodeCanvas() {
+  // The scene canvas alone misses everything a game draws as DOM: the HUD,
+  // the key hints, the countdown and result cards. html-to-image renders the
+  // document over a copy of the WebGL canvas, since a live WebGL buffer reads
+  // back blank inside a foreign drawing context. The capture page is pinned to
+  // a device pixel ratio of 1, so the shot matches the model's frame size.
+  function shotOptions() {
+    return {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      canvasWidth: window.innerWidth,
+      canvasHeight: window.innerHeight,
+      pixelRatio: 1,
+      skipAutoScale: true,
+      quality: 0.8,
+    };
+  }
+  // A game that pins its own pixel ratio renders larger than the viewport;
+  // resample so the fallback frame still matches the model's frame size.
+  function canvasShot() {
     const width = window.innerWidth;
     const height = window.innerHeight;
     if (canvas.width === width && canvas.height === height) {
       return canvas.toDataURL('image/jpeg', 0.8);
     }
-    // A game that pins its own pixel ratio renders larger than the viewport;
-    // resample so every frame matches the model's frame size.
     scratch ??= document.createElement('canvas');
     scratch.width = width;
     scratch.height = height;
@@ -136,20 +153,31 @@
   }
 
   // The game draws inside its RAF callback, so the drawing buffer still holds
-  // that frame when this runs in the same task.
-  function capture() {
+  // that frame when this runs in the same task. The page shot starts here and
+  // encodes while the round-trip back to Python is in flight; a shot that
+  // fails falls back to the bare scene canvas rather than dropping the frame.
+  async function capture() {
+    const shot = pageShot ?? htmlToImage.toJpeg(document.body, shotOptions());
+    pageShot = htmlToImage.toJpeg(document.body, shotOptions());
+    let ui;
+    try {
+      ui = await shot;
+    } catch (error) {
+      console.error('Page capture failed; sending the scene canvas.', error);
+      ui = canvasShot();
+    }
     return {
       tick,
       width: window.innerWidth,
       height: window.innerHeight,
-      ui: encodeCanvas(),
+      ui,
       state: readState(),
     };
   }
 
   const backend = {
     dispatch(events) { dispatchEvents(events); },
-    advanceToFrame({events, targetTick}) {
+    async advanceToFrame({events, targetTick}) {
       dispatchEvents(events);
       simulateTo(targetTick);
       return capture();
@@ -161,12 +189,13 @@
       runFrame();
       return {tick, state: readState()};
     },
-    advanceChunk({events, frames}) {
+    async advanceChunk({events, frames}) {
       dispatchEvents(events);
-      const captured = frames.map((frame) => {
+      const captured = [];
+      for (const frame of frames) {
         simulateTo(frame.targetTick);
-        return capture();
-      });
+        captured.push(await capture());
+      }
       return {tick, frames: captured};
     },
     destroy() { queue.clear(); },
@@ -187,6 +216,7 @@
       return;
     }
     runFrame();
+    pageShot = htmlToImage.toJpeg(document.body, shotOptions());
     window.gameBackend = backend;
   };
   setTimeout(ready, 0);

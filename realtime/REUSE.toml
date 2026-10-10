@@ -41,6 +41,7 @@ path = [
     "uv.lock",
     "start.sh",
     "launch.sh",
+    "stop.sh",
     "turn_server.sh",
     "workbench_bridge.sh",
     "workbench_flux.sh",
@@ -62,3 +63,10 @@ path = [
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved."
 SPDX-License-Identifier = "Apache-2.0"
+
+# --- Vendored third-party browser bundle: html-to-image (UMD build). ---
+[[annotations]]
+path = "games/host/html-to-image.js"
+precedence = "override"
+SPDX-FileCopyrightText = "Copyright (c) 2017-2023 W.Y."
+SPDX-License-Identifier = "MIT"

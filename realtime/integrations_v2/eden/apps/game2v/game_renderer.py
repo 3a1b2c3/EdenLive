@@ -76,6 +76,7 @@ def standalone_page(html: str, entry: Mapping[str, Any]) -> str:
     payload = json.dumps(config).replace('</', '<\\/')
     script = (
         f'<script>window.gameStandalone={payload}</script>'
+        '<script src="/host/html-to-image.js"></script>'
         '<script src="/host/standalone.js"></script>'
     )
     head = re.search(r'<head[^>]*>', html, flags=re.IGNORECASE)

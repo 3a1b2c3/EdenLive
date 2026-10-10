@@ -63,6 +63,16 @@ class Scheduler(nn.Module, ABC):
         super().__init__()
         self.config = config
 
+    def network_timestep_dtype(self, input_dtype: torch.dtype) -> torch.dtype:
+        """Dtype of the timestep handed to ``predict_flow`` for a latent of
+        ``input_dtype``.
+
+        Defaults to the latent dtype. ``DiffusionModel.finalize`` builds its
+        cache-update timestep with this too, so denoising and commit forwards
+        stage the same dtype (a CUDA graph drops its capture on a change).
+        """
+        return input_dtype
+
     @abstractmethod
     def sample(
         self,

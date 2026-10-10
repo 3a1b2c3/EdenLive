@@ -12,8 +12,17 @@ input.attach();
 const {createRuntime} = await import(`/game/${window.gameSlug}/main.js`);
 const runtime = await createRuntime({input, mode: 'play', restart: () => runtime.reset()});
 runtime.reset();
-runtime.layout(window.innerWidth, window.innerHeight);
-window.addEventListener('resize', () => runtime.layout(window.innerWidth, window.innerHeight));
+const surface = document.querySelector('#app') || document.body;
+function surfaceSize() {
+  const rect = surface.getBoundingClientRect();
+  return {width: Math.max(1, Math.round(rect.width)), height: Math.max(1, Math.round(rect.height))};
+}
+function layout() {
+  const {width, height} = surfaceSize();
+  runtime.layout(width, height);
+}
+layout();
+window.addEventListener('resize', layout);
 
 let last = performance.now();
 function frame(now) {
