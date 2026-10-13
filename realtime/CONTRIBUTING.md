@@ -184,8 +184,8 @@ The short version:
 4. Run the project's checks locally:
 
    ```bash
-   uv run --group lint pre-commit run -a       # format + lint + type-check
-   uv run --group test pytest -m ci_cpu         # CPU tests (no GPU required)
+   pre-commit run -a                            # format + lint + type-check
+   pytest -m ci_cpu                             # CPU tests (no GPU required)
    ```
 
 5. Sign off your commits (`git commit --signoff`) and push to your fork.
@@ -258,7 +258,7 @@ are not present. They live [upstream](https://github.com/NVIDIA/flashdreams).
 
 - Python 3.10+. Type-annotate new code; the project type-checks with
   [`ty`](https://docs.astral.sh/ty/).
-- Formatting is enforced by `ruff` via pre-commit (`uv run pre-commit
+- Formatting is enforced by `ruff` via pre-commit (`pre-commit
   run -a`). The CI will reject unformatted code; running pre-commit
   locally is the easiest way to avoid surprises.
 - Prefer small, well-named functions over long functions with comments
@@ -347,10 +347,10 @@ def test_cudagraph_path(): ...
 Running tests locally:
 
 ```bash
-uv run pytest -m ci_cpu          # CPU-safe tests only
-uv run pytest -m ci_gpu          # GPU tests only (needs CUDA)
-uv run pytest -m "not manual"    # everything that runs in CI
-uv run pytest                    # all tests including manual
+pytest -m ci_cpu          # CPU-safe tests only
+pytest -m ci_gpu          # GPU tests only (needs CUDA)
+pytest -m "not manual"    # everything that runs in CI
+pytest                    # all tests including manual
 ```
 
 ## Dependency version bounds
@@ -359,43 +359,49 @@ The `flashdreams/pyproject.toml` declares minimum version bounds for all
 runtime dependencies. These bounds reflect the oldest versions we believe
 are compatible based on API analysis.
 
-**CI tests run against the pinned versions in `uv.lock`**, not against
-the declared minimums. This means:
+**CI tests run against the versions pinned in [`requirements.txt`](requirements.txt)**,
+not against the declared minimums. This means:
 
-- We guarantee correctness at the locked versions.
+- We guarantee correctness at the pinned versions.
 - We expect the package to work at the declared minimum bounds, but do
   not continuously validate this in CI.
 - If you encounter breakage with a version that satisfies the declared
-  bounds but differs from the lock file, please
+  bounds but differs from the pinned versions, please
   [open an issue](https://github.com/NVIDIA/flashdreams/issues). We will
   either fix compatibility or bump the bound in `pyproject.toml`.
 
-## Working with a single integration package
+## Installing
 
-A full `uv sync` installs dependencies for every workspace package. To sync only
-one, pass its distribution name with `--package`:
+This fork is installed with pip, not uv. From `realtime/`:
 
 ```bash
-# Only install eden + its deps (skips unrelated heavy packages)
-uv sync --package flashdreams-eden --extra dev
-
-# Run this fork's test suite
-uv run --package flashdreams-eden pytest integrations_v2/eden/tests/
+pip install torch==2.13.0 torchvision==0.28.0 \
+    --index-url https://download.pytorch.org/whl/cu130
+pip install --no-deps -e ./flashdreams -e ./apps/cam2v \
+    -e ./integrations_v2/eden
+pip install -r requirements.txt
 ```
 
-Workspace packages in this fork:
+`requirements.txt` pins the versions the deployment was verified with; see
+[`README.md`](README.md) for the CUDA wheel index and the Chromium and three.js
+steps. The test suite is `integrations_v2/eden/tests/`:
 
-| Path | `uv --package` name |
-|------|---------------------|
+```bash
+pytest integrations_v2/eden/tests/
+```
+
+Packages in this fork:
+
+| Path | Distribution |
+|------|--------------|
 | `flashdreams` | `flashdreams` |
 | `integrations_v2/eden` | `flashdreams-eden` |
-| `integrations_v2/flashvsr` | `flashdreams-flashvsr` |
 | `apps/cam2v` | `flashdreams-cam2v` |
-| `apps/v2v` | `flashdreams-v2v` |
 
-`flashdreams-eden` declares `flashdreams-cam2v` and `flashdreams-flashvsr` as
-workspace dependencies: `game2v` imports `Cam2VConditioning` from the first, and
-flashvsr's adapter imports `v2v` from the second.
+`flashdreams-eden` depends on `flashdreams` and `flashdreams-cam2v`: `game2v`
+imports `Cam2VConditioning` from the second. `apps/v2v` and
+`integrations_v2/flashvsr` are not part of the serving install; no game2v module
+imports them.
 
 ## Licensing of contributions
 

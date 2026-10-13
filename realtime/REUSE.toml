@@ -38,7 +38,7 @@ path = [
     ".pre-commit-config-base.yaml",
     ".gitignore",
     "pyproject.toml",
-    "uv.lock",
+    "requirements.txt",
     "start.sh",
     "launch.sh",
     "stop.sh",

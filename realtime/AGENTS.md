@@ -46,8 +46,9 @@ benchmark suites and the other 20 integrations live upstream, not here.
 
 - `integrations_v2/eden/` — the Eden integration: `apps/game2v` (the two shipped
   models), `apps/cam2v`, and `impl/` (pipelines, encoders, transformers).
-- `integrations_v2/flashvsr/` and `apps/{cam2v,v2v}` — declared dependencies of
-  the eden package; `game2v` imports `Cam2VConditioning`, flashvsr imports `v2v`.
+- `apps/{cam2v,v2v}` — dependencies of the eden package; `game2v` imports
+  `Cam2VConditioning` from `cam2v`. `integrations_v2/flashvsr/` ships in the tree
+  but nothing in game2v imports it, so the serving install leaves it out.
 - `flashdreams/flashdreams/` — the framework code eden reaches: `api_v2`,
   `infra/{config,diffusion,encoder,postprocess}`, `plugins`,
   `recipes/{wan,taehv}`, `runtime`, `runtime_v2`, `serving`, `core`.
@@ -58,14 +59,13 @@ benchmark suites and the other 20 integrations live upstream, not here.
 ## Common Commands
 
 ```bash
-uv sync --extra dev --extra runners
-uv sync --package <integration> --extra dev
-uv run flashdreams-run --help
-uv run flashdreams-run <runner-name> --help
-uv run flashdreams-run --no-instantiate <runner-name>
-uv run --group lint pre-commit run -a
-uv run pytest integrations_v2/eden/tests
-bash start.sh eden-game2v-5b-taehv        # or eden-game2v-14b-taehv
+pip install -r requirements.txt        # after the torch and -e steps in README.md
+flashdreams-run --help
+flashdreams-run <runner-name> --help
+flashdreams-run --no-instantiate <runner-name>
+pre-commit run -a
+pytest integrations_v2/eden/tests
+bash start.sh 5b                          # or 14b; --no-compile skips compilation
 ```
 
 `start.sh` resolves the application slug and runs `run.py` under `torchrun` in
@@ -76,7 +76,7 @@ Use `--no-instantiate` before GPU work to inspect the resolved runner config wit
 
 ## No-GPU Workflow
 
-- Inspect available runners with `uv run flashdreams-run --help`, then inspect a specific runner with `uv run flashdreams-run --no-instantiate <runner-name>`.
+- Inspect available runners with `flashdreams-run --help`, then inspect a specific runner with `flashdreams-run --no-instantiate <runner-name>`.
 - Prefer CPU checks first: config imports, checkpoint key-remap shape/bijection tests on CPU or meta tensors, docs builds, `pytest -m ci_cpu`, and static assertions about runner names and pipeline wiring.
 - Avoid `ci_gpu`, generation, `torchrun`, Docker GPU tests, large Hugging Face downloads, rollout parity, CUDA graph, WebRTC runtime, and quality-regression tests on CPU-only hosts unless the user requests them or the test explicitly skips cleanly.
 
@@ -100,7 +100,7 @@ Because of this direction, tests in `apps/<name>/tests/` must not import from `i
 ## Known Pitfalls
 
 - FlashDreams targets large NVIDIA GPUs; many real rollouts need 80 GB VRAM and CUDA-capable dependencies.
-- Full `uv sync`/`uv run` can build CUDA packages such as Transformer Engine. For narrow work, use `uv sync --package <integration> --extra dev` when possible.
+- Installing pulls only what [`requirements.txt`](requirements.txt) lists. Transformer Engine and the other CUDA-only packages are not part of it.
 - `flashdreams-run --no-instantiate` resolves config only; it does not prove weights, CUDA execution, or parity.
 - First GPU runs include compile/autotune warmup, so benchmark harnesses should discard warmup chunks.
 - Plain `pytest` includes manual tests. Use `pytest -m ci_cpu` or `pytest -m "not manual"` for normal local validation.

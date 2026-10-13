@@ -178,3 +178,6 @@ node_modules/
 
 # Per-host deployment overrides (hosts, secrets, paths).
 deploy.local.conf
+
+# Pids of the services this deployment started (launch.sh, stop.sh).
+.run/

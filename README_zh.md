@@ -2,7 +2,7 @@
 
 # Eden
 
-**代理引导的视频世界模型：把粗糙的 3D 预览渲染成真实视频。**
+**EdenLive: Real-Time Generative Rendering from Any Reference**
 
 [![Project Page](https://img.shields.io/badge/Project-Page-blue)](xxx)
 [![Paper](https://img.shields.io/badge/arXiv-xxx-b31b1b)](xxx)
@@ -60,7 +60,8 @@ pip install -e ".[data]"
 manifest 驱动的推理路径需要它们。不装的话只有 prompt 驱动那条路
 （`inference.use_prompt_loader`）能用。
 
-`realtime/` 下的实时流式服务用 `wm` conda 环境运行（80GB 显存）—— 见
+`realtime/` 下的实时流式服务需要 80GB 显存，用 pip 从
+[`realtime/requirements.txt`](realtime/requirements.txt) 安装 —— 见
 [`realtime/README.md`](realtime/README.md)。
 
 可选：FlashAttention 4，提供最快的注意力算子。它对版本敏感 ——
@@ -138,9 +139,12 @@ bash turn_server.sh
 #    可执行文件不叫 `claude` 时设 EDEN_WORKBENCH_CLAUDE。
 bash workbench_bridge.sh
 
-# 3. 模型服务，在 GPU 机器上。页面先开在工作台，选了游戏才开始渲染。
-#    launch.sh 会自己拉起 FLUX worker（渲染每局开始时那张写实首帧），
-#    权重从 MODEL_ROOT 加载，不用准备 HF_HOME。先激活你自己的 Python 环境。
+# 3. FLUX worker，在 GPU 机器上，渲染每局开始时那张写实首帧。
+bash workbench_flux.sh
+
+# 4. 模型服务，在 GPU 机器上。页面先开在工作台，选了游戏才开始渲染。
+#    权重从 MODEL_ROOT 加载，不用准备 HF_HOME；如果第 3 步没跑，launch.sh 会自己
+#    拉起 FLUX worker。先激活 realtime/requirements.txt 装好的环境。
 bash launch.sh
 ```
 
@@ -217,16 +221,16 @@ python -m eden.scripts.check
 - [ ] 把 `eden/configs/` 里的 `/path/to/...` 占位符替换为发布后的权重、checkpoint
       与 manifest 位置。
 - [ ] 在 `docs/assets/generated.mp4` 之外补充更多示例结果。
-- [ ] 填写引用信息。
+- [ ] 补全引用的作者、发表 venue 和链接。
 
 ## 引用
 
 ```bibtex
-@article{xxx,
-  title   = {xxx},
+@article{edenlive2026,
+  title   = {EdenLive: Real-Time Generative Rendering from Any Reference},
   author  = {xxx},
   journal = {xxx},
-  year    = {xxx}
+  year    = {2026}
 }
 ```
 

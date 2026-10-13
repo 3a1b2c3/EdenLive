@@ -25,8 +25,11 @@ shift 10.0 (14B) / 5.0 (1.3B), and chunk size 3 (the flashdreams `len_t`).
 
 ## Install
 
+From `realtime/`, which installs this package together with `flashdreams` and
+`flashdreams-cam2v`:
+
 ```bash
-uv sync --package flashdreams-eden --inexact
+pip install -r requirements.txt
 ```
 
 Checkpoints download from Hugging Face on first use. Export `HF_TOKEN` when the
@@ -35,8 +38,7 @@ selected repository requires authentication.
 ## Cam2V application
 
 ```bash
-uv sync --package flashdreams-eden --inexact
-uv run --no-sync flashdreams-run-v2 cam2v-eden \
+flashdreams-run-v2 cam2v-eden \
   --mode webrtc --host 0.0.0.0 --port 8089 -- --example-data
 ```
 
@@ -54,7 +56,7 @@ pipeline = PIPELINE_EDEN_WORLD_FAST.setup().to("cuda").eval()
 ## Tests
 
 ```bash
-uv run --no-sync pytest integrations_v2/eden -m ci_cpu
+pytest integrations_v2/eden -m ci_cpu
 ```
 
 ## Game2V HUD

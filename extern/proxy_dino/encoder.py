@@ -45,10 +45,14 @@ class DINOv3CheckpointEncoder(nn.Module):
         self,
         backbone: nn.Module,
         projection_dim: int | None = 1024,
-        patchify_factor: int = 2,
+        patchify_factor: int = 1,
     ) -> None:
         super().__init__()
         self.backbone = backbone
+        # 1 means one DINO token per projected vector, which is what the released
+        # projection was trained for: ``patch_projection`` is (projection_dim,
+        # hidden_size). A factor of f groups fxf tokens and needs a projection of
+        # (projection_dim, hidden_size * f**2) trained that way.
         self.patchify_factor = int(patchify_factor)
         if self.patchify_factor < 1:
             raise ValueError("patchify_factor must be positive")
@@ -92,7 +96,7 @@ def create_checkpoint_dinov3_encoder(
     checkpoint_path: str,
     *,
     projection_dim: int = 1024,
-    patchify_factor: int = 2,
+    patchify_factor: int = 1,
     local_files_only: bool = True,
 ) -> DINOv3CheckpointEncoder:
     """Load the frozen projected DINOv3 checkpoint used by proxy-to-real."""
@@ -147,7 +151,7 @@ def encode_proxy_dino(
     encoder: DINOv3CheckpointEncoder,
     images: torch.Tensor,
     *,
-    image_size: tuple[int, int] = (288, 512),
+    image_size: tuple[int, int] = (480, 832),
 ) -> torch.Tensor:
     """Encode RGB images to ``[N, C, 1, Hpatch, Wpatch]`` proxy features."""
 

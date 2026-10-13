@@ -11,12 +11,10 @@ set -u
 APP=$(app_slug "${1:-$MODEL}") || exit 1
 COMPILE="${2:-}"
 
-pkill -9 -f '[r]un.py' 2>/dev/null || true
-
-torchrun --nproc_per_node="$NPROC" run.py "$APP" \
+serve app .eden_app.log \
+  torchrun --nproc_per_node="$NPROC" run.py "$APP" \
   --mode webrtc --host "$APP_HOST" --port "$APP_PORT" -- \
   --no-ui --total-blocks 10000 $COMPILE \
-  --game "$GAME" \
-  > .eden_app.log 2>&1 &
-echo "$APP on $NPROC GPUs, pid $!, http://$APP_HOST:$APP_PORT/ (log .eden_app.log)"
+  --game "$GAME"
+echo "$APP on $NPROC GPUs, http://$APP_HOST:$APP_PORT/"
 tail -f .eden_app.log

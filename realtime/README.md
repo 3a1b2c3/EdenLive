@@ -15,9 +15,9 @@ sessions: the `eden` integration, the framework code it imports, and the game
 renders that drive it.
 
 This tree is the real-time serving path for [Eden](../README.md) and lives inside
-that repository. It is a self-contained uv workspace: its `eden` package is the
-FlashDreams integration, which is a different package from the `eden/` at the
-Eden repository root, and neither imports the other.
+that repository. Its `eden` package is the FlashDreams integration, which is a
+different package from the `eden/` at the Eden repository root, and neither
+imports the other. It is installed with pip from [`requirements.txt`](requirements.txt).
 
 FlashDreams itself is a high-performance inference and serving library for
 interactive autoregressive video and world models. For every other model, the
@@ -27,10 +27,10 @@ full documentation, and the developer guides, use upstream.
 
 - NVIDIA GPU with **80 GB VRAM or more** (e.g. H100 80GB), see notes below.
 - NVIDIA driver from the **R580 series or newer** (default compatible with CUDA 13.x)
-- **CUDA 13.x** (PyTorch `2.11.0+cu130` and the `nvidia-*-cu13` libraries, as installed
-  in the `wm` conda env the launch scripts use)
+- **CUDA 13.x** (PyTorch `2.13.0+cu130`, the build [`requirements.txt`](requirements.txt)
+  is pinned against; a CUDA 12.8 driver takes the `cu128` wheel index instead)
 - **Python >= 3.10**
-- **PyTorch >= 2.11.0+cu130** (`>= 2.9` for bare PyPI library install)
+- **PyTorch >= 2.9** (2.13.0 verified), with a matching torchvision
 - Linux x86-64 or arm64
 - **100 GB+ free storage space** recommended for environment and model checkpoints.
 - Docker with the
@@ -44,15 +44,38 @@ full documentation, and the developer guides, use upstream.
 
 ## Quickstart
 
-Activate a Python environment with the runtime dependencies first: the launch
-scripts call whatever `python` and `torchrun` are on `PATH`, and set up nothing
-of their own.
+The launch scripts call whatever `python` and `torchrun` are on `PATH` and set
+up nothing of their own, so install into the environment you will activate
+before launching. `torch` has to come first and from the wheel index matching
+your driver; `requirements.txt` then installs the rest, including this tree:
+
+```bash
+cd realtime
+pip install torch==2.13.0 torchvision==0.28.0 \
+    --index-url https://download.pytorch.org/whl/cu130
+pip install --no-deps -e ./flashdreams -e ./apps/cam2v \
+    -e ./integrations_v2/eden
+pip install -r requirements.txt
+python -m playwright install chromium
+```
+
+`cu130` matches a CUDA 13 driver; use `https://download.pytorch.org/whl/cu128`
+for CUDA 12.8, with the torchvision build of the same torch release. Chromium
+is what captures the proxy game, both for the cover image and for the frames
+the model conditions on. `three.js` is not in the tree (`games/node_modules` is
+git-ignored); the renderer serves it from `games/node_modules/three`, pinned to
+0.161.0:
+
+```bash
+npm install --prefix games three@0.161.0
+```
 
 Everything deployment-specific -- where the weights are, which addresses and
 ports the services bind, how many GPUs to use -- lives in
 [`deploy.conf`](deploy.conf). Edit it once; the scripts read it and take no
-arguments. Point `EDEN_DEPLOY_CONF` at a different file to keep more than one
-deployment side by side.
+arguments. To keep a second deployment, copy `deploy.conf` to
+`deploy.local.conf` (git-ignored): when that file exists it is sourced after
+`deploy.conf` and its values win.
 
 Weights come from `MODEL_ROOT` in that file (see below), not from Hugging Face.
 
@@ -87,8 +110,8 @@ bash workbench_bridge.sh
 # 3. FLUX worker, on the GPU host. Renders the photoreal first frame.
 bash workbench_flux.sh            # or `bash workbench_flux.sh <gpu>`
 
-# 4. The model app, on the GPU host. Starts the FLUX worker itself if step 3
-#    was skipped.
+# 4. The model app, on the GPU host. Starts the FLUX worker itself when it is
+#    not already running.
 bash launch.sh
 
 # Stop everything this host is running: the app, the FLUX worker,
@@ -151,11 +174,11 @@ entirely, which only works when the browser and the server share a subnet.
 screen and no generation, and needs neither the bridge nor the FLUX worker.
 
 ```bash
-bash start.sh eden-game2v-5b-taehv      # or eden-game2v-14b-taehv
+bash start.sh 5b      # or 14b; defaults to MODEL in deploy.conf
 ```
 
-It reads the same `deploy.conf`. A second argument of `off` disables transformer
-compilation, for when only time-to-first-chunk matters.
+It reads the same `deploy.conf`. A second argument of `--no-compile` skips
+transformer compilation, for when only time-to-first-chunk matters.
 
 ## Supported models
 
@@ -177,28 +200,6 @@ The `cam2v-eden-*` slugs in
 [`integrations_v2/eden/pyproject.toml`](integrations_v2/eden/pyproject.toml) are
 kept because `game2v` shares their conditioning code.
 
-## Developer guides
-
-- [Architecture](ARCHITECTURE.md)
-- [Inference pipeline overview](https://nvidia.github.io/flashdreams/main/developer_guides/inference_pipeline_overview.html)
-- [Config system](https://nvidia.github.io/flashdreams/main/developer_guides/config_system.html)
-
-The docs site above is upstream's; it describes models this fork does not carry.
-
-For day-to-day development:
-
-```bash
-uv sync --extra dev --extra runners
-uv run --group lint pre-commit run -a
-```
-
-The test suites were removed along with the other integrations, so
-`integrations_v2/eden/tests/` is the only `pytest` target here. It is
-CPU-only:
-
-```bash
-pytest integrations_v2/eden/tests
-```
 
 ## Contributing
 

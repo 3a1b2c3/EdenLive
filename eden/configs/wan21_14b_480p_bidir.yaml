@@ -72,11 +72,15 @@ model:
     # The frozen patch projection was finetuned at this size; the adapter resamples
     # control to the latent grid.
     image_size:
-    - 288
-    - 512
+    - 480
+    - 832
     local_files_only: true
     model_path: vision-encoder/backbone
-    patchify_factor: 2
+    # Native 16px patches: one DINO token maps to one projected vector, so
+    # patch_projection is (1024, 1024). This is the published projection's profile
+    # and the one realtime/ serves; 2 would group 2x2 tokens and need a (1024, 4096)
+    # projection trained that way.
+    patchify_factor: 1
     # Offline inference decodes RGB source clips; cached target latents are training-only.
     use_cached_latents: false
     vae_time_compression_ratio: 4
@@ -155,8 +159,8 @@ data:
       - first_frame
       # Point these at your own manifest. The repo ships two runnable proxy recordings:
       # path=examples/samples/manifest.csv root=examples/samples.
-      path: /path/to/proxy_manifest.csv
-      root: /path/to/proxy_dataset
+      path: examples/samples/manifest.csv
+      root: examples/samples
   batch_size: 1
   shuffle: false
   num_workers: 4

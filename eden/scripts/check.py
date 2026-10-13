@@ -57,6 +57,14 @@ def check_config(path: Path, strategies: dict) -> list[str]:
     if not build_runtime_plugins(config):
         problems.append("no runtime plugins selected")
 
+    # The proxy-DINO projection is the one piece of the config a GPU run dies on
+    # that this check can see: the layer's shape is fixed by patchify_factor, and
+    # the published checkpoint has to match it. Checked without loading the
+    # backbone, which is the slow part.
+    proxy = config.get("model", {}).get("proxy_dino") if isinstance(config.get("model"), dict) else None
+    if isinstance(proxy, dict) and proxy.get("enabled"):
+        problems.extend(check_proxy_dino_projection(config, proxy))
+
     # _select_inference_loader falls back to the prompt loader when the config
     # asks for it or carries no data: block at all, so a missing dataset is only
     # a problem when neither of those holds.
@@ -68,6 +76,52 @@ def check_config(path: Path, strategies: dict) -> list[str]:
         problems.append("data: block with no data.dataset.name")
 
     return problems
+
+
+
+def check_proxy_dino_projection(config, proxy: dict) -> list[str]:
+    """The projection checkpoint must load into the layer the config builds."""
+
+    from safetensors import safe_open
+
+    factor = int(proxy.get("patchify_factor", 1))
+    control_dim = int(proxy.get("control_dim", 1024))
+    checkpoint = proxy.get("checkpoint_path")
+    if not checkpoint:
+        return ["proxy_dino enabled with no checkpoint_path"]
+    # Same rule as Wan22DiffusersAdapter._under_pretrained_dir: absolute paths
+    # stand, anything else is read under model.pretrained_dir.
+    raw = Path(str(checkpoint)).expanduser()
+    root = str((config.get("model") or {}).get("pretrained_dir") or "")
+    path = raw if raw.is_absolute() or not root else Path(root).expanduser() / raw
+    if not path.is_file():
+        return [f"proxy_dino checkpoint not found: {path}"]
+    try:
+        with safe_open(path, framework="pt") as handle:
+            keys = list(handle.keys())
+            # The training checkpoint prefixes the key
+            # (model.module.encoder.patch_projection.weight); the loader strips
+            # those prefixes, so match on the suffix.
+            weight = next((key for key in keys if key.endswith("patch_projection.weight")), None)
+            shape = tuple(handle.get_slice(weight).get_shape()) if weight else None
+            cls_token = next((key for key in keys if key.endswith("embeddings.cls_token")), None)
+            hidden_size = handle.get_slice(cls_token).get_shape()[-1] if cls_token else None
+    except Exception as exc:
+        return [f"proxy_dino checkpoint {path.name} is not readable: {exc}"]
+    if shape is None:
+        return [f"proxy_dino checkpoint {path.name} has no patch_projection.weight"]
+    if hidden_size is None:
+        return [f"proxy_dino checkpoint {path.name} has no cls token to read the token width from"]
+    # The layer the config builds is (control_dim, hidden_size * factor**2): one
+    # DINO token is hidden_size wide and a factor of f groups fxf of them.
+    expected = (control_dim, int(hidden_size) * factor**2)
+    if shape != expected:
+        return [
+            f"proxy_dino patch_projection is {shape}, but patchify_factor={factor} with "
+            f"control_dim={control_dim} builds {expected}"
+        ]
+    return []
+
 
 
 def main() -> int:

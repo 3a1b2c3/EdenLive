@@ -34,11 +34,8 @@ install them from the git repo:
 pip install "flashdreams-eden @ git+<this-repo>.git#subdirectory=integrations_v2/eden"
 ```
 
-Or with uv:
-
-```bash
-uv pip install "flashdreams-eden @ git+<this-repo>.git#subdirectory=integrations_v2/eden"
-```
+Inside this repository, install the serving stack from
+[`requirements.txt`](requirements.txt) instead.
 
 ## Package inventory
 

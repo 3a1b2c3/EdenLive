@@ -11,31 +11,20 @@
 set -u
 . "$(dirname "$(readlink -f "$0")")/_common.sh"
 
-if [ -z "$TURN_SECRET" ]; then
-  echo "set TURN_SECRET in deploy.local.conf" >&2
-  exit 1
-fi
-if ! command -v turnserver >/dev/null; then
-  echo "turnserver not found; install coturn" >&2
-  exit 1
-fi
-IP="${1:-$(ip -4 -o addr show "$TURN_IFACE" 2>/dev/null | awk '{print $4}' | cut -d/ -f1)}"
-if [ -z "$IP" ]; then
-  echo "no IPv4 address on $TURN_IFACE; pass the relay IP or set TURN_IFACE" >&2
-  exit 1
-fi
+[ -n "$TURN_SECRET" ] || die "set TURN_SECRET in deploy.local.conf"
+command -v turnserver >/dev/null || die "turnserver not found; install coturn"
 
-pkill -f '[t]urnserver' 2>/dev/null || true
-nohup turnserver -n --listening-port="$TURN_PORT" \
+IP="${1:-$(ip -4 -o addr show "$TURN_IFACE" 2>/dev/null | awk '{print $4}' | cut -d/ -f1)}"
+[ -n "$IP" ] || die "no IPv4 address on $TURN_IFACE; pass the relay IP or set TURN_IFACE"
+
+serve turn .turnserver.log \
+  turnserver -n --listening-port="$TURN_PORT" \
   --listening-ip="$IP" --relay-ip="$IP" --external-ip="$IP" \
   --realm=flashdreams --lt-cred-mech --user="$TURN_USERNAME:$TURN_SECRET" \
   --no-tls --no-dtls --no-cli --min-port=49160 --max-port=49200 \
-  --log-file=stdout --simple-log \
-  > .turnserver.log 2>&1 < /dev/null &
+  --log-file=stdout --simple-log
+
 sleep 2
-if ! kill -0 $! 2>/dev/null; then
-  echo "TURN relay exited; see .turnserver.log" >&2
-  exit 1
-fi
-echo "TURN relay on $IP:$TURN_PORT (log .turnserver.log)"
+running turn || die "TURN relay exited; see .turnserver.log"
+echo "TURN relay on $IP:$TURN_PORT"
 echo "set TURN_HOST=$IP"

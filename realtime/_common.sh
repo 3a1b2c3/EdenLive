@@ -1,7 +1,18 @@
 # Shared setup for the launch scripts. Sourced, not run.
 #
-# Loads deploy.conf, then deploy.local.conf if it exists, and exports what the
-# Python side reads.
+# Reads deploy.conf, then deploy.local.conf if it exists, and exports what the
+# Python side reads. Also keeps the pid of each service this deployment
+# starts, so a later launch or stop only touches those processes.
+
+# bash 3.2 only exits the function when `exit` runs inside one, so step back
+# out of it and then out of the sourced file.
+die() {
+  echo "$1" >&2
+  shopt -s extdebug
+  trap 'exit 1' RETURN
+  trap 'exit 1' DEBUG
+  return 1
+}
 
 # Run from realtime/, where run.py and games/ live.
 cd "$(dirname "$(readlink -f "${BASH_SOURCE[1]}")")" || exit 1
@@ -11,32 +22,75 @@ if [ -f deploy.local.conf ]; then
   . ./deploy.local.conf
 fi
 
-# The weight tree. A relative MODEL_ROOT is read from the Eden repository root.
-case "$MODEL_ROOT" in
-  "") echo "set MODEL_ROOT in deploy.local.conf" >&2; exit 1 ;;
-  /*) ;;
-  *) MODEL_ROOT="$(cd .. && pwd)/$MODEL_ROOT" ;;
-esac
+# A relative MODEL_ROOT is read from the Eden repository root.
+if [ -z "$MODEL_ROOT" ]; then
+  die "set MODEL_ROOT in deploy.local.conf"
+fi
+if [ "${MODEL_ROOT:0:1}" != "/" ]; then
+  MODEL_ROOT="$(cd .. && pwd)/$MODEL_ROOT"
+fi
 export EDEN_MODEL_ROOT="$MODEL_ROOT"
 export HF_HUB_OFFLINE=1 PYTHONUNBUFFERED=1
 
-# TURN relay. An empty TURN_HOST means no relay.
+# An empty TURN_HOST means the page connects directly, with no relay.
 if [ -n "$TURN_HOST" ]; then
   if [ -z "$TURN_SECRET" ]; then
-    echo "TURN_HOST is set but TURN_SECRET is empty" >&2
-    exit 1
+    die "TURN_HOST is set but TURN_SECRET is empty"
   fi
-  export FLASHDREAMS_TURN_HOST="$TURN_HOST" \
-         FLASHDREAMS_TURN_PORT="$TURN_PORT" \
-         FLASHDREAMS_TURN_USERNAME="$TURN_USERNAME" \
-         FLASHDREAMS_TURN_CREDENTIAL="$TURN_SECRET"
+  export FLASHDREAMS_TURN_HOST="$TURN_HOST"
+  export FLASHDREAMS_TURN_PORT="$TURN_PORT"
+  export FLASHDREAMS_TURN_USERNAME="$TURN_USERNAME"
+  export FLASHDREAMS_TURN_CREDENTIAL="$TURN_SECRET"
 fi
 
-# The application slug for a MODEL value (14b or 5b).
+# The application slug for a MODEL value of 14b or 5b.
 app_slug() {
   case "$1" in
     14b) echo game2v-eden-world-v2-14b-taehv ;;
     5b)  echo game2v-eden-world-v2-5b-taehv ;;
-    *)   echo "unknown model '$1' (use 14b or 5b)" >&2; return 1 ;;
+    *)   die "unknown model '$1' (use 14b or 5b)" ;;
   esac
+}
+
+# --- Services this deployment started ---------------------------------------
+# Pids live in .run/<name>.pid. Stopping by command line is not safe: another
+# deployment on the same host runs the same commands.
+
+pid_file() { echo ".run/$1.pid"; }
+
+# Start a named service in the background and remember its pid.
+#   serve <name> <log> <command...>
+serve() {
+  local name="$1" log="$2"
+  shift 2
+  stop_service "$name"
+  mkdir -p .run
+  nohup setsid "$@" > "$log" 2>&1 < /dev/null &
+  echo "$!" > "$(pid_file "$name")"
+  echo "$name pid $! (log $log)"
+}
+
+service_pid() {
+  local file
+  file="$(pid_file "$1")"
+  [ -s "$file" ] && cat "$file"
+}
+
+running() {
+  local pid
+  pid="$(service_pid "$1")"
+  [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
+}
+
+# Stop a service and the children it spawned. A stale pid is removed quietly.
+stop_service() {
+  local pid
+  pid="$(service_pid "$1")"
+  [ -n "$pid" ] || return 1
+  if kill -0 "$pid" 2>/dev/null; then
+    pkill -9 -P "$pid" 2>/dev/null || true
+    kill -9 "$pid" 2>/dev/null || true
+    echo "stopped $1 (pid $pid)"
+  fi
+  rm -f "$(pid_file "$1")"
 }

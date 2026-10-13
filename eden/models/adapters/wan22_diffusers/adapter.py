@@ -1818,7 +1818,7 @@ class Wan22DiffusersAdapter(ModelAdapter):
             model_path,
             checkpoint_path,
             projection_dim=self._proxy_dino_control_dim(),
-            patchify_factor=int(cfg.get("patchify_factor", 2)),
+            patchify_factor=int(cfg.get("patchify_factor", 1)),
             local_files_only=bool(cfg.get("local_files_only", True)),
         )
         if int(encoder.feature_dim) != self._proxy_dino_control_dim():
@@ -1876,7 +1876,7 @@ class Wan22DiffusersAdapter(ModelAdapter):
                 "model.proxy_dino.video_context_time_axis must be 'decoded' or 'latent', "
                 f"got {time_axis!r}"
             )
-        encoder_size = tuple(int(v) for v in cfg.get("image_size", (288, 512)))
+        encoder_size = tuple(int(v) for v in cfg.get("image_size", (480, 832)))
         images = F.interpolate(
             images.reshape(batch_size * images.shape[1], channels, height, width),
             size=encoder_size,

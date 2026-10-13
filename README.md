@@ -2,7 +2,7 @@
 
 # Eden
 
-**Proxy-guided video world models: turn coarse 3D previews into photorealistic video.**
+**EdenLive: Real-Time Generative Rendering from Any Reference**
 
 [![Project Page](https://img.shields.io/badge/Project-Page-blue)](xxx)
 [![Paper](https://img.shields.io/badge/arXiv-xxx-b31b1b)](xxx)
@@ -62,8 +62,9 @@ pip install -e ".[data]"
 the manifest-driven inference path needs. Without it, only the prompt-driven path
 (`inference.use_prompt_loader`) works.
 
-The real-time streaming service under `realtime/` runs from the `wm` conda env
-(80 GB VRAM) — see [`realtime/README.md`](realtime/README.md).
+The real-time streaming service under `realtime/` needs 80 GB of VRAM and is
+installed with pip from [`realtime/requirements.txt`](realtime/requirements.txt) —
+see [`realtime/README.md`](realtime/README.md).
 
 Optional: FlashAttention 4 for the fastest attention kernel. It is version
 sensitive — a `flash_attn`/`cutlass` mismatch surfaces as
@@ -200,10 +201,14 @@ bash turn_server.sh
 #    own. Set EDEN_WORKBENCH_CLAUDE if the binary is not named `claude`.
 bash workbench_bridge.sh
 
-# 3. The model app, on the GPU host. The page opens on the workbench and
-#    renders nothing until a game is picked. launch.sh starts the FLUX worker
-#    itself (the photoreal first frame) and loads weights from MODEL_ROOT, so
-#    no HF_HOME setup is needed. Activate your Python environment first.
+# 3. FLUX worker, on the GPU host. Renders the photoreal first frame.
+bash workbench_flux.sh
+
+# 4. The model app, on the GPU host. The page opens on the workbench and
+#    renders nothing until a game is picked. It loads weights from MODEL_ROOT,
+#    so no HF_HOME setup is needed, and starts the FLUX worker itself when one
+#    is not already running. Activate the environment from
+#    realtime/requirements.txt first.
 bash launch.sh
 ```
 
@@ -286,16 +291,16 @@ still need a real inference run.
 - [ ] Replace the `/path/to/...` placeholders in `eden/configs/` — `model.proxy_dino.*`
       and the manifest paths — with the published locations.
 - [ ] Add more example results alongside `docs/assets/generated.mp4`.
-- [ ] Fill in the citation block.
+- [ ] Fill in the citation authors, venue, and link.
 
 ## Citation
 
 ```bibtex
-@article{xxx,
-  title   = {xxx},
+@article{edenlive2026,
+  title   = {EdenLive: Real-Time Generative Rendering from Any Reference},
   author  = {xxx},
   journal = {xxx},
-  year    = {xxx}
+  year    = {2026}
 }
 ```
 

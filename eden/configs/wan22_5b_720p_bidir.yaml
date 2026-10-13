@@ -45,10 +45,10 @@ model:
   # flash-attn-4 stack, while triton runs on the GPUs the rest of the configs target.
   teacher_forcing_attention_backend: triton
   proxy_dino:
-    # This checkpoint was trained with `zero`: the unconditional CFG branch uses zero DINO
-    # control, so guidance pushes along the proxy axis as well as text. Must match how the
+    # This checkpoint was trained with `same`: the proxy control is fed to both CFG
+    # branches, so guidance only pushes along the text axis. Must match how the
     # checkpoint was trained; `zero` and `same` are not interchangeable.
-    cfg_unconditional_control: zero
+    cfg_unconditional_control: same
     channel_concat_rmsnorm: false
     # This is the newly added Wan patch-embedding control slice (not the frozen,
     # checkpoint-loaded DINO patch projection). Zero-init keeps the model numerically
@@ -58,12 +58,16 @@ model:
     control_dim: 1024
     enabled: true
     image_size:
-    - 288
-    - 512
+    - 480
+    - 832
     local_files_only: true
     # Override these paths for the local DINOv3 backbone and the finetuned proxy.
     model_path: vision-encoder/backbone
-    patchify_factor: 2
+    # Native 16px patches: one DINO token maps to one projected vector, so
+    # patch_projection is (1024, 1024). This is the published projection's profile
+    # and the one realtime/ serves; 2 would group 2x2 tokens and need a (1024, 4096)
+    # projection trained that way.
+    patchify_factor: 1
     # Offline inference decodes RGB source clips; cached target latents are training-only.
     use_cached_latents: false
     vae_time_compression_ratio: 4
@@ -141,8 +145,8 @@ data:
       - first_frame
       # Point these at your own manifest. The repo ships two runnable proxy recordings:
       # path=examples/samples/manifest.csv root=examples/samples.
-      path: /path/to/proxy_manifest.csv
-      root: /path/to/proxy_dataset
+      path: examples/samples/manifest.csv
+      root: examples/samples
   batch_size: 1
   shuffle: false
   num_workers: 4
@@ -163,7 +167,7 @@ inference:
   num_frames: 121
   fps: 24
   num_inference_steps: 48
-  guidance_scale: 2.0
+  guidance_scale: 3.0
   guidance_scale_proxy: null
   negative_prompt: Vibrant colors, overexposed, static, blurry details, subtitles, style, artwork, painting,
     image, still, overall grayish, worst quality, low quality, JPEG compression residue, ugly, incomplete,

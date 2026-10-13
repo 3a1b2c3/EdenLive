@@ -12,7 +12,7 @@ description = "Reusable transport-neutral FlashDreams video-to-video application
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "flashdreams[local-window,serving]",
+    "flashdreams[serving]",
     "imageio-ffmpeg>=0.5",
     "numpy>=1.26",
     "torch>=2.9",
@@ -23,14 +23,10 @@ dev = [
     "pytest>=8.0",
 ]
 
-[tool.uv.sources]
-flashdreams = { workspace = true }
 
 [tool.setuptools.packages.find]
 include = ["v2v*"]
 
-[tool.uv]
-managed = true
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib -p flashdreams._pytest_plugins.marker_enforcement"

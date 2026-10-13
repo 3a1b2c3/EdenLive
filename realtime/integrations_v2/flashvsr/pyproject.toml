@@ -61,7 +61,6 @@ packages = [
     "flashvsr.apps",
     "flashvsr.apps.v2v",
     "flashvsr.impl",
-    "flashvsr.impl.csrc",
     "flashvsr.impl.decoder",
     "flashvsr.impl.encoder",
     "flashvsr.impl.transformer",
@@ -70,8 +69,6 @@ packages = [
 [tool.setuptools.package-dir]
 flashvsr = "."
 
-[tool.setuptools.package-data]
-"flashvsr.impl.csrc" = ["*.cu"]
 
 # Pytest's ``configfile`` resolution picks the nearest ``pyproject.toml`` to
 # the test files, so when running ``pytest integrations_v2/flashvsr/tests``

@@ -33,6 +33,9 @@ classifiers = [
 dependencies = [
   "accelerate>=1.0",
   "diffusers>=0.38",
+  # The Wan pipelines call ftfy.fix_text while encoding prompts and do not
+  # declare it themselves.
+  "ftfy>=6",
   "huggingface-hub>=0.30",
   "imageio>=2.30",
   "imageio-ffmpeg>=0.5",

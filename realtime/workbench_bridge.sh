@@ -19,11 +19,8 @@ if [ ! -s .workbench/token ]; then
   (umask 077; python -c 'import secrets; print(secrets.token_urlsafe(24))' > .workbench/token)
 fi
 export EDEN_WORKBENCH_TOKEN="$(cat .workbench/token)"
-# Greybox capture runs on Chromium's software renderer; this host needs no GPU.
-export EDEN_GAME_GPU=0
+export EDEN_GAME_GPU=0   # greybox capture uses Chromium's software renderer
 
-pkill -f '[e]den.apps.workbench.bridge' 2>/dev/null || true
-nohup setsid python -m eden.apps.workbench.bridge --host "$HOST" --port "$BRIDGE_PORT" \
-  > .workbench/bridge.log 2>&1 < /dev/null &
-echo "bridge pid $!, $HOST:$BRIDGE_PORT (log .workbench/bridge.log)"
+serve bridge .workbench/bridge.log \
+  python -m eden.apps.workbench.bridge --host "$HOST" --port "$BRIDGE_PORT"
 echo "on the GPU host, set BRIDGE_HOST=$HOST"
