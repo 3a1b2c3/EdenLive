@@ -181,6 +181,7 @@ class WanDiTNetwork(nn.Module):
         self.patch_embedding_type = config.patch_embedding_type
         self.apply_rope_before_kvcache = config.apply_rope_before_kvcache
         self.cp_method = config.cp_method
+        self._cp_group: ProcessGroup | None = None
         self.fp32_adaln = config.fp32_adaln
 
         # Embedding layers
@@ -251,6 +252,7 @@ class WanDiTNetwork(nn.Module):
 
         This must be called before ``initialize_cache`` when CP is used.
         """
+        self._cp_group = cp_group
         for block in self.blocks:
             assert isinstance(block, Block)
             block.set_context_parallel_group(cp_group)
@@ -484,11 +486,20 @@ class WanDiTNetwork(nn.Module):
         if self.patch_embedding_type == "linear":
             x = self.patch_embedding(x)  # (..., L, D)
         elif self.patch_embedding_type == "conv3d":
-            _weight = self.patch_embedding.weight.reshape(
-                self.dim, -1
-            )  # [D, in_dim * kt * kh * kw]
-            _bias = self.patch_embedding.bias  # [D] or None
-            x = torch.nn.functional.linear(x, _weight, _bias)
+            full = (
+                cat_outputs_cp(x, seq_dim=-2, cp_group=self._cp_group)
+                if self._cp_group is not None
+                else x
+            )
+            video = self.unpatchify_and_maybe_gather_cp(
+                self._patch_h, self._patch_w, full
+            ).movedim(-3, -4)
+            embedded = self.patch_embedding(
+                video.reshape(-1, *video.shape[-4:]).contiguous()
+            )
+            x = embedded.flatten(2).transpose(1, 2).reshape(*batch_shape, -1, self.dim)
+            if self._cp_group is not None:
+                x = split_inputs_cp(x, seq_dim=-2, cp_group=self._cp_group)
         else:
             raise ValueError(
                 f"Invalid patch embedding type: {self.patch_embedding_type}"
@@ -507,11 +518,17 @@ class WanDiTNetwork(nn.Module):
             timesteps.ndim > len(batch_shape) and timesteps.shape[-1] == L
         )
         e = self.time_embedding(
-            sinusoidal_embedding_1d(self.freq_dim, timesteps).type_as(x)
+            sinusoidal_embedding_1d(self.freq_dim, timesteps.reshape(-1)).type_as(x)
         )  # [..., D] (scalar) or [..., L, D] (per-token)
         e0 = self.time_projection(e).unflatten(
             -1, (6, self.dim)
         )  # [..., 6, D] or [..., L, 6, D]
+        if per_token_timestep:
+            e = e.reshape(*batch_shape, L, self.dim)
+            e0 = e0.reshape(*batch_shape, L, 6, self.dim)
+        else:
+            e = e.reshape(*batch_shape, self.dim)
+            e0 = e0.reshape(*batch_shape, 6, self.dim)
 
         # ``broadcast_to`` materialises the broadcast against ``batch_shape``
         # in case ``timesteps`` was a true scalar / smaller-rank tensor; the
@@ -545,7 +562,17 @@ class WanDiTNetwork(nn.Module):
             cache.after_update(current_chunk_idx)
 
         # Final head
+        # The reference gathers hidden tokens before its output projection.
+        # Projecting local shards can select a different BF16 GEMM for short chunks.
+        if self._cp_group is not None:
+            x = cat_outputs_cp(x, seq_dim=-2, cp_group=self._cp_group)
+            if per_token_timestep:
+                head_e = cat_outputs_cp(
+                    head_e, seq_dim=-3, cp_group=self._cp_group
+                )
         x = self.head(x, head_e)  # (..., L, D)
+        if self._cp_group is not None:
+            x = split_inputs_cp(x, seq_dim=-2, cp_group=self._cp_group)
         return x
 
 

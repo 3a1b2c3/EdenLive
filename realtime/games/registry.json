@@ -51,8 +51,8 @@
       ]
     },
     {
-      "slug": "astrobot",
-      "title": "Astrobot: Moonstone Run",
+      "slug": "moonstone-run",
+      "title": "Moonstone Run",
       "description": "The same moonstone collectathon as the original, rendered with box platforms, a boxy robot and disc coins. Hop the seven stones, gather all twelve coins, and stay on the tops — slip into the mist and the run is lost.",
       "prompt": "Clear daylight on a high rocky plateau, seen from a camera behind and above a small white robot among flat-topped pale boulders standing over a deep mist-filled ravine. A course of large gritty stone tops — a long ridge, stepped slabs, a lookout rock and a slender spire — steps upward across the gaps, with a small steel beacon mast on the highest rock, golden coins hanging in the air above the stone and dark weathered rubble along the crumbling ledges. Bare stone, thin mist in the shaded gaps, blue sky and hard sunlight with crisp shadows.",
       "cover_prompt": "Clear daylight on a high rocky plateau, seen from a camera behind and above a small white robot standing on a flat-topped pale boulder. A course of large flat-topped rocks — a long ridge, stepped slabs, a lookout rock and a slender spire — steps upward across a deep ravine filled with thin white mist, with a small steel beacon mast on the highest rock; golden coins hang in the air above the stone tops and dark weathered rubble litters the ledges. Blue sky, hard sunlight, crisp shadows on bare gritty stone.",
@@ -75,8 +75,8 @@
       ]
     },
     {
-      "slug": "need-for-speed",
-      "title": "Need for Speed: Neon Circuit",
+      "slug": "neon-circuit",
+      "title": "Neon Circuit",
       "description": "The same three-lap neon circuit as the original, rendered with box cars, block towers and simplified palm trees. Steer, keep the throttle pinned, grab green boost packs, and finish first before a rival, the 55-second clock, or a third collision ends the race.",
       "prompt": "Bright midday sun over a closed-off city street circuit, seen from a low chase camera behind a sports car on grey asphalt between white lane lines. The two-lane road runs through a canyon of glass office towers, roadside palms and billboards, with concrete barriers and painted kerbs along the shoulders and corners and a steel gantry carrying race banners over the black-and-white start line; three rival race cars are out on the circuit and flat green boost markers lie on the tarmac. Clear blue sky with thin high cloud, hard sunlight, crisp shadows and heat shimmer over the road.",
       "cover_prompt": "Bright midday sun over a closed-off city street circuit, seen from a low camera just behind a sports car sitting on grey asphalt at a black-and-white chequered start line. A steel gantry with race banners spans the two-lane road, concrete barriers and painted kerbs run along both shoulders, and glass office towers, palm trees and billboards line the street ahead; three rival race cars are already away in the distance and flat green boost markers lie on the tarmac. Clear blue sky with thin high cloud, hard sunlight, crisp shadows.",
@@ -128,8 +128,8 @@
       ]
     },
     {
-      "slug": "street-of-rage",
-      "title": "Street of Rage: Nightfang",
+      "slug": "nightfang",
+      "title": "Nightfang",
       "description": "A side-scrolling street brawler: chain punches, land heavy blows and dodge the vampire wardens. Defeat both wardens to open the gate, then face a dragon with claw attacks and a sweeping fire breath.",
       "prompt": "An urban shopping street viewed from an elevated side angle, with a lone fighter, two cloaked vampire wardens and a large winged dragon beyond a metal gate. Concrete storefronts with painted signs, recessed doors, rows of glass windows and flat roof ledges line the pavement. Street lamps, utility bins, kerbstones and road markings define the broad roadway; taller buildings form the distant skyline. The fighter wears gloves and a fitted sports jacket. Clear blue sky, natural midday sunlight and crisp contact shadows.",
       "cover_prompt": "An elevated side view of a gloved fighter standing on the left of a broad urban roadway, with a cloaked vampire further down the street to the right and a second cloaked vampire still further along the block. Concrete shop facades fill the background, with rows of glass windows, recessed doors, roof ledges and a painted sign reading NIGHTFANG. Two street lamps and utility bins line the kerb behind them. Lane dashes and paving seams cross the street beneath clear blue sky, hard midday sunlight and crisp contact shadows.",
@@ -153,7 +153,7 @@
       ]
     },
     {
-      "slug": "street-fighter",
+      "slug": "neon-clash",
       "title": "NEON CLASH · Street Duel",
       "description": "A side-view street fight: move, jump, punch, kick and guard as Kai against the CPU rival Raze. Attacks have startup, hit and recovery; guarded blows deal less damage. Knock the rival out to win, or lose if your own health hits zero.",
       "prompt": "Clear midday sunlight over a city street, seen from a side-on camera looking across a sunlit asphalt roadway. A concrete sidewalk and kerb run along the far side, in front of a low arcade storefront with shuttered bays, a glass door and a painted AFTER HOURS sign. A taller painted building stands to the right with a vertical NEON letter sign and a vending machine at the pavement. Two street lamps stand at either end of the block, and a row of office slabs fills the skyline behind. Two martial artists occupy the roadway: a fighter in a pale gi on the left, a fighter in a dark gi on the right, facing each other across a few metres of asphalt marked with dashed lane lines. Flat blue sky, hard midday sun, crisp shadows.",
@@ -179,7 +179,7 @@
       ]
     },
     {
-      "slug": "dark-soul",
+      "slug": "ashen-wilds",
       "title": "Ashen Wilds",
       "description": "Third-person melee on a highland meadow: walk a worn path toward a stone circle, spend stamina to strike and roll, lock onto a wild goat and the Stone Warden, and defeat the Warden before your health is gone.",
       "prompt": "Clear midday sunlight over a highland meadow, seen from behind a plate-armoured knight on a worn dirt path. Green grass and an ochre trail lead toward a distant circle of standing stones, with pines, firs, leafless trees and scattered rocks along both sides. A wayside shrine with an ember bowl and an upright sword sits near the path. Two ruined watchtowers and a broken stone gate occupy the far ridge. A horned goat stands on the grass nearby, and a tall armoured skeletal warden stands inside the stone circle. Flat blue sky, hard midday sun, crisp shadows, no haze.",
@@ -209,7 +209,7 @@
       ]
     },
     {
-      "slug": "hades",
+      "slug": "ashen-vow",
       "title": "ASHEN VOW · Escape from Erebus",
       "description": "A circular-arena combat: slash a three-hit combo, dash through telegraphed strikes, and detonate an infernal nova. Defeat two skeletal wardens to unseal Asterion, then bring down the horned guardian so the Last Gate opens.",
       "prompt": "Clear midday sunlight over a circular stone courtyard, seen from an elevated third-person camera looking across the floor toward a far gateway. A round paved arena sits above a sunken lava moat, ringed by stone columns and brazier bowls. Gold inlay marks the paving rings, and a carved sigil lies on the floor before the gate. A warrior in a crimson cloak, with a gold sword and a round shield, stands on the near side of the arena. Two skeletal wardens occupy the middle of the floor, one in a violet cloak and one in a rust-red cloak. A sealed stone gate with gold fittings stands on the far side. Clear blue sky, hard midday sun, crisp shadows.",
@@ -235,8 +235,8 @@
       ]
     },
     {
-      "slug": "elda",
-      "title": "Wilds of Elda",
+      "slug": "moorland-archer",
+      "title": "Moorland Archer",
       "description": "A third-person archery adventure on open rolling hills: cross the meadow from the start rise toward the ancient shrine on the far plateau, draw the bow with B and loose auto-aimed arrows at the club-wielding monsters guarding its door. Kill every guard to win; if your five hearts run out, the round is lost.",
       "prompt": "Clear midday sunlight over rolling green moorland, seen from a third-person chase view behind a lone hooded archer in a green tunic carrying a bow and a back quiver. A winding dirt path runs from a grassy rise through grass tufts, scattered oak and pine groves and boulders toward a grey domed stone shrine with glowing orange runes on its doorway pillars, set on a round plateau to the north. A lake and a shallow stream cut the valley to the west, a campfire ring of stones sits near the shrine approach, five red-roofed village houses stand far to the east, and snow-capped mountains ring the horizon. Three club-wielding monsters idle on the slope before the shrine door. Clear blue sky, hard midday sun, crisp shadows.",
       "cover_prompt": "Clear midday sunlight over rolling green moorland, seen from a low chase camera just behind a lone archer in a green tunic and pointed green hood, bow in hand and a leather quiver across the back, standing on a pale dirt path in the centre of the frame. The path runs straight uphill between grass tufts to a dark domed stone shrine with an orange-lit doorway on the far rise. A grey boulder and a blue lake lie to the left beyond oak and pine trees, more oaks and red-roofed houses stand to the right, and snow-capped grey mountains fill the horizon. Clear blue sky, hard sunlight, crisp shadows.",
@@ -332,7 +332,7 @@
       }
     },
     {
-      "slug": "qq",
+      "slug": "nitro-kart",
       "title": "Nitro Kart Rush",
       "description": "Steer a go-kart around a closed loop track, hold drift through corners to charge the nitro gauge, and fire nitro boosts to overtake rival karts.",
       "prompt": "A sunny cartoon city kart circuit: a closed loop asphalt track with red-white curbs, a few sweeping corners, a checkered start/finish gate with a banner, floating blue nitro boxes on the racing line, low barriers along the edges, and grandstands, palm trees, colorful buildings and balloons around it under a blue sky. The player's kart and three differently colored rival karts line up on the starting grid.",

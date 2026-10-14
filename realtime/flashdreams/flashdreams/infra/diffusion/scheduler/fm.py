@@ -253,13 +253,19 @@ class FlowMatchScheduler(Scheduler):
             disable=not self.config.enable_tqdm,
             desc="FlowMatchScheduler",
         ):
-            sigma = sigmas[i]
+            sigma = sigmas[i].to(dtype=input_dtype)
             # Schedule buffers are pinned to fp32 (to preserve integer
             # timestep values under a stray `module.to(bf16)`). By default
             # the network gets them in the input dtype so downstream
             # modulation / Linear layers stay consistent; see
             # ``FlowMatchSchedulerConfig.network_timestep_dtype``.
-            timestep = timesteps[i].to(dtype=timestep_dtype)
+            # Reference explicit schedules normalize to sigma on the GPU, then
+            # reconstruct the network timestep. The FP32 round-trip matters.
+            timestep = (
+                timesteps[i]
+                / self.config.num_train_timesteps
+                * self.config.num_train_timesteps
+            ).to(dtype=timestep_dtype)
             if i > 0:
                 assert clean is not None
                 noise = (

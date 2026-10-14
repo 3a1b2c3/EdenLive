@@ -5,12 +5,11 @@
 #
 # Starts the FLUX worker first if it is not running. The workbench bridge, and
 # the TURN relay when TURN_HOST is set, must already be up. Settings come from
-# deploy.conf.
+# deploy.conf. To play the registered games without the bridge, use start.sh.
 set -u
 . "$(dirname "$(readlink -f "$0")")/_common.sh"
 APP=$(app_slug "$MODEL") || exit 1
 
-[ -n "$BRIDGE_HOST" ] || die "set BRIDGE_HOST to the host running workbench_bridge.sh"
 [ -s .workbench/token ] || die "no .workbench/token: start workbench_bridge.sh first, or copy its token here"
 
 export EDEN_WORKBENCH_BRIDGE="http://$BRIDGE_HOST:$BRIDGE_PORT"

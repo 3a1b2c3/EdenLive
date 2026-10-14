@@ -29,7 +29,7 @@ from flashdreams.runtime_v2.distributed_sync import broadcast_step_gate
 from flashdreams.runtime_v2.event_buffer import EventBuffer
 from flashdreams.infra.postprocess import VideoPostprocessStream
 from flashdreams.infra.postprocess.base import from_bvtchw, to_bvtchw
-from flashdreams.infra.runner_io import ResizeInterpolation, load_first_frame_tensor
+from flashdreams.infra.runner_io import ResizeInterpolation
 from flashdreams.runtime_v2.input_timeline import RealtimeInputTimeline
 from flashdreams.runtime_v2.keyboard_input import KeyboardStateTrack
 from flashdreams.runtime_v2.presentation_manager import PresentationManager
@@ -145,9 +145,9 @@ class Game2VSessionConfig:
     game_slug: str = "boxed-in"
     """Local WebGameVault game used for the conditioning timeline."""
 
-    control_stream_factory: Callable[["Game2VSessionConfig", SessionDesc], Any] | None = (
-        None
-    )
+    control_stream_factory: (
+        Callable[["Game2VSessionConfig", SessionDesc], Any] | None
+    ) = None
     """Build the overlapped condition encoder for frame-conditioned models.
 
     ``None`` (the camera-control default) leaves
@@ -208,7 +208,9 @@ class Game2VSessionConfig:
             or not isinstance(self.prompt_event_chunks, int)
             or self.prompt_event_chunks <= 0
         ):
-            raise ValueError("Game2VSessionConfig.prompt_event_chunks must be a positive integer.")
+            raise ValueError(
+                "Game2VSessionConfig.prompt_event_chunks must be a positive integer."
+            )
         if not isinstance(self.dynamic_prompt, bool):
             raise TypeError("Game2VSessionConfig.dynamic_prompt must be bool.")
         if (self.model_video_width is None) != (self.model_video_height is None):
@@ -413,7 +415,9 @@ class Game2VModelState:
     ui_loop: Cam2VSlangPyUILoop | None = None
     """Registered UI-loop handle used only through ``invoke_async``."""
 
-    browser_metrics_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+    browser_metrics_lock: threading.Lock = field(
+        default_factory=threading.Lock, repr=False
+    )
     browser_metrics: dict[str, float | int | str] | None = None
     browser_metrics_epoch: int = 0
     """Small, locked snapshot for the HTTP dashboard; never expose model state."""
@@ -607,7 +611,9 @@ class Game2VModelLoop(IModelLoop[Game2VModelState]):
                 "its input shape here, so this step is much slower than later ones"
             )
         browser_metrics_lock = getattr(state, "browser_metrics_lock", None)
-        with browser_metrics_lock if browser_metrics_lock is not None else nullcontext():
+        with (
+            browser_metrics_lock if browser_metrics_lock is not None else nullcontext()
+        ):
             browser_metrics_epoch = getattr(state, "browser_metrics_epoch", 0)
         generate_started_at = time.perf_counter()
         frames = state.config.generate_step(
@@ -776,18 +782,26 @@ class Game2VModelLoop(IModelLoop[Game2VModelState]):
 
         if state.game_capture is not None:
             if output_frame_count > len(state.pending_game_frames):
-                raise RuntimeError("Game2V requires a postprocessor that preserves frame cadence.")
-            paired = [state.pending_game_frames.popleft() for _ in range(output_frame_count)]
-            results.append(StepResult(
-                step_index=step_index,
-                output=torch.from_numpy(np.stack([f.ui_frame for f in paired])).permute(0, 3, 1, 2),
-                frame_count=output_frame_count,
-                output_layout=VideoTensorLayout.tchw,
-                frame_metadata=tuple(
-                    envelope(f.game_slug, f.game_frame_id, f.ui_state)
-                    for f in paired
-                ),
-            ))
+                raise RuntimeError(
+                    "Game2V requires a postprocessor that preserves frame cadence."
+                )
+            paired = [
+                state.pending_game_frames.popleft() for _ in range(output_frame_count)
+            ]
+            results.append(
+                StepResult(
+                    step_index=step_index,
+                    output=torch.from_numpy(
+                        np.stack([f.ui_frame for f in paired])
+                    ).permute(0, 3, 1, 2),
+                    frame_count=output_frame_count,
+                    output_layout=VideoTensorLayout.tchw,
+                    frame_metadata=tuple(
+                        envelope(f.game_slug, f.game_frame_id, f.ui_state)
+                        for f in paired
+                    ),
+                )
+            )
         return results
 
     def attach_event_buffer(self, event_buffer: EventBuffer, reader_id: int) -> None:
@@ -916,6 +930,7 @@ class Game2VSession(ISession):
     def init(self) -> None:
         """Register the UI and model-generation loops with isolated state."""
         from .game_ui import Game2VUILoop
+
         self.register_ui_loop(Game2VUILoop, state=None)
         ui_loop = None
         # The proxy-DINO encoder is built lazily, on the first chunk that needs
@@ -1145,8 +1160,11 @@ def _encode_chunk_prompt(state: Game2VModelState) -> None:
 
         if embeddings is None:
             embeddings = torch.empty(
-                1, pipeline.diffusion_model.transformer.network.text_len, 4096,
-                device=state.config.device, dtype=torch.bfloat16,
+                1,
+                pipeline.diffusion_model.transformer.network.text_len,
+                4096,
+                device=state.config.device,
+                dtype=torch.bfloat16,
             )
         dist.broadcast(embeddings, src=0)
     pipeline.replace_text_embeddings(state.cache, embeddings)
@@ -1163,9 +1181,10 @@ def _rollout_cache_kwargs(state: "Game2VModelState") -> dict[str, int]:
     signature.
     """
     pipeline = state.pipeline
-    if "rollout_latent_frames" not in inspect.signature(
-        pipeline.initialize_cache
-    ).parameters:
+    if (
+        "rollout_latent_frames"
+        not in inspect.signature(pipeline.initialize_cache).parameters
+    ):
         return {}
     len_t = int(pipeline.diffusion_model.transformer.config.len_t)
     return {"rollout_latent_frames": state.config.total_blocks * len_t}
@@ -1184,9 +1203,10 @@ def _text_encoder_kwargs(state: "Game2VModelState") -> dict[str, bool]:
         return {}
     if int(os.environ.get("RANK", "0")) != 0:
         return {}
-    if "release_oneshot_encoders" not in inspect.signature(
-        state.pipeline.initialize_cache
-    ).parameters:
+    if (
+        "release_oneshot_encoders"
+        not in inspect.signature(state.pipeline.initialize_cache).parameters
+    ):
         return {}
     return {"release_oneshot_encoders": False}
 
@@ -1274,7 +1294,9 @@ def _await_dialog_dismissed(
         # A requested game switch ends the hold: the switch is applied at the
         # top of the next step, which a held step would otherwise never reach
         # once the client that could dismiss the card has left.
-        if getattr(state, "pending_game_slug", None) or getattr(state, "pending_home", False):
+        if getattr(state, "pending_game_slug", None) or getattr(
+            state, "pending_home", False
+        ):
             keep_waiting = False
         # A run that is shutting down stops waiting, so a closed tab cannot
         # strand the model thread behind a card nobody is left to dismiss.
@@ -1307,14 +1329,39 @@ def _anchor_frame(state: Game2VModelState) -> torch.Tensor:
         return cached
     model_height = state.config.model_video_height or state.session_desc.video_height
     model_width = state.config.model_video_width or state.session_desc.video_width
-    frame = load_first_frame_tensor(
-        state.config.conditioning.first_frame_path,
-        pixel_height=model_height,
-        pixel_width=model_width,
-        device=state.config.device,
-        dtype=state.config.first_frame_dtype,
-        interpolation=state.config.first_frame_interpolation,
-        install_hint=state.config.install_hint,
+    import math
+    import numpy as np
+    import torch.nn.functional as F
+    from PIL import Image
+
+    pixels = (
+        torch.from_numpy(
+            np.array(
+                Image.open(state.config.conditioning.first_frame_path).convert("RGB")
+            )
+        )
+        .permute(2, 0, 1)
+        .float()
+    )
+    scale = max(model_height / pixels.shape[1], model_width / pixels.shape[2])
+    pixels = F.interpolate(
+        pixels[None],
+        size=(math.ceil(pixels.shape[1] * scale), math.ceil(pixels.shape[2] * scale)),
+        mode="bilinear",
+        align_corners=False,
+    )[0]
+    top, left = (
+        (pixels.shape[1] - model_height) // 2,
+        (pixels.shape[2] - model_width) // 2,
+    )
+    frame = (
+        (
+            pixels[:, top : top + model_height, left : left + model_width].contiguous()
+            / 127.5
+            - 1
+        )
+        .unsqueeze(0)
+        .to(device=state.config.device, dtype=state.config.first_frame_dtype)
     )
     state.anchor_frame = frame
     return frame
@@ -1479,11 +1526,17 @@ def _await_start(state: Game2VModelState, shutdown_event: threading.Event) -> fl
             break
         shutdown_event.wait(_DIALOG_POLL_SECONDS)
     waited = time.perf_counter() - since
-    logger.info("Game2V starting {} after {:.1f} s.", state.pending_game_slug or state.config.game_slug, waited)
+    logger.info(
+        "Game2V starting {} after {:.1f} s.",
+        state.pending_game_slug or state.config.game_slug,
+        waited,
+    )
     return waited
 
 
-def request_game_switch(state: Game2VModelState, slug: str, *, restart: bool = False) -> None:
+def request_game_switch(
+    state: Game2VModelState, slug: str, *, restart: bool = False
+) -> None:
     """Ask the next model step to switch to ``slug``. Rank zero only.
 
     Also releases a ``wait_for_start`` gate: picking a game is the start signal.
@@ -1520,7 +1573,9 @@ def _reset_browser_metrics(state: Game2VModelState) -> None:
         state.browser_metrics = None
 
 
-def browser_metrics_snapshot(state: Game2VModelState) -> dict[str, float | int | str] | None:
+def browser_metrics_snapshot(
+    state: Game2VModelState,
+) -> dict[str, float | int | str] | None:
     """Copy the latest completed step without reading mutable model fields."""
     lock = getattr(state, "browser_metrics_lock", None)
     if lock is None:
@@ -1531,7 +1586,10 @@ def browser_metrics_snapshot(state: Game2VModelState) -> dict[str, float | int |
 
 
 def _publish_browser_metrics(
-    state: Game2VModelState, metrics: Mapping[str, float | int], *, epoch: int,
+    state: Game2VModelState,
+    metrics: Mapping[str, float | int],
+    *,
+    epoch: int,
 ) -> None:
     lock = getattr(state, "browser_metrics_lock", None)
     if lock is None:

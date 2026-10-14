@@ -30,6 +30,10 @@ if [ "${MODEL_ROOT:0:1}" != "/" ]; then
   MODEL_ROOT="$(cd .. && pwd)/$MODEL_ROOT"
 fi
 export EDEN_MODEL_ROOT="$MODEL_ROOT"
+
+# An empty BRIDGE_HOST means this host: the first address `hostname -I` reports.
+# workbench_bridge.sh binds it and launch.sh connects to it, so both agree.
+BRIDGE_HOST="${BRIDGE_HOST:-$(hostname -I | awk '{print $1}')}"
 export HF_HUB_OFFLINE=1 PYTHONUNBUFFERED=1
 
 # An empty TURN_HOST means the page connects directly, with no relay.
@@ -82,14 +86,27 @@ running() {
   [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
 }
 
-# Stop a service and the children it spawned. A stale pid is removed quietly.
+# Every process below a pid, children first-found (torchrun -> ranks -> Chromium).
+descendants() {
+  local child
+  for child in $(pgrep -P "$1" 2>/dev/null); do
+    echo "$child"
+    descendants "$child"
+  done
+}
+
+# Stop a service and everything it spawned. serve() starts each one under
+# setsid, so it leads its own process group; the group kill catches the bulk,
+# and the walk catches anything that moved to a group of its own (Chromium).
+# A stale pid is removed quietly.
 stop_service() {
-  local pid
+  local pid tree
   pid="$(service_pid "$1")"
   [ -n "$pid" ] || return 1
   if kill -0 "$pid" 2>/dev/null; then
-    pkill -9 -P "$pid" 2>/dev/null || true
-    kill -9 "$pid" 2>/dev/null || true
+    tree="$(descendants "$pid")"
+    kill -9 -- "-$pid" 2>/dev/null || true
+    kill -9 "$pid" $tree 2>/dev/null || true
     echo "stopped $1 (pid $pid)"
   fi
   rm -f "$(pid_file "$1")"

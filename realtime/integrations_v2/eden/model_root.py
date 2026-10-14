@@ -2,11 +2,12 @@
 """Where the EdenLive weights live.
 
 The model tree is one directory, shaped as the Hugging Face repo that gets
-published: ``dit-5b/``, ``dit-14b/``, ``dit-5b-bidir/``, ``dit-14b-bidir/``,
-``umt5/``, ``vae-5b/``, ``vae-14b/``, ``decoder-5b/``, ``vision-encoder/``,
-``clip/`` and ``flux-c2f/``. It sits on CPFS, which
-is mounted at different paths on the notebook and inside the GPU pod, so the
-root is resolved rather than hardcoded.
+published: ``dit-14b/``, ``dit-5b/``, ``dit-14b-bidir/``, ``dit-5b-bidir/``,
+``vae-14b/``, ``vae-5b/``, ``decoder-14b/``, ``decoder-5b/``, ``scheduler-14b/``,
+``scheduler-5b/``, ``umt5/``, ``clip/``, ``vision-encoder/`` and ``flux-c2f/``.
+Serving reads all of them except the ``*-bidir`` and ``scheduler-*`` directories,
+which only the offline configs use. The tree can sit at a different path on each
+machine, so the root is resolved rather than hardcoded.
 
 Set ``EDEN_MODEL_ROOT`` to that directory, or name it as ``model_root`` in the
 pipeline YAML, which takes precedence. ``launch.sh`` exports the environment

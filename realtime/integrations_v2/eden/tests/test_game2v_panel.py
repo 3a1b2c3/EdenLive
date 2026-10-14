@@ -165,7 +165,7 @@ def test_panel_lists_registered_games_and_rewrites_play_page(isolated_extension)
         assert subway["cover"] == "files/subway-run/cover.png"
         # A hand-ported game has no generation source; a workbench game does.
         assert subway["source"] == ""
-        made = next(game for game in payload["games"] if game["slug"] == "qq")
+        made = next(game for game in payload["games"] if game["slug"] == "nitro-kart")
         assert made["source"] == "game-prototype-turbo"
         assert "/game/game/" not in html
         assert '<base href="/game/subway-run/">' in html

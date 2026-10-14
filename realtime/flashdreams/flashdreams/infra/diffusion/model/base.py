@@ -60,6 +60,9 @@ class DiffusionModelConfig(InstantiateConfig):
     """RNG seed for initial-noise draws and scheduler sampling.
     ``None`` uses the global RNG."""
 
+    max_latent_frames: int | None = None
+    """Draw one bounded video's initial noise, offload it to CPU, then slice chunks."""
+
     context_noise: int = 0
     """Timestep used by ``finalize`` for the AR cache-update forward.
     ``0`` skips ``add_noise``."""
@@ -132,6 +135,7 @@ class DiffusionModel(nn.Module, Generic[TransformerCacheT]):
         )
         self.scheduler = self.config.scheduler.setup()
         self._rng: torch.Generator | None = None
+        self._initial_video_noise: Tensor | None = None
 
     @property
     def device(self) -> torch.device:
@@ -185,8 +189,52 @@ class DiffusionModel(nn.Module, Generic[TransformerCacheT]):
             and torch.distributed.get_world_size() > 1
         )
         if not distributed or torch.distributed.get_rank() == 0:
-            full = torch.randn(
-                full_shape, device=like.device, dtype=like.dtype, generator=self.rng
+            shape_cthw = (
+                *full_shape[:-4],
+                full_shape[-3],
+                full_shape[-4],
+                *full_shape[-2:],
+            )
+            full = (
+                torch.randn(
+                    shape_cthw, device=like.device, dtype=like.dtype, generator=self.rng
+                )
+                .movedim(-3, -4)
+                .contiguous()
+            )
+        else:
+            full = torch.empty(full_shape, device=like.device, dtype=like.dtype)
+        if distributed:
+            torch.distributed.broadcast(full, src=0)
+        return self.transformer.patchify_and_maybe_split_cp(full)
+
+    def _video_initial_noise(self, like: Tensor, autoregressive_index: int) -> Tensor:
+        full_shape = tuple(
+            self.transformer.unpatchify_and_maybe_gather_cp(
+                torch.empty_like(like)
+            ).shape
+        )
+        distributed = (
+            torch.distributed.is_initialized()
+            and torch.distributed.get_world_size() > 1
+        )
+        if not distributed or torch.distributed.get_rank() == 0:
+            if self._initial_video_noise is None:
+                shape = (
+                    *full_shape[:-4],
+                    full_shape[-3],
+                    self.config.max_latent_frames,
+                    *full_shape[-2:],
+                )
+                self._initial_video_noise = torch.randn(
+                    shape, device=like.device, dtype=like.dtype, generator=self.rng
+                ).cpu()
+            start = autoregressive_index * self.transformer.config.len_t
+            full = (
+                self._initial_video_noise[..., start : start + full_shape[-4], :, :]
+                .to(like.device)
+                .movedim(-3, -4)
+                .contiguous()
             )
         else:
             full = torch.empty(full_shape, device=like.device, dtype=like.dtype)
@@ -215,10 +263,30 @@ class DiffusionModel(nn.Module, Generic[TransformerCacheT]):
         """
         if input is not None:
             input = self.transformer.patchify_and_maybe_split_cp(input)
+        latent_shape = self.latent_shape
+        if self.config.max_latent_frames is not None:
+            len_t = self.transformer.config.len_t
+            frames = min(
+                len_t, self.config.max_latent_frames - autoregressive_index * len_t
+            )
+            if frames <= 0:
+                raise ValueError("max_latent_frames exhausted")
+            latent_shape = (
+                *latent_shape[:-2],
+                latent_shape[-2] * frames // len_t,
+                latent_shape[-1],
+            )
+            for block in cache.network_cache.block_caches:
+                block.self_attn.valid_chunk_size = latent_shape[-2]
         cache.start(autoregressive_index)
 
         noise_fn = self._rank0_noise if self.config.noise_from_rank0 else None
-        if noise_fn is not None:
+        if self.config.max_latent_frames is not None:
+            initial_noise = self._video_initial_noise(
+                torch.empty(latent_shape, device=self.device, dtype=self.dtype),
+                autoregressive_index,
+            )
+        elif noise_fn is not None:
             initial_noise = noise_fn(
                 torch.empty(self.latent_shape, device=self.device, dtype=self.dtype)
             )

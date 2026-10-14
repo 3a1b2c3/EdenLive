@@ -24,18 +24,8 @@ model or its adapter belongs in `integrations_v2/<model>/tests/`.
 
 ## What is here
 
-- `t2v` — text-to-video: prompt in, frames out. The reference app to copy.
-- `cam2v` — interactive camera-to-video.
-- `action2v` — world models driven by direct action input.
-- `v2v` — video-to-video, used for super-resolution.
-- `interactive_drive` — the interactive driving demo, keyboard and wheel input.
-- `crazy_robotaxi` — the driving game built on `omnidreams_game_engine`.
-- `omnidreams_game_engine` — reusable simulation, authored-map, physics, and
-  conditioning components. It owns no runtime loop, so it is a library the
-  other apps build on rather than something you launch.
-
-`omnidreams_game_engine` is not the OmniDreams model. That is
-`integrations_v2/omnidreams`. The names are close; the packages are unrelated.
+- `cam2v` — interactive camera-to-video. The Eden game2v app imports its
+  conditioning code; the other upstream apps are not carried in this fork.
 
 Each app's own README covers how to launch it and what the controls are. To
-bind a model to one of these, read `integrations_v2/README.md`.
+bind a model to one of these, see `integrations_v2/eden/` for the Eden example.

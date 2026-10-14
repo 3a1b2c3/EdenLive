@@ -20,7 +20,7 @@
 # it. Order matters: each one imports the one before it.
 #
 # Not included, and not needed to serve game2v: the local Dear ImGui window
-# (imgui-bundle, slangpy) and flashvsr, which no game2v config imports.
+# (imgui-bundle, slangpy), which no game2v config imports.
 
 # flashdreams
 boto3==1.43.95

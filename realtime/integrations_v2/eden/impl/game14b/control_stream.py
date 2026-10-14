@@ -81,12 +81,14 @@ class ProxyDinoControlStream:
         latent_height: int,
         latent_width: int,
         len_t: int,
+        max_latent_frames: int | None = None,
         dtype: torch.dtype = torch.bfloat16,
     ) -> None:
         self.config = config
         self.latent_height = int(latent_height)
         self.latent_width = int(latent_width)
         self.len_t = int(len_t)
+        self.max_latent_frames = max_latent_frames
         self.dtype = dtype
         self._encoder: ProxyDinoControlEncoder | None = None
         self._pending: dict[int, _PendingEncode] = {}
@@ -139,17 +141,26 @@ class ProxyDinoControlStream:
                 f"{autoregressive_index}"
             )
         entry = _PendingEncode(
-            self._executor.submit(self._await_and_encode, pending_render)
+            self._executor.submit(
+                self._await_and_encode, pending_render, autoregressive_index
+            )
         )
         self._pending[autoregressive_index] = entry
 
-    def _await_and_encode(self, pending_render: Any) -> tuple[torch.Tensor, Any]:
+    def _await_and_encode(
+        self, pending_render: Any, autoregressive_index: int
+    ) -> tuple[torch.Tensor, Any]:
         chunk = (
             pending_render.result()
             if isinstance(pending_render, Future)
             else pending_render
         )
-        images = _stack_condition_frames(chunk.frames, expected=self.len_t)
+        frames = self.len_t
+        if self.max_latent_frames is not None:
+            frames = min(
+                frames, self.max_latent_frames - autoregressive_index * self.len_t
+            )
+        images = _stack_condition_frames(chunk.frames, expected=frames)
         encoder = self._ensure_encoder()
         if self._stream is None:
             return (
@@ -179,7 +190,7 @@ class ProxyDinoControlStream:
         finished, so this is a handoff rather than a wait.
         """
         control = self._take_local(autoregressive_index)
-        return self._broadcast(control)
+        return self._broadcast(control, autoregressive_index)
 
     def _take_local(self, autoregressive_index: int) -> torch.Tensor | None:
         if self._executor is None:
@@ -201,14 +212,21 @@ class ProxyDinoControlStream:
             control.record_stream(torch.cuda.current_stream())
         return control
 
-    def _broadcast(self, control: torch.Tensor | None) -> torch.Tensor:
+    def _broadcast(
+        self, control: torch.Tensor | None, autoregressive_index: int
+    ) -> torch.Tensor:
         """Share rank zero's features with every rank."""
         if _world_size() == 1:
             assert control is not None, "single-rank stream must own its encode"
             return control
         if control is None:
+            frames = self.len_t
+            if self.max_latent_frames is not None:
+                frames = min(
+                    frames, self.max_latent_frames - autoregressive_index * self.len_t
+                )
             control = torch.empty(
-                (self.len_t, self.control_dim, self.latent_height, self.latent_width),
+                (frames, self.control_dim, self.latent_height, self.latent_width),
                 device=self.config.device,
                 dtype=self.dtype,
             )

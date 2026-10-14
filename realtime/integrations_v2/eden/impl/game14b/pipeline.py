@@ -7,8 +7,7 @@ Differences from the base Wan I2V pipeline:
 
 * The first-frame condition is built per chunk, never for the whole rollout:
   AR step 0 hands the cover to the encoder, which encodes it alone and splices
-  it onto a grey tail encoded once per resolution (latent frames 1-17, reused
-  from 15-17 once the attention arena is full). See
+  it onto a grey condition stream whose global time advances every chunk. See
   :mod:`eden.impl.game14b.encoder`.
 * ``generate`` takes the already-encoded proxy-DINO features for the chunk.
   Computing them is the caller's job precisely so the cost can be overlapped
@@ -26,7 +25,7 @@ are reused across rollouts. The Game2V session re-runs
 ``initialize_cache`` on every restart, and reloading both encoders from disk
 plus re-encoding a prompt that has not changed is the whole of the stall a
 restart shows. A prompt or anchor frame that actually changes recomputes only
-the part that changed; the grey tail never does, since it carries no image.
+the part that changed; the grey stream starts with a fresh VAE cache on each rollout.
 """
 
 from __future__ import annotations
@@ -67,9 +66,7 @@ class Game14BInferencePipelineConfig(WanInferencePipelineConfig):
         default_factory=lambda: Game14BInferencePipeline
     )
 
-    encoder: Game14BCtrlEncoderConfig = field(
-        default_factory=Game14BCtrlEncoderConfig
-    )
+    encoder: Game14BCtrlEncoderConfig = field(default_factory=Game14BCtrlEncoderConfig)
     """Condition encoder: first-frame latent slices + proxy-DINO control."""
 
     image_encoder: CLIPImageEncoderConfig | None = field(
@@ -135,6 +132,9 @@ class Game14BInferencePipeline(WanInferencePipeline):
         # Reuse before the base call: ``super().initialize_cache`` reloads the
         # released one-shot encoders and re-encodes unconditionally, which is
         # the restart stall this cache exists to avoid.
+        if self.diffusion_model.config.max_latent_frames is not None:
+            self.diffusion_model._rng = None
+            self.diffusion_model._initial_video_noise = None
         text_embeddings = self._cached_text_embeddings(text)
         image_embeddings = (
             self._cached_image_embeddings(image) if image is not None else None
@@ -240,7 +240,9 @@ class Game14BInferencePipeline(WanInferencePipeline):
 
         try:
             if isinstance(text_encoder, torch.nn.Module):
-                self.text_encoder = _Recording(text_encoder, self._record_text_embeddings)
+                self.text_encoder = _Recording(
+                    text_encoder, self._record_text_embeddings
+                )
             if isinstance(image_encoder, torch.nn.Module):
                 pending_image = self._pending_image
 
@@ -328,9 +330,7 @@ class Game14BInferencePipeline(WanInferencePipeline):
                     f"derived from pixels ({derived_w})."
                 )
         if height is None or width is None:
-            raise ValueError(
-                "T2V (image=None) requires explicit `height` and `width`."
-            )
+            raise ValueError("T2V (image=None) requires explicit `height` and `width`.")
 
         guidance_scale = self._transformer_config.guidance_scale
         negative_text_embeddings = None
@@ -342,9 +342,7 @@ class Game14BInferencePipeline(WanInferencePipeline):
             if negative_text_embeddings is None:
                 self._ensure_oneshot_encoders_loaded()
                 assert self.text_encoder is not None
-                negative_text_embeddings = self.text_encoder(
-                    [self._negative_prompt()]
-                )
+                negative_text_embeddings = self.text_encoder([self._negative_prompt()])
                 self._negative_text_cache = negative_text_embeddings
 
         parent = super(WanInferencePipeline, self).initialize_cache(
@@ -383,6 +381,11 @@ class Game14BInferencePipeline(WanInferencePipeline):
             Decoded video ``[*batch_shape, T, C, H, W]`` in ``[-1, 1]``.
         """
         assert cache.image is not None, "initialize_cache() must be called first"
+        maximum = self.diffusion_model.config.max_latent_frames
+        if maximum is not None:
+            start = autoregressive_index * self.diffusion_model.transformer.config.len_t
+            input = input[..., : maximum - start, :, :, :]
+
         # The packed first frame is encoded at AR 0 only (the cover alone, no
         # zero padding: the tail comes from the encoder's grey-tail cache).
         image = cache.image if autoregressive_index == 0 else None

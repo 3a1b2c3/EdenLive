@@ -1,0 +1,130 @@
+# Wan 2.1 14B few-step autoregressive video inference.
+# Recording metadata supplies the actual frame count and temporal prompts.
+model:
+  adapter: wan22_diffusers
+  pretrained_dir: models/EdenLive
+  components:
+    vae:
+      path: vae-14b
+    text_encoder:
+      path: umt5/text_encoder
+    tokenizer:
+      path: umt5/tokenizer
+    scheduler:
+      path: scheduler-14b
+    image_encoder:
+      path: clip/image_encoder
+    image_processor:
+      path: clip/image_processor
+    transformer:
+      path: dit-14b
+  pipeline_class: WanImageToVideoPipeline
+  torch_dtype: bfloat16
+  max_sequence_length: 512
+  negative_prompt: 镜头晃动，色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走
+  image_condition:
+    clip_embeds: auto
+    first_frame_encoding: masked_video
+    mode: mask_channel_concat
+  proxy_dino:
+    cfg_unconditional_control: zero
+    channel_concat_rmsnorm: true
+    channel_concat_zero_init: true
+    checkpoint_path: vision-encoder/projection.safetensors
+    control_dim: 1024
+    enabled: true
+    image_size:
+    - 480
+    - 832
+    local_files_only: true
+    model_path: vision-encoder/backbone
+    patchify_factor: 1
+    use_cached_latents: false
+    vae_time_compression_ratio: 4
+    video_context_time_axis: latent
+    resize_mode: bicubic_center_crop
+    projection_autocast: true
+  teacher_forcing_attention_backend: triton
+  dynamic_prompt:
+    enabled: false
+runtime:
+  fsdp2:
+    enabled: true
+    mixed_precision: bf16
+    param_dtype: bf16
+    reduce_dtype: fp32
+    reshard_after_forward: true
+    wrap_policy: transformer_block
+  sequence_parallel:
+    enabled: true
+    size: 2
+    axis: temporal
+    layout: balanced_blocks
+  attention_backend:
+    enabled: false
+    backend: _native_flash
+  torch_compile:
+    enabled: false
+    backend: inductor
+    mode: default
+    fullgraph: false
+    dynamic: false
+    preserve_precision: true
+  kv_cache:
+    enabled: true
+    offload_generated_chunks: true
+    context:
+      max_latent_frames: 18
+      sink_latent_frames: 6
+      debug_window: false
+      rope_mode: fixed_window
+    quantized: false
+    compression: none
+data:
+  dataset:
+    name: recording_manifest
+    params:
+      path: examples/samples/manifest.csv
+      root: examples/samples
+      width: 832
+      height: 480
+      fps: 16
+      max_frames: null
+      text_mode: chunk
+      dynamic: true
+      chunk_size: 3
+  batch_size: 1
+  shuffle: false
+  num_workers: 0
+  pin_memory: true
+  drop_last: false
+inference:
+  strategy: chunk_causal
+  height: 480
+  width: 832
+  num_frames: 81
+  fps: 16
+  chunk_size: 3
+  pack_first_frame: true
+  num_inference_steps: 4
+  guidance_scale: 1.0
+  use_image_condition: true
+  scheduler:
+    name: flow_euler
+    stochastic_sampling: true
+    timesteps:
+    - 1000
+    - 900.0
+    - 750.0
+    - 500.0
+  output_type: np
+  seed: 2026092901
+  outputs:
+  - video
+  output_dir: inference/wan21_14b_480p_few_step
+  max_batches: 0
+  num_samples: 1
+  save_condition_videos:
+    video_context: proxy
+  condition_video_fps:
+    video_context: 4

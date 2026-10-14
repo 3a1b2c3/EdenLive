@@ -93,6 +93,25 @@ class Workbench:
         (state / "jobs").mkdir(parents=True, exist_ok=True)
         (state / "projects").mkdir(parents=True, exist_ok=True)
         (state / "conversations").mkdir(parents=True, exist_ok=True)
+        self._fail_interrupted()
+
+    def _fail_interrupted(self) -> None:
+        """Mark turns left running by a previous bridge process as failed.
+
+        Jobs live only in this process, so a turn still ``running`` at startup
+        belongs to a job that died with the old one and would never finish.
+        """
+        for path in (self.state / "conversations").glob("*.json"):
+            try:
+                conversation = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            interrupted = [m for m in conversation.get("messages") or [] if m.get("status") == "running"]
+            for message in interrupted:
+                message["status"] = "failed"
+                message["error"] = "The workbench bridge restarted before this job finished."
+            if interrupted and _CONVERSATION_ID.fullmatch(str(conversation.get("id", ""))):
+                self._save_conversation(conversation)
 
     # ---- jobs ---------------------------------------------------------
 

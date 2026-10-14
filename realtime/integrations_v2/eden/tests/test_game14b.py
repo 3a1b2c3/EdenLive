@@ -65,23 +65,11 @@ def test_sampling_matches_the_sgf_v4_14b_schedule() -> None:
     assert scheduler.shift == 3.0
     assert scheduler.sigma_max == 1.0
     assert scheduler.timestep_dtype == torch.float32
-    assert scheduler.network_timestep_dtype == torch.float32
+    assert scheduler.network_timestep_dtype is None
     # 18-frame attention budget: 6 fixed sink + 12 rolling.
     assert transformer.window_size_t == 12
     assert transformer.sink_size_t == 6
     assert transformer.sink_size_t + transformer.window_size_t == 18
-
-
-def test_grey_tail_windows_fill_then_reuse_the_last_three() -> None:
-    """The 18-frame arena fills chunk by chunk, then every chunk reuses the tail."""
-    from eden.impl.game14b.encoder import GREY_TAIL_LATENT_FRAMES, grey_tail_window
-
-    assert GREY_TAIL_LATENT_FRAMES == 18
-    windows = [grey_tail_window(k, 3) for k in range(9)]
-    assert windows == [
-        (0, 3), (3, 6), (6, 9), (9, 12), (12, 15), (15, 18),
-        (15, 18), (15, 18), (15, 18),
-    ]
 
 
 class _FakeVAE:
@@ -92,6 +80,7 @@ class _FakeVAE:
 
     def __init__(self) -> None:
         self.calls: list[tuple[int, int]] = []
+        self.inputs: list[torch.Tensor] = []
         self.frames = 0
 
     def initialize_autoregressive_cache(self) -> dict:
@@ -106,10 +95,17 @@ class _FakeVAE:
         del cache
         count = int(frames.shape[-4])
         self.calls.append((autoregressive_index, count))
-        latent_frames = 1 + (count - 1) // 4 if autoregressive_index == 0 else count // 4
-        values = torch.arange(self.frames, self.frames + latent_frames, dtype=frames.dtype)
+        self.inputs.append(frames.clone())
+        latent_frames = (
+            1 + (count - 1) // 4 if autoregressive_index == 0 else count // 4
+        )
+        values = torch.arange(
+            self.frames, self.frames + latent_frames, dtype=frames.dtype
+        )
         self.frames += latent_frames
-        return values.view(latent_frames, 1, 1, 1).expand(latent_frames, 16, 2, 2).clone()
+        return (
+            values.view(latent_frames, 1, 1, 1).expand(latent_frames, 16, 2, 2).clone()
+        )
 
 
 def _encoder(vae: _FakeVAE):
@@ -118,44 +114,36 @@ def _encoder(vae: _FakeVAE):
     encoder = Game14BCtrlEncoder.__new__(Game14BCtrlEncoder)
     torch.nn.Module.__init__(encoder)
     encoder.encoder = vae
-    encoder._grey_tail_cache = {}
     encoder._cover_cache = None
     return encoder
 
 
-def test_condition_is_cover_then_streamed_grey_tail_per_chunk() -> None:
-    """AR 0 splices the cover onto tail[1:3]; later chunks read the streamed tail."""
+def test_condition_keeps_global_time_after_attention_window_fills() -> None:
     from eden.impl.game14b.encoder import Game14BCtrlEncoderCache, Game14BCtrlInput
 
     vae = _FakeVAE()
     encoder = _encoder(vae)
-    cover = torch.zeros(1, 3, 8, 8)
-    control = torch.zeros(3, 1024, 1, 1)
+    cover = torch.ones(1, 3, 8, 8)
+    control = torch.zeros(3, 1024, 2, 2)
     cache = Game14BCtrlEncoderCache(vae={})
-
     out = encoder(Game14BCtrlInput(image=cover, control=control), 0, cache)
-    # Cover alone (latent 0), then zeros streamed until 18 latent frames.
-    assert vae.calls == [(0, 1), (0, 9)] + [(k, 12) for k in range(1, 6)]
-    tail = [float(v) for v in cache.grey_tail[:, 0, 0, 0]]
-    assert tail == [float(v) for v in range(1, 19)]
-    # Latent frame 0 is the cover's own latent; frames 1-2 come from the tail.
-    assert out.i2v.latent[:, 0, 0, 0].tolist() == [0.0, tail[1], tail[2]]
+    assert vae.calls == [(0, 1), (0, 9)]
+    assert torch.equal(vae.inputs[1][:1], cover)
+    assert torch.all(vae.inputs[1][1:] == 0)
+    assert out.i2v.latent[:, 0, 0, 0].tolist() == [0.0, 2.0, 3.0]
     assert out.i2v.mask[:, 0, 0, 0].tolist() == [1.0, 0.0, 0.0]
-
-    for k, expected in [(1, tail[3:6]), (5, tail[15:18]), (6, tail[15:18]), (40, tail[15:18])]:
-        out = encoder(Game14BCtrlInput(image=None, control=control), k, cache)
-        assert out.i2v.latent[:, 0, 0, 0].tolist() == expected
+    for index in range(1, 8):
+        out = encoder(Game14BCtrlInput(image=None, control=control), index, cache)
+        assert out.i2v.latent[:, 0, 0, 0].tolist() == [
+            float(1 + index * 3 + offset) for offset in range(3)
+        ]
         assert torch.all(out.i2v.mask == 0)
-    # Nothing past AR 0 touched the VAE.
-    assert len(vae.calls) == 7
-
-    # A restart at the same resolution and anchor encodes nothing new.
+    assert len(vae.calls) == 9
     restart = Game14BCtrlEncoderCache(vae={})
     encoder(Game14BCtrlInput(image=cover, control=control), 0, restart)
-    assert len(vae.calls) == 7
-    # A new anchor re-encodes only its own frame.
-    encoder(Game14BCtrlInput(image=torch.ones_like(cover), control=control), 0, restart)
-    assert vae.calls[7:] == [(0, 1)]
+    # Cover is reused; the grey stream starts from its own fresh rollout cache.
+    assert vae.calls[-1] == (0, 9)
+    assert len(vae.calls) == 10
 
 
 def test_later_chunk_before_ar0_is_rejected() -> None:
@@ -202,6 +190,9 @@ def test_restart_reuses_the_one_shot_encodings() -> None:
             )
 
     pipeline = Game14BInferencePipeline.__new__(_Pipeline)
+    pipeline.diffusion_model = SimpleNamespace(
+        config=SimpleNamespace(max_latent_frames=None)
+    )
     pipeline._text_cache = None
     pipeline._negative_text_cache = None
     pipeline._image_cache = None
@@ -282,8 +273,7 @@ def test_covers_differ_between_games() -> None:
     assert {"subway-run", "boxed-in"} <= set(slugs)
     assert len({game_cover_path(slug) for slug in slugs}) == len(slugs)
     prompts = {
-        slug: resolve_game14b_conditioning({"game": slug}).prompt
-        for slug in slugs
+        slug: resolve_game14b_conditioning({"game": slug}).prompt for slug in slugs
     }
     assert len(set(prompts.values())) == len(slugs)
 

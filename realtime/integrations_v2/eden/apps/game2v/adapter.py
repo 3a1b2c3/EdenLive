@@ -1,4 +1,5 @@
 """Eden game-to-video application entry point."""
+
 import dataclasses
 import torch
 from flashdreams.api_v2.application import IApplication
@@ -38,11 +39,17 @@ GAME2V_EDEN_WORLD_V2_14B_DEFAULTS = dataclasses.replace(
     Cam2VApplicationDefaults(
         pipeline_config=derive_config(PIPELINE_GAME2V_EDEN_WORLD_V2_14B),
         input_resolver=resolve_game14b_conditioning,
-        total_blocks=20,
+        total_blocks=(
+            (PIPELINE_GAME2V_EDEN_WORLD_V2_14B.diffusion_model.max_latent_frames + 2)
+            // 3
+            if PIPELINE_GAME2V_EDEN_WORLD_V2_14B.diffusion_model.max_latent_frames
+            is not None
+            else 20
+        ),
         pixel_width=832,
         pixel_height=480,
-        first_frame_dtype=torch.bfloat16,
-        first_frame_interpolation="cubic",
+        first_frame_dtype=torch.float32,
+        first_frame_interpolation="linear",
         fps=16,
         log_model_timing=True,
         install_hint="Install the Eden integration: pip install flashdreams-eden.",
@@ -78,6 +85,12 @@ GAME2V_EDEN_WORLD_V2_5B_DEFAULTS = dataclasses.replace(
     pixel_width=GAME2V_5B_PIXEL_WIDTH,
     pixel_height=GAME2V_5B_PIXEL_HEIGHT,
     fps=GAME2V_5B_FPS,
+    total_blocks=(
+        (PIPELINE_GAME2V_EDEN_WORLD_V2_5B.diffusion_model.max_latent_frames + 2) // 3
+        if PIPELINE_GAME2V_EDEN_WORLD_V2_5B.diffusion_model.max_latent_frames
+        is not None
+        else 20
+    ),
     generate_step=generate_game5b_step,
     control_stream_factory=make_game5b_control_stream,
 )

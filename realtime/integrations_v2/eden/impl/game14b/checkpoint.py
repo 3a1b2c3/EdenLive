@@ -15,7 +15,7 @@ remap, extended with the three groups the base table does not cover
 - ``condition_embedder.image_embedder.*`` — the CLIP ``MLPProj``, whose
   ``LayerNorm/Linear/GELU/Linear/LayerNorm`` stack lands on
   ``img_emb.proj.{0,1,3,4}``.
-- ``patch_embedding.condition_norm.weight`` — the fp32 affine RMSNorm over
+- ``patch_embedding.condition_norm.weight`` — the affine RMSNorm over
   the appended proxy-DINO control channels. It passes through unchanged,
   but the module has to exist before loading, which is why the network
   subclass builds it eagerly.
@@ -60,7 +60,7 @@ def load_game14b_dit_state_dict(checkpoint_path: str) -> dict[str, torch.Tensor]
     """Read the DiT weights out of the published safetensors file.
 
     Args:
-        checkpoint_path: ``dit-14b/model.safetensors``.
+        checkpoint_path: ``dit-14b/diffusion_pytorch_model.safetensors``.
     """
     return game14b_dit_state_dict_from_diffusers(load_file(checkpoint_path))
 

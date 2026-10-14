@@ -37,8 +37,8 @@ def test_package_registers_the_shared_cam2v_application() -> None:
 
     dependencies = manifest["project"]["dependencies"]
     assert "flashdreams-cam2v" in dependencies
-    # v2v and flashvsr ship in the tree, but no game2v module imports them, so
-    # the serving install does not depend on either.
+    # v2v and flashvsr are not in this fork; the serving install must not
+    # depend on either.
     assert "flashdreams-flashvsr" not in dependencies
     assert "flashdreams-v2v" not in dependencies
     entry_points = manifest["project"]["entry-points"]["flashdreams.applications_v2"]

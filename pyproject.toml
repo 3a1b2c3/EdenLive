@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "eden"
+name = "edenlive"
 version = "0.1.0"
-description = "Eden: proxy-guided video world models. Turn coarse 3D previews into photorealistic video."
+description = "EdenLive: proxy-guided video world models. Turn coarse 3D previews into photorealistic video."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
 license = { text = "Apache-2.0" }
@@ -51,17 +51,17 @@ dependencies = [
 # Manifest-driven inference reads source clips and first frames off disk or object
 # storage: decord decodes video, pandas reads parquet/csv manifests.
 data = [
+  "av>=17",
   "decord>=0.6",
   "pandas>=2",
   "pyarrow>=14",
 ]
 all = [
-  "eden[data]",
+  "edenlive[data]",
 ]
 
 [project.scripts]
-eden-infer = "eden.scripts.infer:main"
-eden-check = "eden.scripts.check:main"
+edenlive-infer = "edenlive.scripts.infer:main"
 
 # TODO: add [project.urls] once the project page, repository, and weights are
 # public. Left out rather than filled with placeholders, which would ship as
@@ -71,7 +71,7 @@ eden-check = "eden.scripts.check:main"
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["eden*", "extern.proxy_dino*"]
+include = ["edenlive*"]
 
 [tool.setuptools.package-data]
-eden = ["configs/**/*.yaml"]
+edenlive = ["configs/**/*.yaml"]

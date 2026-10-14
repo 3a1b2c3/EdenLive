@@ -36,7 +36,7 @@ def load_game5b_dit_state_dict(checkpoint_path: str) -> dict[str, torch.Tensor]:
     """Read the DiT weights out of the published safetensors file.
 
     Args:
-        checkpoint_path: ``dit-5b/model.safetensors``.
+        checkpoint_path: ``dit-5b/diffusion_pytorch_model.safetensors``.
 
     Returns:
         A state dict keyed for :class:`WanDiTNetwork`.

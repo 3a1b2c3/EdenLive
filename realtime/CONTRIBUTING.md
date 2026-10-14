@@ -179,8 +179,8 @@ The short version:
 3. Add or update tests where it makes sense. Every test must carry
    exactly one CI tier marker (`@pytest.mark.ci_cpu`,
    `@pytest.mark.ci_gpu`, or `@pytest.mark.manual`); see
-   [Testing](#testing) below. The project enforces this at collection
-   time -- pytest will error if a test is missing a marker.
+   [Testing](#testing) below. This fork uses the markers by convention;
+   it does not include the upstream enforcement plugin.
 4. Run the project's checks locally:
 
    ```bash
@@ -293,8 +293,8 @@ are not present. They live [upstream](https://github.com/NVIDIA/flashdreams).
 
 ## Testing
 
-Pytest collection is configured in the root `pyproject.toml`. There is
-no `testpaths` setting, so `pytest` from the repo root walks the tree:
+Pytest collection is configured in `realtime/pyproject.toml`. Running `pytest`
+from `realtime/` collects `apps/cam2v/tests` and `integrations_v2/eden/tests`:
 
 - Files named `test_*.py`. Pytest's default also collects `*_test.py`;
   don't use that name here.
@@ -308,15 +308,17 @@ Same test filename in different folders is fine (several
 `--import-mode=importlib` so pytest keeps them separate. Do not remove
 that flag.
 
-A `test_*.py` next to the code it validates is collected with no CI
-change. The root `pyproject.toml` skips `parity_check`,
+A `test_*.py` under either test directory is collected automatically.
+The vendored game-authoring skill uses a separate test entry point: run
+`python -m pytest forge/tests -q -m "not slow"` from `skills/game-prototype-turbo/`.
+The runtime configuration skips `parity_check`,
 `parity_check_v2`, `baseline_fastvideo`, and `baseline_lightx2v` via
 `norecursedirs`.
 
 Every test function must be marked with exactly one **CI tier marker**.
-A pytest plugin (`flashdreams._pytest_plugins.marker_enforcement`)
-enforces this at collection time -- tests without a marker are
-rejected, and tests with both `ci_cpu` and `ci_gpu` are rejected.
+Upstream enforces this at collection time with a pytest plugin
+(`flashdreams._pytest_plugins.marker_enforcement`); this fork does not
+carry the plugin, so the rule is a convention here, not a check.
 
 | Marker | When to use | CI runner |
 |--------|-------------|-----------|
@@ -399,9 +401,7 @@ Packages in this fork:
 | `apps/cam2v` | `flashdreams-cam2v` |
 
 `flashdreams-eden` depends on `flashdreams` and `flashdreams-cam2v`: `game2v`
-imports `Cam2VConditioning` from the second. `apps/v2v` and
-`integrations_v2/flashvsr` are not part of the serving install; no game2v module
-imports them.
+imports `Cam2VConditioning` from the second.
 
 ## Licensing of contributions
 

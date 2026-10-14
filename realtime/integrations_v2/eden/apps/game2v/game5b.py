@@ -70,6 +70,7 @@ def make_game5b_control_stream(
         latent_height=pixel_height // GAME2V_5B_VAE_SPATIAL_RATIO,
         latent_width=pixel_width // GAME2V_5B_VAE_SPATIAL_RATIO,
         len_t=GAME2V_5B_LEN_T,
+        max_latent_frames=_SPEC["max_latent_frames"],
     )
 
 

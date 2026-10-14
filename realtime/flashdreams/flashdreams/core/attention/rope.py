@@ -55,11 +55,11 @@ def _compute_freqs(
         Base frequencies of shape ``[dim // 2]``.
     """
     dim_range = (
-        torch.arange(0, dim, 2, dtype=torch.float32, device=device)[: (dim // 2)] / dim
+        torch.arange(0, dim, 2, dtype=torch.float64, device="cpu")[: (dim // 2)] / dim
     )
     ntk_factor = extrapolation_ratio ** (dim / (dim - 2))
     theta = 10000.0 * ntk_factor
-    freqs = 1.0 / (theta**dim_range)
+    freqs = (1.0 / (theta**dim_range)).to(device)
     return freqs
 
 
@@ -112,12 +112,12 @@ class _RotaryPositionEmbedding3DBase:
         self.cp_group: ProcessGroup | None = None
 
     def _freq_components_for_len(self, len_t: int) -> tuple[Tensor, Tensor, Tensor]:
-        seq_t = torch.arange(len_t, dtype=torch.float32, device=self.device)
+        seq_t = torch.arange(len_t, dtype=torch.float64, device=self.device)
         return self._freq_components(seq_t)
 
     def _freq_components(self, seq_t: Tensor) -> tuple[Tensor, Tensor, Tensor]:
-        seq_h = torch.arange(self.len_h, dtype=torch.float32, device=self.device)
-        seq_w = torch.arange(self.len_w, dtype=torch.float32, device=self.device)
+        seq_h = torch.arange(self.len_h, dtype=torch.float64, device=self.device)
+        seq_w = torch.arange(self.len_w, dtype=torch.float64, device=self.device)
         len_t = seq_t.shape[0]
         freqs_t = repeat(
             torch.outer(seq_t, self.raw_freqs_t),
@@ -412,52 +412,34 @@ class KVCacheRelativeRotaryPositionEmbedding3D(_RotaryPositionEmbedding3DBase):
             self.kvcache_total_size_t
         )
         self._rope_freqs = self._cat_freqs(self.freqs_t, self.freqs_h, self.freqs_w)
-        self._rope_freqs_cp: Tensor | None = None
 
     def _split_cache_freqs_cp(self, freqs: Tensor, valid_len_t: int) -> Tensor:
-        """Split cache-relative RoPE frequencies chunk-by-chunk for CP."""
         cp_group = unpack_optional(self.cp_group)
         tokens_per_chunk = self.len_t * self.len_h * self.len_w
-        assert valid_len_t % self.len_t == 0
-        valid_tokens = valid_len_t * self.len_h * self.len_w
-        freqs = freqs[:valid_tokens]
-        freq_shape = freqs.shape[1:]
-        freqs = freqs.reshape(valid_len_t // self.len_t, tokens_per_chunk, *freq_shape)
-        freqs = split_inputs_cp(freqs, seq_dim=1, cp_group=cp_group)
-        return freqs.reshape(-1, *freq_shape)
-
-    def set_context_parallel_group(self, cp_group: ProcessGroup | None) -> None:
-        super().set_context_parallel_group(cp_group)
-        self._rope_freqs_cp = (
-            None
-            if cp_group is None
-            else self._split_cache_freqs_cp(self._rope_freqs, self.kvcache_total_size_t)
+        freqs = freqs[: valid_len_t * self.len_h * self.len_w]
+        return torch.cat(
+            [
+                split_inputs_cp(chunk, seq_dim=0, cp_group=cp_group)
+                for chunk in freqs.split(tokens_per_chunk)
+            ],
+            dim=0,
         )
 
-    def shift_t(self, autoregressive_index: int) -> Tensor:
-        """Return fixed KV-cache-relative RoPE frequencies.
-
-        The returned tensor covers all valid KV-cache slots, ordered as
-        ``(T, H, W)``. If context parallelism is enabled with
-        :meth:`set_context_parallel_group`, cache chunks are split independently
-        so each rank receives the local sequence shard for every cache chunk.
-
-        Args:
-            autoregressive_index: Accepted for API parity with standard RoPE.
-                Ignored because cache-relative positions are fixed by KV-cache
-                position, not by global AR step.
-
-        Returns:
-            RoPE frequencies of shape ``[S, 1, 1, head_dim]``, where ``S`` is
-            the valid KV-cache token count after optional CP splitting.
-        """
-        if self.is_context_parallel_enabled():
-            if self._rope_freqs_cp is not None:
-                return self._rope_freqs_cp
-            return self._split_cache_freqs_cp(
-                self._rope_freqs, self.kvcache_total_size_t
+    def shift_t(
+        self, autoregressive_index: int, chunk_len_t: int | None = None
+    ) -> Tensor:
+        frames = self.len_t if chunk_len_t is None else chunk_len_t
+        visible = (
+            min(
+                autoregressive_index * self.len_t,
+                self.kvcache_total_size_t - self.len_t,
             )
-        return self._rope_freqs
+            + frames
+        )
+        freqs = self._rope_freqs[: visible * self.len_h * self.len_w]
+        if self.is_context_parallel_enabled():
+            return self._split_cache_freqs_cp(freqs, visible)
+        return freqs
 
 
 def apply_rope_freqs(x: Tensor, freqs: Tensor, interleaved: bool = False) -> Tensor:

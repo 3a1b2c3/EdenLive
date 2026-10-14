@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import stat
 from pathlib import Path
 
@@ -411,3 +410,24 @@ def test_failed_build_is_retried_from_all_requests(games, tmp_path, fake_claude,
             assert (await _wait(client, second["job"]["id"]))["status"] == "succeeded"
             assert second["conversation"]["slug"] == "yard"
     _run(body())
+
+
+def test_restart_fails_turns_left_running(games, tmp_path):
+    # A job lives only in the bridge process, so a turn still running when a new
+    # bridge starts can never finish; it must not stay "running" forever.
+    state = tmp_path / "state"
+    (state / "conversations").mkdir(parents=True)
+    path = state / "conversations" / "abcdef012345.json"
+    path.write_text(json.dumps({
+        "id": "abcdef012345", "slug": "yard", "title": "yard", "created": 0, "updated": 0,
+        "messages": [
+            {"role": "user", "text": "yard", "time": 0},
+            {"role": "assistant", "text": "", "job": "0123456789ab", "status": "running", "time": 0},
+        ],
+    }), encoding="utf-8")
+
+    bridge_mod.Workbench(state=state, root=games, capture=_fake_capture)
+
+    turn = json.loads(path.read_text(encoding="utf-8"))["messages"][1]
+    assert turn["status"] == "failed"
+    assert "restarted" in turn["error"]

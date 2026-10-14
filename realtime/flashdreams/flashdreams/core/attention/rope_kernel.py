@@ -15,17 +15,15 @@
 
 """Fused, inference-only Triton kernel for 3D rotary position embedding.
 
-Byte-for-byte drop-in for
-:func:`transformer_engine.pytorch.attention.rope.apply_rotary_pos_emb`
-(``tensor_format="bshd", fused=True``) on the diffusion-transformer
-forward path. Forward-only (no autograd graph), writes back in
-place, and accepts the full-width ``[S, 1, 1, D]`` freqs layout
-that :meth:`RotaryPositionEmbedding3D.shift_t` emits.
+Matches the reference Wan inference arithmetic: BF16 sin/cos tables and
+individual BF16 products are rounded before the add/subtract. Frequency
+angles use FP64, matching the reference table construction. The kernel is
+forward-only and writes to freshly materialized Q or cloned cached K.
 
-For each ``s`` the rotation is, in fp32::
+For each ``s``::
 
-    out[a] = x[a] * cos(f) - x[b] * sin(f)
-    out[b] = x[b] * cos(f) + x[a] * sin(f)
+    out[a] = bf16(x[a] * cos(f)) - bf16(x[b] * sin(f))
+    out[b] = bf16(x[b] * cos(f)) + bf16(x[a] * sin(f))
 
 where ``(a, b) = (d, d + D/2)`` when ``interleaved=False`` and
 ``(2k, 2k+1)`` when ``interleaved=True``.
@@ -36,6 +34,7 @@ from __future__ import annotations
 import torch
 import triton
 import triton.language as tl
+from triton.language.extra import libdevice
 from torch import Tensor
 
 
@@ -82,9 +81,9 @@ def _rope_inference_kernel(
     # once, do cos / sin in fp32, then cast down before the multiply.
     freq_off = s_off[:, None] * stride_fs + d_idx[None, :] * stride_fd
     freq_mask = s_mask[:, None] & d_mask[None, :]
-    freq = tl.load(freqs_ptr + freq_off, mask=freq_mask, other=0.0).to(tl.float32)
-    cos_f = tl.cos(freq)
-    sin_f = tl.sin(freq)
+    freq = tl.load(freqs_ptr + freq_off, mask=freq_mask, other=0.0).to(tl.float64)
+    cos_f = libdevice.cos(freq).to(tl.float32)
+    sin_f = libdevice.sin(freq).to(tl.float32)
 
     h_offset = pid_ht * BLOCK_H
     h_idx = h_offset + tl.arange(0, BLOCK_H)
@@ -109,10 +108,14 @@ def _rope_inference_kernel(
         x_pairs = tl.reshape(x_flat, (BLOCK_S, BLOCK_H, BLOCK_D, 2))
         a, b = tl.split(x_pairs)
 
-        cos_t = cos_f[:, None, :].to(a.dtype)
-        sin_t = sin_f[:, None, :].to(a.dtype)
-        out_a = a * cos_t - b * sin_t
-        out_b = b * cos_t + a * sin_t
+        cos_t = cos_f[:, None, :].to(a.dtype).to(tl.float32)
+        sin_t = sin_f[:, None, :].to(a.dtype).to(tl.float32)
+        ac = (a.to(tl.float32) * cos_t).to(a.dtype).to(tl.float32)
+        bs = (b.to(tl.float32) * sin_t).to(b.dtype).to(tl.float32)
+        bc = (b.to(tl.float32) * cos_t).to(b.dtype).to(tl.float32)
+        ass = (a.to(tl.float32) * sin_t).to(a.dtype).to(tl.float32)
+        out_a = ac - bs
+        out_b = bc + ass
 
         out_pairs = tl.join(out_a, out_b)
         out_flat = tl.reshape(out_pairs, (BLOCK_S, BLOCK_H, 2 * BLOCK_D))
@@ -129,10 +132,14 @@ def _rope_inference_kernel(
         a = tl.load(row_base + a_off, mask=mask, other=0.0)
         b = tl.load(row_base + b_off, mask=mask, other=0.0)
 
-        cos_t = cos_f[:, None, :].to(a.dtype)
-        sin_t = sin_f[:, None, :].to(a.dtype)
-        out_a = a * cos_t - b * sin_t
-        out_b = b * cos_t + a * sin_t
+        cos_t = cos_f[:, None, :].to(a.dtype).to(tl.float32)
+        sin_t = sin_f[:, None, :].to(a.dtype).to(tl.float32)
+        ac = (a.to(tl.float32) * cos_t).to(a.dtype).to(tl.float32)
+        bs = (b.to(tl.float32) * sin_t).to(b.dtype).to(tl.float32)
+        bc = (b.to(tl.float32) * cos_t).to(b.dtype).to(tl.float32)
+        ass = (a.to(tl.float32) * sin_t).to(a.dtype).to(tl.float32)
+        out_a = ac - bs
+        out_b = bc + ass
 
         tl.store(row_base + a_off, out_a, mask=mask)
         tl.store(row_base + b_off, out_b, mask=mask)
@@ -268,6 +275,7 @@ def apply_rotary_pos_emb(
             BLOCK_H=BLOCK_H,
             BLOCK_D=BLOCK_D,
             num_warps=num_warps_eff,  # type: ignore[call-arg]
+            enable_fp_fusion=False,
             num_stages=num_stages_eff,  # type: ignore[call-arg]
         )
     return out

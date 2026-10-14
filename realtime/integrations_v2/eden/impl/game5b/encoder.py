@@ -9,14 +9,9 @@ Two conditions are assembled here:
 cover frame's own latent occupies latent frame 0 of the *first denoising chunk*
 (rather than being committed as a standalone clean chunk ahead of it), is held
 at ``t=0`` while the chunk's other frames denoise, and is re-pinned before every
-network forward. That is precisely the Wan 2.2 TI2V contract the stock
-:class:`~flashdreams.recipes.wan.autoencoder.i2v.I2VCtrlEncoder` already emits
--- AR step 0 encodes the cover plus a zero tail into ``len_t`` latent frames
-with a one-hot mask on frame 0; later steps emit an all-zero mask -- so it is
-reused verbatim rather than reimplemented. The 14B AR variant needs its own
-``independent``/grey-tail splice instead because it channel-concatenates a
-whole-rollout condition clip; this model stamps a single frame, so there is no
-tail to build and nothing for a later AR step to read past the end of.
+network forward. The cover is encoded alone, matching reference independent-first-frame
+conditioning. Unused later condition latents are zero; this model stamps the
+first latent and does not concatenate the grey tail.
 
 **Proxy-DINO control.** Already encoded from the rendered game frames by
 :class:`~eden.impl.game14b.dino.ProxyDinoControlEncoder`; the caller supplies
@@ -98,9 +93,7 @@ class Game5BCtrlEncoderConfig(EncoderConfig):
         default_factory=lambda: Game5BCtrlEncoder
     )
 
-    encoder: WanVAEEncoderConfig = field(
-        default_factory=Wan22TI2V5BVAEEncoderConfig
-    )
+    encoder: WanVAEEncoderConfig = field(default_factory=Wan22TI2V5BVAEEncoderConfig)
     """Streaming Wan 2.2 TI2V-5B VAE encoder; pin its checkpoint to the
     decoder's so the encoded latent matches the network's input distribution."""
 
@@ -143,12 +136,13 @@ class Game5BCtrlEncoder(StreamingVideoEncoder[Game5BCtrlEncoderCache]):
                 autoregressive_index=0,
                 cache=cache.vae,
             )
-            if int(latent.shape[-4]) != len_t:
-                raise ValueError(
-                    f"AR 0 condition encode produced {latent.shape[-4]} latent "
-                    f"frames but the chunk is {len_t}; the pixel chunk handed in "
-                    "does not match the transformer's len_t."
-                )
+            latent = torch.cat(
+                [
+                    latent,
+                    latent.new_zeros(*latent.shape[:-4], len_t - 1, *latent.shape[-3:]),
+                ],
+                dim=-4,
+            )
             cache.condition_latent = latent
             # One-hot on latent frame 0: the packed condition frame. Same shape
             # as the latent so mask and latent patchify identically and the

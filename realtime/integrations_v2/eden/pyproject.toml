@@ -23,8 +23,6 @@ version = "0.1.0"
 description = "Eden World Cam2V integration for FlashDreams v2."
 readme = "README.md"
 requires-python = ">=3.10"
-# `flashdreams-v2v` and `flashdreams-flashvsr` live in this tree but no game2v
-# module imports them, so the serving install does not pull them in.
 dependencies = [
     "flashdreams",
     "flashdreams-cam2v",

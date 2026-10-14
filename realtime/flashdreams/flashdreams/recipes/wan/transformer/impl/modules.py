@@ -46,11 +46,12 @@ def sinusoidal_embedding_1d(dim: int, position: Tensor) -> Tensor:
     """
     assert dim % 2 == 0, "dim must be even for sinusoidal embedding"
     half = dim // 2
-    position = position.type(torch.float64)
-    freqs = torch.pow(
-        10000, -torch.arange(half, device=position.device, dtype=torch.float64) / half
+    exponent = (
+        -math.log(10000)
+        * torch.arange(half, device=position.device, dtype=torch.float32)
+        / half
     )
-    sinusoid = position[..., None] * freqs
+    sinusoid = position.float()[..., None] * torch.exp(exponent)
     out = torch.cat([torch.cos(sinusoid), torch.sin(sinusoid)], dim=-1)
     return out
 
@@ -162,9 +163,7 @@ class Head(nn.Module):
         if self.fp32_adaln:
             # Diffusers ``norm_out`` path: the shift/scale sum stays in the
             # parameter dtype, the LayerNorm and the affine run in fp32.
-            x = (
-                self.norm(x.float()) * (1 + e_chunks[1]) + e_chunks[0]
-            ).type_as(x)
+            x = (self.norm(x.float()) * (1 + e_chunks[1]) + e_chunks[0]).type_as(x)
         else:
             x = self.norm(x) * (1 + e_chunks[1]) + e_chunks[0]  # [..., L, D]
         x = self.head(x)
@@ -215,7 +214,7 @@ class MultiHeadAttention(nn.Module):
         self.norm_k = nn.RMSNorm(inner_dim, eps=eps)
 
         self.attn_op = ContextParallelAttention(
-            qkv_format="bshd", backend="cudnn", method=cp_method
+            qkv_format="bshd", backend="flash", method=cp_method
         )
 
     def set_context_parallel_group(self, cp_group: ProcessGroup | None) -> None:
@@ -336,7 +335,11 @@ class MultiHeadAttention(nn.Module):
             return rope_freqs, rope_freqs
 
         write_end = kv_cache.write_end
-        write_start = write_end - kv_cache.chunk_size
+        write_start = write_end - (
+            kv_cache.valid_chunk_size
+            if kv_cache.valid_chunk_size is not None
+            else kv_cache.chunk_size
+        )
         rope_freqs_q = rope_freqs[write_start:write_end]
         rope_freqs_k = rope_freqs[: kv_cache.size]
         return rope_freqs_q, rope_freqs_k
@@ -439,7 +442,7 @@ class CrossAttention(MultiHeadAttention):
             self.v_img = nn.Linear(self.context_dim, self.inner_dim)
             self.norm_k_img = nn.RMSNorm(self.inner_dim, eps=self.eps)
             self.attn_op_image = ContextParallelAttention(
-                qkv_format="bshd", backend="cudnn", method=cp_method
+                qkv_format="bshd", backend="flash", method=cp_method
             )
 
     def compute_kv_image(self, context: Tensor) -> BlockKVCache:
@@ -713,7 +716,9 @@ class Block(nn.Module):
             c.squeeze(-2) for c in (self.modulation + e.float()).chunk(6, dim=-2)
         ]
 
-        y = (_layer_norm_fp32(self.norm1, x) * (1 + e_chunks[1]) + e_chunks[0]).type_as(x)
+        y = (_layer_norm_fp32(self.norm1, x) * (1 + e_chunks[1]) + e_chunks[0]).type_as(
+            x
+        )
         y = self.self_attn(
             y,
             rope_freqs=rope_freqs,
@@ -725,7 +730,9 @@ class Block(nn.Module):
             _layer_norm_fp32(self.norm3, x).type_as(x),
             kv_cache=cache.cross_attn,
         )
-        y = (_layer_norm_fp32(self.norm2, x) * (1 + e_chunks[4]) + e_chunks[3]).type_as(x)
+        y = (_layer_norm_fp32(self.norm2, x) * (1 + e_chunks[4]) + e_chunks[3]).type_as(
+            x
+        )
         y = self.ffn(y)
         x = (x.float() + y.float() * e_chunks[5]).type_as(x)
         return x

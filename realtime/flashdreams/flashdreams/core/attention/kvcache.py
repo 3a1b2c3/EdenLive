@@ -595,6 +595,9 @@ class BlockKVCache:
     _n_cached: int = 0
     """Number of valid tokens currently in the cache."""
 
+    valid_chunk_size: int | None = None
+    """Actual tokens in a short final chunk; physical chunk slots retain their width."""
+
     _k: Tensor = field(init=False)
     """Cached keys. shape ``[..., total_size, ..., Dk]``, where the ``total_size`` is the length of the cache buffer at ``seq_dim`` dimension."""
 
@@ -709,10 +712,22 @@ class BlockKVCache:
 
         if self._curr_chunk_idx == self._prev_chunk_idx + 1:
             write_start = torch.sym_min(self._n_cached, total_size - self.chunk_size)
-            write_end = write_start + self.chunk_size
+            write_end = write_start + (
+                self.valid_chunk_size
+                if self.valid_chunk_size is not None
+                else self.chunk_size
+            )
         elif self._curr_chunk_idx == self._prev_chunk_idx:
             write_end = torch.sym_min(self._n_cached, total_size)
-            write_start = torch.sym_max(write_end - self.chunk_size, 0)
+            write_start = torch.sym_max(
+                write_end
+                - (
+                    self.valid_chunk_size
+                    if self.valid_chunk_size is not None
+                    else self.chunk_size
+                ),
+                0,
+            )
         else:
             raise ValueError(
                 f"{self._curr_chunk_idx=} should be either {self._prev_chunk_idx + 1} or {self._prev_chunk_idx}."
@@ -747,7 +762,12 @@ class BlockKVCache:
         )
         total_size = self._k.shape[self.seq_dim]
         if self._curr_chunk_idx == self._prev_chunk_idx + 1:
-            return torch.sym_min(self._n_cached + self.chunk_size, total_size)
+            start = torch.sym_min(self._n_cached, total_size - self.chunk_size)
+            return start + (
+                self.valid_chunk_size
+                if self.valid_chunk_size is not None
+                else self.chunk_size
+            )
         if self._curr_chunk_idx == self._prev_chunk_idx:
             return torch.sym_min(self._n_cached, total_size)
         raise ValueError(
@@ -814,11 +834,16 @@ class BlockKVCache:
 
         chunk_size_k = k.shape[self.seq_dim]
         chunk_size_v = v.shape[self.seq_dim]
-        assert chunk_size_k == self.chunk_size, (
+        expected_chunk_size = (
+            self.valid_chunk_size
+            if self.valid_chunk_size is not None
+            else self.chunk_size
+        )
+        assert chunk_size_k == expected_chunk_size, (
             f"Expected input k to have chunk_size ({chunk_size_k}) at seq_dim ({self.seq_dim}), "
             f"got {chunk_size_k} != {self.chunk_size}"
         )
-        assert chunk_size_v == self.chunk_size, (
+        assert chunk_size_v == expected_chunk_size, (
             f"Expected input v to have chunk_size ({chunk_size_v}) at seq_dim ({self.seq_dim}), "
             f"got {chunk_size_v} != {self.chunk_size}"
         )
@@ -838,11 +863,7 @@ class BlockKVCache:
         )
 
         if self._curr_chunk_idx == self._prev_chunk_idx + 1:
-            if self.is_steady_state():
-                pass
-            else:
-                total_size = self._k.shape[self.seq_dim]
-                self._n_cached = min(self._n_cached + self.chunk_size, total_size)
+            self._n_cached = self._visible_end()
             self._prev_chunk_idx += 1
         elif self._curr_chunk_idx == self._prev_chunk_idx:
             pass

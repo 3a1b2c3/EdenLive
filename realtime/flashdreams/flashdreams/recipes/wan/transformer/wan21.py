@@ -88,7 +88,21 @@ class Wan21TransformerCache(TransformerAutoregressiveCache):
         # itself does not call before_update. Same for shift_t: tying the
         # AR index into the captured graph as a Python int would re-trigger
         # cat/repeat on every cond/uncond pass.
-        self.rope_freqs = self.rope_adapter.shift_t(autoregressive_index)
+        if isinstance(self.rope_adapter, KVCacheRelativeRotaryPositionEmbedding3D):
+            block = self.network_cache.block_caches[0].self_attn
+            tokens = (
+                block.valid_chunk_size
+                if block.valid_chunk_size is not None
+                else block.chunk_size
+            )
+            frames = (
+                tokens
+                * self.rope_adapter.context_parallel_size()
+                // (self.rope_adapter.len_h * self.rope_adapter.len_w)
+            )
+            self.rope_freqs = self.rope_adapter.shift_t(autoregressive_index, frames)
+        else:
+            self.rope_freqs = self.rope_adapter.shift_t(autoregressive_index)
 
         self.autoregressive_index = autoregressive_index
         self.network_cache.before_update(autoregressive_index)
@@ -471,6 +485,8 @@ class Wan21Transformer(Transformer[Wan21TransformerCache]):
         )
         self._output_height = height
         self._output_width = width
+        network = getattr(self.network, "_orig_mod", self.network)
+        network._patch_h, network._patch_w = height // kh, width // kw
         total_tokens = (cfg.len_t // kt) * (height // kh) * (width // kw)
         assert total_tokens % self._cp_size == 0, (
             f"Wan token length ({total_tokens} from len_t={cfg.len_t}, "
@@ -701,6 +717,23 @@ class Wan21Transformer(Transformer[Wan21TransformerCache]):
             uncond=True,
         )
         return flow_uncond + self.config.guidance_scale * (flow_cond - flow_uncond)
+
+    def finalize_kv_cache(self, noisy_latent, timestep, cache, input=None) -> None:
+        # Reference cache commits use a scalar context timestep, including AR 0.
+        # Expanding t=0 to every token changes the time-MLP GEMM shape/numerics.
+        network_input = self._build_network_input(noisy_latent, input)
+        self._predict_flow(
+            network_input, timestep, cache, cache.autoregressive_index, {}, uncond=False
+        )
+        if cache.network_cache_uncond is not None:
+            self._predict_flow(
+                network_input,
+                timestep,
+                cache,
+                cache.autoregressive_index,
+                {},
+                uncond=True,
+            )
 
     def postprocess_clean_latent(
         self,

@@ -111,11 +111,7 @@ class Game14BTransformer(Wan21Transformer):
             load_started = time.perf_counter()
             state_dict = load_game14b_dit_state_dict(config.dcp_checkpoint_path)
             state_dict = {
-                key: value.to(
-                    dtype=torch.float32
-                    if key.endswith("condition_norm.weight")
-                    else config.dtype
-                )
+                key: value.to(dtype=config.dtype)
                 for key, value in state_dict.items()
             }
             network.load_state_dict(state_dict, strict=True, assign=True)
@@ -124,9 +120,6 @@ class Game14BTransformer(Wan21Transformer):
                 time.perf_counter() - load_started,
                 len(state_dict),
             )
-        # The base setup casts the whole module to ``config.dtype``; the
-        # control RMSNorm is kept in fp32 to match the reference numerics.
-        network.patch_embedding.condition_norm.to(dtype=torch.float32)
         return network
 
     def _unwrapped_network(self) -> Game14BDiTNetwork:

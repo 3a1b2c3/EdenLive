@@ -1,15 +1,16 @@
 # Wan 2.2：FA4 与 precision-preserving compile
 
-这是 Wan 2.2 的显式性能开关。默认配置继续使用 Triton FlexAttention 并关闭
-block compile，所以已有配置保持原行为 —— 两个开关都要显式打开才生效。
+5B 双向默认使用 FA4 self-attention 和分段文本 cross-attention，
+并关闭 block compile。5B few-step 和两个 14B 配置继续使用缓存/SP 对应的注意力路径。
 
 ## 支持范围
 
 - FA4 使用官方 `flash-attn-4` 包，通过 PyTorch FlexAttention 的
   `kernel_options.BACKEND=FLASH` 调用；不使用 Diffusers attention backend。
 - 当前验证组合为 SM90、BF16、PyTorch 2.11、SP=1。
-- FA4 替换 SP=1、无 cache 的 bidir unmasked self-attention。cached chunk-AR 和
-  text/image cross-attention 继续走原 dispatcher，不受影响。
+- FA4 替换 SP=1、无 cache 的 bidir unmasked self-attention。
+  5B 动态文本 cross-attention 使用 FA4 varlen；cached chunk-AR 和 image
+  cross-attention 继续走原 dispatcher。
 - bidir 的 direct FA4 调用使用官方 `flash_attn.cute.flash_attn_func`，所以
   `DIFFUSERS_ATTN_BACKEND` 要保持 `native`，不能设成 Diffusers 的 `flash`
   （那是 FA2 接口）。
@@ -22,6 +23,21 @@ block compile，所以已有配置保持原行为 —— 两个开关都要显�
 `teacher_forcing` 前缀是历史原因，它选的是通用注意力算子）。
 
 ## 安装
+
+已有 `wm` 环境保留现有 PyTorch，安装所需的算子版本：
+
+```bash
+python -m pip install --no-deps flash-attn-4==4.0.0b31 \
+  nvidia-cutlass-dsl==4.7.1 nvidia-cutlass-dsl-libs-core==4.7.1 \
+  nvidia-cutlass-dsl-libs-base==4.7.1 \
+  nvidia-cutlass-dsl-libs-cu12==4.7.1 cuda-python==12.9.7 \
+  cuda-bindings==12.9.8 apache-tvm-ffi==0.1.14.post0 quack-kernels==0.6.5
+```
+
+升级 CUTLASS 时需清除旧的 `nvidia-cutlass-dsl-libs-core` / `libs-cu13` 4.6
+组件，再安装完整的 core/base/cu12 4.7.1；这些包共享模块目录，混装会造成导入失败。
+本次 `wm` 保留 PyTorch `2.14.0.dev20260717+cu130`，SM90 上的 FA4 varlen
+BF16 内核已运行，微型测试与 SDPA 输出逐元素相同。
 
 已经验证过的 CUDA 12.8 组合记录在
 `requirements/wan22-fa4-cu128-constraints.txt`：
@@ -61,10 +77,4 @@ runtime:
 选项，保留中间 downcast/upcast 的舍入，且不修改全进程配置。它要求 Inductor 的
 default mode；它不把 BF16 变成 FP32，也不保证和 eager 逐元素一致。
 
-改完之后可以先静态检查配置还能正常组装：
-
-```bash
-python -m eden.scripts.check
-```
-
-这只是静态检查。真正验证 FA4 和 compile 的数值行为，还是要跑一次真实推理。
+改完之后要跑一次真实推理，验证 FA4 和 compile 的数值行为。

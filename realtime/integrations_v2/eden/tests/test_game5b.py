@@ -231,9 +231,7 @@ def test_taehv_variant_reads_the_wan22_tiny_weights() -> None:
     assert isinstance(config, TeahvVAEWan22DecoderConfig)
     # The variant reads the path the pipeline YAML names, which is the same
     # ``lighttaew2_2`` checkpoint the registry points at.
-    assert config.checkpoint_path == AVAILABLE_TAEHV_CHECKPOINT_PATHS[
-        "lighttae_wan22"
-    ]
+    assert config.checkpoint_path == AVAILABLE_TAEHV_CHECKPOINT_PATHS["lighttae_wan22"]
     assert config.checkpoint_path.endswith("lighttaew2_2.pth")
     assert TeahvVAEWan22Decoder.MODEL_TYPE == "wan22"
 
@@ -316,7 +314,7 @@ def test_checkpoint_points_at_the_published_ema_file() -> None:
 
     transformer = PIPELINE_GAME2V_EDEN_WORLD_V2_5B.diffusion_model.transformer
     assert transformer.dcp_checkpoint_path == (
-        f"{EDEN_MODEL_ROOT}/dit-5b/model.safetensors"
+        f"{EDEN_MODEL_ROOT}/dit-5b/diffusion_pytorch_model.safetensors"
     )
     # The remap loader reads this slot; the base safetensors slot stays unset.
     assert transformer.checkpoint_path is None
@@ -377,9 +375,10 @@ def test_encoder_stamps_only_the_first_chunk() -> None:
         def __call__(self, pixels, autoregressive_index, cache):
             del autoregressive_index, cache
             encodes["count"] += 1
+            assert pixels.shape[-4] == 1
             return torch.arange(
-                len_t * GAME5B_LATENT_CHANNELS * 2 * 2, dtype=torch.float32
-            ).reshape(len_t, GAME5B_LATENT_CHANNELS, 2, 2)
+                GAME5B_LATENT_CHANNELS * 2 * 2, dtype=torch.float32
+            ).reshape(1, GAME5B_LATENT_CHANNELS, 2, 2)
 
     encoder = Game5BCtrlEncoder.__new__(Game5BCtrlEncoder)
     encoder.encoder = _VAEEncoder()
@@ -387,7 +386,7 @@ def test_encoder_stamps_only_the_first_chunk() -> None:
     control = torch.zeros(len_t, GAME5B_CONTROL_DIM, 2, 2)
 
     first = encoder.forward(
-        Game5BCtrlInput(image=torch.zeros(9, 3, 32, 32), control=control),
+        Game5BCtrlInput(image=torch.zeros(1, 3, 32, 32), control=control),
         autoregressive_index=0,
         cache=cache,
     )
@@ -471,6 +470,9 @@ def test_restart_reuses_the_text_embeddings() -> None:
             return SimpleNamespace(image=image, transformer_cache=SimpleNamespace())
 
     pipeline = Game5BInferencePipeline.__new__(_Pipeline)
+    pipeline.diffusion_model = SimpleNamespace(
+        config=SimpleNamespace(max_latent_frames=None)
+    )
     # Bypass ``__init__``: it builds the real encoders and loads checkpoints.
     pipeline._text_cache = None
     pipeline._negative_text_cache = None
@@ -560,12 +562,15 @@ def test_control_stream_resamples_onto_the_5b_latent_grid() -> None:
     built: dict[str, object] = {}
 
     class _Stream:
-        def __init__(self, config, *, latent_height, latent_width, len_t):
+        def __init__(
+            self, config, *, latent_height, latent_width, len_t, max_latent_frames
+        ):
             built.update(
                 config=config,
                 latent_height=latent_height,
                 latent_width=latent_width,
                 len_t=len_t,
+                max_latent_frames=max_latent_frames,
             )
 
     import eden.apps.game2v.game5b as game5b

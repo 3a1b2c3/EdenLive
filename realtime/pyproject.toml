@@ -10,9 +10,7 @@ extraPaths = [
     "flashdreams",
     "apps",
     "apps/cam2v",
-    "apps/v2v",
     "integrations_v2",
-    "integrations_v2/flashvsr",
     "integrations_v2/eden",
 ]
 # For pyright to pickup the correct python.
@@ -28,31 +26,15 @@ extra-paths = [
     "flashdreams",
     "apps",
     "apps/cam2v",
-    "apps/v2v",
     "integrations_v2",
-    "integrations_v2/flashvsr",
     "integrations_v2/eden",
 ]
 
 [tool.ty.src]
 # Auto-generated protobuf stubs trigger `conflicting-metaclass` errors due to
 # protobuf's EnumTypeWrapper pattern (known ty limitation).
-# Interactive Drive's imported scene/simulation support has known-untyped
-# flashdreams / slangpy / numpy interop areas; keep it out of workspace ``ty``.
-# (The pre-fold sample's pyright config had a similar exclude list.)
 exclude = [
     "**/protos/*pb2*",
-    "apps/interactive_drive/interactive_drive/**",
-    # Same files as above; tests live beside the package, not inside it.
-    "apps/interactive_drive/tests/**",
-    # These map/archive parsers and numerical PhysX adapters intentionally
-    # accept dynamically shaped YAML, Arrow, and NumPy values. Keep the new
-    # V2 application, session, engine contracts, rollout, input, and renderer
-    # boundaries type-checked while isolating that data-oriented edge code.
-    "apps/omnidreams_game_engine/omnidreams_game_engine/game_map/**",
-    # Bench / parity-debugging scaffolding for the hy_worldplay integration;
-    # not shipped product, mirrors the interactive_drive precedent above.
-    "integrations_v2/hy_worldplay/tests/parity_check/**",
 ]
 
 [tool.ty.rules]
@@ -67,7 +49,10 @@ invalid-method-override = "ignore"
 replace-imports-with-any = ["flash_attn.**", "transformer_engine.**", "triton.**"]
 
 [tool.pytest.ini_options]
-addopts = "--import-mode=importlib -p flashdreams._pytest_plugins.marker_enforcement"
+addopts = "--import-mode=importlib"
+# The vendored game-authoring skill has its own test entry point and uses
+# sibling test imports; collect only the installed runtime applications here.
+testpaths = ["apps/cam2v/tests", "integrations_v2/eden/tests"]
 norecursedirs = [
     "parity_check",
     "parity_check_v2",
@@ -83,8 +68,7 @@ markers = [
 
 [dependency-groups]
 # Test-specific dependencies shared across workspace members. Listed here so
-# that the type checker (ty) can resolve imports in test files and in
-# flashdreams/_pytest_plugins.
+# that the type checker (ty) can resolve imports in test files.
 test = [
     "pytest>=8.0",
     "pytest-benchmark>=5.1",

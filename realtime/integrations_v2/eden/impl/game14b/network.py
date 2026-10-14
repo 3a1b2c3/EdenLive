@@ -6,11 +6,12 @@
 The AR teacher-forced recipe widens the patch embedding to
 ``16 noisy + 4 mask + 16 image latent + 1024 proxy-DINO = 1060`` input
 channels and normalizes *only* the trailing DINO block with a trainable
-fp32 affine RMSNorm immediately before the patch convolution.
+affine RMSNorm immediately before the patch convolution. Parameters use the
+DiT's BF16 storage; normalization statistics use FP32 inputs.
 
-FlashDreams applies the ``conv3d`` patch embedding as an ``F.linear`` over
-already-patchified tokens, so the reference's pre-conv normalization has to
-happen before patchify. :meth:`normalize_control_channels` does exactly
+The patch embedding uses the reference's ``Conv3d`` on gathered input.
+Its pre-conv normalization happens before patchify.
+:meth:`normalize_control_channels` does exactly
 that on the ``[..., T, C, H, W]`` control tensor, which keeps the numerics
 identical to the reference (``permute`` channel-last, normalize in fp32,
 restore dtype) while running once per AR chunk instead of once per
@@ -56,8 +57,7 @@ class Game14BDiTNetwork(WanDiTNetwork):
             )
         # Registered under ``patch_embedding`` so the checkpoint key
         # ``patch_embedding.condition_norm.weight`` maps without a rename.
-        # fp32 affine, eps 1e-6: the reference keeps this norm in fp32 even
-        # when the surrounding network runs in bf16.
+        # The transformer setup casts this affine to the DiT storage dtype.
         self.patch_embedding.condition_norm = nn.RMSNorm(
             self.control_dim,
             eps=config.eps,

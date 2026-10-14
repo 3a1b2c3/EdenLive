@@ -37,7 +37,9 @@ fps: 24
 
 # CFG off: one conditional KV stream, the proxy control encoded once per chunk.
 guidance_scale: 1.0
-seed: 42
+seed: 2026092901
+# Set to the recording latent length for bounded replay; initial noise is CPU-offloaded.
+max_latent_frames: null
 # The AR cache commits the clean latent, so the cache-update forward runs at t=0.
 context_noise: 0
 
@@ -85,7 +87,7 @@ scheduler:
 
 components:
   # Distilled DiT, single safetensors, Diffusers keys.
-  transformer: dit-5b/model.safetensors
+  transformer: dit-5b/diffusion_pytorch_model.safetensors
   # Wan 2.2 TI2V-5B VAE, shared by the encoder and the full decoder. Native
   # single-file checkpoint, so it loads with no key remap.
   vae: vae-5b/Wan2.2_VAE.pth

@@ -1,0 +1,113 @@
+# Wan 2.1 14B bidirectional video inference.
+# Recording metadata supplies the actual frame count and temporal prompts.
+model:
+  adapter: wan22_diffusers
+  pretrained_dir: models/EdenLive
+  components:
+    vae:
+      path: vae-14b
+    text_encoder:
+      path: umt5/text_encoder
+    tokenizer:
+      path: umt5/tokenizer
+    scheduler:
+      path: scheduler-14b
+    image_encoder:
+      path: clip/image_encoder
+    image_processor:
+      path: clip/image_processor
+    transformer:
+      path: dit-14b-bidir
+  pipeline_class: WanImageToVideoPipeline
+  torch_dtype: bfloat16
+  max_sequence_length: 512
+  negative_prompt: 镜头晃动，色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走
+  image_condition:
+    clip_embeds: auto
+    first_frame_encoding: masked_video
+    mode: mask_channel_concat
+  proxy_dino:
+    cfg_unconditional_control: same
+    channel_concat_rmsnorm: true
+    channel_concat_zero_init: true
+    checkpoint_path: vision-encoder/projection.safetensors
+    control_dim: 1024
+    enabled: true
+    image_size:
+    - 480
+    - 832
+    local_files_only: true
+    model_path: vision-encoder/backbone
+    patchify_factor: 1
+    use_cached_latents: false
+    vae_time_compression_ratio: 4
+    video_context_time_axis: latent
+    resize_mode: bicubic
+    projection_autocast: true
+  teacher_forcing_attention_backend: triton
+  dynamic_prompt:
+    enabled: false
+runtime:
+  fsdp2:
+    enabled: true
+    mixed_precision: bf16
+    param_dtype: bf16
+    reduce_dtype: fp32
+    reshard_after_forward: true
+    wrap_policy: transformer_block
+  sequence_parallel:
+    enabled: true
+    size: 2
+    axis: temporal
+    layout: balanced_blocks
+  attention_backend:
+    enabled: false
+    backend: _native_flash
+  torch_compile:
+    enabled: false
+  kv_cache:
+    enabled: false
+data:
+  dataset:
+    name: recording_manifest
+    params:
+      path: examples/samples/manifest.csv
+      root: examples/samples
+      width: 832
+      height: 480
+      fps: 16
+      max_frames: 81
+      text_mode: global
+      dynamic: false
+      chunk_size: 3
+  batch_size: 1
+  shuffle: false
+  num_workers: 0
+  pin_memory: true
+  drop_last: false
+inference:
+  strategy: diffusion
+  height: 480
+  width: 832
+  num_frames: 81
+  max_frames: 81
+  fps: 16
+  num_inference_steps: 30
+  guidance_scale: 3.0
+  use_image_condition: true
+  scheduler:
+    name: flow_euler
+    schedule: shifted_linear
+    shift: 3.0
+    stretch: false
+  output_type: np
+  seed: 42
+  outputs:
+  - video
+  output_dir: inference/wan21_14b_480p_bidir
+  max_batches: 0
+  num_samples: 1
+  save_condition_videos:
+    video_context: proxy
+  condition_video_fps:
+    video_context: 4

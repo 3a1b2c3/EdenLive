@@ -72,6 +72,8 @@ class FluxRenderer:
         else:
             self.pipe.to(device=self.device)
         self.pipe.set_progress_bar_config(disable=True)
+        # CPU offload can leave CUDA uninitialized; memory stats do not initialize it.
+        torch.cuda.init()
         logger.info("FLUX c2f pipeline ready in {:.1f}s (offload: {})",
                     time.perf_counter() - started, offload)
 

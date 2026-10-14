@@ -263,7 +263,10 @@ class RMS_norm(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         dim = 1 if self.channel_first else -1
-        return F.normalize(x, dim=dim) * self.scale * self.gamma + self.bias
+        return (
+            F.normalize(x.float(), dim=dim).to(x.dtype) * self.scale * self.gamma
+            + self.bias
+        )
 
 
 def _bt_flatten(x: torch.Tensor) -> torch.Tensor:
@@ -1098,8 +1101,14 @@ class WanVAE(nn.Module):
         # ``state_dict_transform`` rewires upstream key conventions (e.g.
         # diffusers ``encoder.down_blocks.*`` to flashdreams
         # ``encoder.downsamples.*``) before the load.
-        half = "encoder" if enable_encoder and not enable_decoder else (
-            "decoder" if enable_decoder and not enable_encoder else "encoder+decoder"
+        half = (
+            "encoder"
+            if enable_encoder and not enable_decoder
+            else (
+                "decoder"
+                if enable_decoder and not enable_encoder
+                else "encoder+decoder"
+            )
         )
         logger.info("Loading Wan VAE {} weights from {}", half, vae_path)
         load_started = time.perf_counter()
@@ -1354,6 +1363,10 @@ class WanVAEEncoder(StreamingVideoEncoder[WanVAECache]):
             latent_std=config.latent_std,
             state_dict_transform=config.state_dict_transform,
         ).to(dtype=config.dtype)
+        # Reference computes the reciprocal after casting std to latent dtype.
+        self.vae.inv_std = (
+            1.0 / torch.tensor(config.latent_std, dtype=config.dtype)
+        ).view(1, config.z_dim, 1, 1, 1)
 
     def initialize_autoregressive_cache(self) -> WanVAECache:
         return self.vae.prepare_cache()
@@ -1372,9 +1385,9 @@ class WanVAEEncoder(StreamingVideoEncoder[WanVAECache]):
 
         *batch_shape, T, C, H, W = input.shape
         batch_size = math.prod(batch_shape)
-        x = input.reshape(batch_size, T, C, H, W)
+        x = input.reshape(batch_size, T, C, H, W).to(dtype=self.config.dtype)
 
-        z = self.vae.encode(x.transpose(1, 2), cache=cache).transpose(1, 2)
+        z = self.vae.encode(x.transpose(1, 2).contiguous(), cache=cache).transpose(1, 2)
         return z.reshape(*batch_shape, *z.shape[1:])
 
     @property

@@ -3,12 +3,10 @@
 
 """Frozen proxy-DINO (DINOv3 ViT-L/16) control encoder.
 
-Ported from the reference recipe's ``extern/proxy_dino/encoder.py`` so the
-inference numerics match. This is the profile both presets (5B and 14B)
-were trained against: bilinear+antialias resize to 480x832, ImageNet
-normalization, bf16 autocast backbone, native 16px patches (no grouping), patch
-projection and L2 normalization under the same autocast, then a trilinear
-resample onto the DiT's latent grid.
+The 5B profile uses tensor bilinear+antialias resize; the 14B profile uses
+PIL uint8 bicubic center-crop. Both use ImageNet normalization, BF16 autocast
+for backbone and projection, and L2 normalization. Projected features are
+cast to BF16 before trilinear resampling onto the DiT latent grid.
 
 Per-frame independence is what makes the overlap in
 :mod:`eden.apps.game2v.session` sound: a chunk's features depend only on
@@ -123,6 +121,7 @@ class ProxyDinoEncoder(nn.Module):
         images: Tensor,
         *,
         image_size: tuple[int, int] = (480, 832),
+        resize_mode: str = "bilinear",
     ) -> Tensor:
         """Encode ``[N, 3, H, W]`` RGB in ``[0, 1]`` to ``[N, C, h, w]``."""
         if images.ndim != 4 or int(images.shape[1]) != 3:
@@ -133,13 +132,50 @@ class ProxyDinoEncoder(nn.Module):
         # permute of HWC frames arrives channels-last, the live stream NCHW, and
         # the resample and the backbone conv both pick kernels by memory format,
         # ~1e-3 apart -- enough for the rollout to diverge from its first chunk.
-        pixel_values = F.interpolate(
-            images.float().contiguous(),
-            size=tuple(image_size),
-            mode="bilinear",
-            align_corners=False,
-            antialias=True,
-        )
+        if resize_mode == "bilinear":
+            pixel_values = F.interpolate(
+                images.float().contiguous(),
+                size=tuple(image_size),
+                mode="bilinear",
+                align_corners=False,
+                antialias=True,
+            )
+        else:
+            import numpy as np
+            from PIL import Image
+
+            rgb = (
+                images.detach()
+                .float()
+                .clamp(0, 1)
+                .mul(255)
+                .round()
+                .to(torch.uint8)
+                .permute(0, 2, 3, 1)
+                .cpu()
+                .numpy()
+            )
+            target_h, target_w = image_size
+            cropped = []
+            for array in rgb:
+                picture = Image.fromarray(array)
+                width, height = picture.size
+                ratio = width / height
+                resized_h, resized_w = (
+                    (target_h, round(target_h * ratio))
+                    if ratio > target_w / target_h
+                    else (round(target_w / ratio), target_w)
+                )
+                picture = picture.resize(
+                    (resized_w, resized_h), Image.Resampling.BICUBIC
+                )
+                left, top = (resized_w - target_w) // 2, (resized_h - target_h) // 2
+                picture = picture.crop((left, top, left + target_w, top + target_h))
+                cropped.append(torch.from_numpy(np.array(picture)).permute(2, 0, 1))
+            pixel_values = (
+                torch.stack(cropped).to(device=images.device, dtype=torch.float32)
+                / 255.0
+            )
         mean = pixel_values.new_tensor(DINOV3_IMAGE_MEAN).view(1, 3, 1, 1)
         std = pixel_values.new_tensor(DINOV3_IMAGE_STD).view(1, 3, 1, 1)
         pixel_values = (pixel_values - mean) / std
@@ -179,6 +215,7 @@ class ProxyDinoEncoderConfig(InstantiateConfig):
 
     projection_dim: int = 1024
     image_size: tuple[int, int] = (480, 832)
+    resize_mode: str = "bilinear"
     """Encoder input resolution the projection was trained at."""
 
     device: str = "cuda"
@@ -291,7 +328,11 @@ class ProxyDinoControlEncoder:
         """
         frames = frames.to(device=self.config.device)
         if self._call is self.encoder:
-            features = self._call(frames, image_size=self.config.image_size)
+            features = self._call(
+                frames,
+                image_size=self.config.image_size,
+                resize_mode=self.config.resize_mode,
+            )
         else:
             # The encode runs on its own thread, while the DiT compiles on the
             # main one. Dynamo's FX trace sets a process-wide "FX is tracing"
@@ -300,9 +341,13 @@ class ProxyDinoControlEncoder:
             # the whole of each compile, so taking it here makes the encode
             # wait out a DiT compile. Outside a compile nothing else holds it.
             with _dynamo_compile_lock():
-                features = self._call(frames, image_size=self.config.image_size)
+                features = self._call(
+                    frames,
+                    image_size=self.config.image_size,
+                    resize_mode=self.config.resize_mode,
+                )
         # [T, C, h, w] -> [1, C, T, h, w] for the volumetric resample.
-        volume = features.permute(1, 0, 2, 3).unsqueeze(0)
+        volume = features.to(dtype=dtype).permute(1, 0, 2, 3).unsqueeze(0)
         if volume.shape[-2:] != (latent_height, latent_width):
             volume = F.interpolate(
                 volume,

@@ -199,14 +199,14 @@ if '--render' in sys.argv:
     # start key that emits round.started with a prompt, and (where the game
     # has one) a pause flag that holds the rollout until probe() clears it.
     ported = {
-        'astrobot': (' ', None),
-        'need-for-speed': ('w', None),
+        'moonstone-run': (' ', None),
+        'neon-circuit': ('w', None),
         'dead-rush': ('w', 'p'),
-        'street-of-rage': ('j', 'p'),
-        'street-fighter': ('j', 'escape'),
-        'dark-soul': ('w', 'p'),
-        'hades': ('j', 'escape'),
-        'elda': ('w', 'p'),
+        'nightfang': ('j', 'p'),
+        'neon-clash': ('j', 'escape'),
+        'ashen-wilds': ('w', 'p'),
+        'ashen-vow': ('j', 'escape'),
+        'moorland-archer': ('w', 'p'),
         'city-walk': ('w', 'escape'),
     }
     for slug, (start_key, pause_key) in ported.items():

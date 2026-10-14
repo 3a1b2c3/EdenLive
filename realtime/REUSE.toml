@@ -33,7 +33,6 @@ SPDX-License-Identifier = "Apache-2.0"
 # --- Configuration / build / CI / shell scripts ---
 [[annotations]]
 path = [
-    ".github/**",
     ".pre-commit-config.yaml",
     ".pre-commit-config-base.yaml",
     ".gitignore",

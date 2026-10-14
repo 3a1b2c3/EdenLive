@@ -68,9 +68,7 @@ class Game5BInferencePipelineConfig(WanInferencePipelineConfig):
         default_factory=lambda: Game5BInferencePipeline
     )
 
-    encoder: Game5BCtrlEncoderConfig = field(
-        default_factory=Game5BCtrlEncoderConfig
-    )
+    encoder: Game5BCtrlEncoderConfig = field(default_factory=Game5BCtrlEncoderConfig)
     """Condition encoder: packed first-frame stamp + proxy-DINO control."""
 
     image_encoder: None = None
@@ -136,6 +134,9 @@ class Game5BInferencePipeline(WanInferencePipeline):
         # Reuse before the base call: ``super().initialize_cache`` reloads the
         # released one-shot encoder and re-encodes unconditionally, which is the
         # restart stall this cache exists to avoid.
+        if self.diffusion_model.config.max_latent_frames is not None:
+            self.diffusion_model._rng = None
+            self.diffusion_model._initial_video_noise = None
         text_embeddings = self._cached_text_embeddings(text)
         reusing = text_embeddings is not None
         logger.info(
@@ -300,9 +301,7 @@ class Game5BInferencePipeline(WanInferencePipeline):
                     f"derived from pixels ({derived_w})."
                 )
         if height is None or width is None:
-            raise ValueError(
-                "T2V (image=None) requires explicit `height` and `width`."
-            )
+            raise ValueError("T2V (image=None) requires explicit `height` and `width`.")
 
         guidance_scale = self._transformer_config.guidance_scale
         negative_text_embeddings = None
@@ -314,9 +313,7 @@ class Game5BInferencePipeline(WanInferencePipeline):
             if negative_text_embeddings is None:
                 self._ensure_oneshot_encoders_loaded()
                 assert self.text_encoder is not None
-                negative_text_embeddings = self.text_encoder(
-                    [self._negative_prompt()]
-                )
+                negative_text_embeddings = self.text_encoder([self._negative_prompt()])
                 self._negative_text_cache = negative_text_embeddings
 
         parent = super(WanInferencePipeline, self).initialize_cache(
@@ -355,14 +352,15 @@ class Game5BInferencePipeline(WanInferencePipeline):
             Decoded video ``[*batch_shape, T, C, H, W]`` in ``[-1, 1]``.
         """
         assert cache.image is not None, "initialize_cache() must be called first"
+        maximum = self.diffusion_model.config.max_latent_frames
+        if maximum is not None:
+            start = autoregressive_index * self.diffusion_model.transformer.config.len_t
+            input = input[..., : maximum - start, :, :, :]
+
         # The packed first frame is encoded at AR 0 and stamped from there on,
         # so only that step needs pixels. Later steps would encode a zero chunk
         # whose latent the all-zero mask discards; the encoder skips it.
-        pixels = (
-            self._preprocess_i2v_input(autoregressive_index, cache.image)
-            if autoregressive_index == 0
-            else None
-        )
+        pixels = cache.image if autoregressive_index == 0 else None
         # Skip ``WanInferencePipeline.generate``: it would rebuild the input from
         # ``cache.image`` and drop the control payload.
         return super(WanInferencePipeline, self).generate(

@@ -14,10 +14,11 @@ carrying only what the two **Eden game2v** models need to serve interactive
 sessions: the `eden` integration, the framework code it imports, and the game
 renders that drive it.
 
-This tree is the real-time serving path for [Eden](../README.md) and lives inside
-that repository. Its `eden` package is the FlashDreams integration, which is a
-different package from the `eden/` at the Eden repository root, and neither
-imports the other. It is installed with pip from [`requirements.txt`](requirements.txt).
+This tree is the real-time serving path for [EdenLive](../README.md) and lives
+inside that repository. Its `eden` package is the FlashDreams integration, a
+different package from `edenlive/` at the repository root; neither imports the
+other. Both install into one environment, described in the
+[repository README](../README.md#installation).
 
 FlashDreams itself is a high-performance inference and serving library for
 interactive autoregressive video and world models. For every other model, the
@@ -29,8 +30,9 @@ full documentation, and the developer guides, use upstream.
 - NVIDIA driver from the **R580 series or newer** (default compatible with CUDA 13.x)
 - **CUDA 13.x** (PyTorch `2.13.0+cu130`, the build [`requirements.txt`](requirements.txt)
   is pinned against; a CUDA 12.8 driver takes the `cu128` wheel index instead)
-- **Python >= 3.10**
-- **PyTorch >= 2.9** (2.13.0 verified), with a matching torchvision
+- **Python 3.10** (the verified environment)
+- **PyTorch 2.13 or newer, cu130** (verified with the `2.14.0.dev20260717+cu130`
+  nightly and torchvision 0.28.0), with a matching torchvision
 - Linux x86-64 or arm64
 - **100 GB+ free storage space** recommended for environment and model checkpoints.
 - Docker with the
@@ -78,6 +80,9 @@ arguments. To keep a second deployment, copy `deploy.conf` to
 `deploy.conf` and its values win.
 
 Weights come from `MODEL_ROOT` in that file (see below), not from Hugging Face.
+For offline inference as well, follow the single-environment install in the
+[repository README](../README.md#installation), which adds the root package on
+top of the steps above.
 
 ### Launch the workbench
 
@@ -132,13 +137,13 @@ Weights live in one directory, `MODEL_ROOT` in [`deploy.conf`](deploy.conf),
 which defaults to `models/EdenLive` under the repository root. A relative path
 there is read from the repository root. The realtime pipeline configs
 ([`integrations_v2/eden/configs/`](integrations_v2/eden/configs)) can pin the
-tree themselves with their own `model_root`, which wins over `deploy.conf`. The
-tree is the Hugging Face repo layout: `dit-5b/`,
-`dit-14b/`, `dit-5b-bidir/`, `dit-14b-bidir/`, `umt5/`, `vae-5b/`, `vae-14b/`,
-`decoder-5b/`, `vision-encoder/`, `flux-c2f/` and `clip/`. The two `*-bidir/`
-directories hold the bidirectional base DiT weights; no serving config loads
-them, the realtime pipelines use `dit-5b/` and `dit-14b/`. Everything is loaded
-with `HF_HUB_OFFLINE=1`.
+tree themselves with their own `model_root`, which wins over `deploy.conf`.
+Serving reads `dit-14b/`, `dit-5b/`, `vae-14b/`, `vae-5b/`, `decoder-14b/`,
+`decoder-5b/`, `umt5/`, `clip/`, `vision-encoder/` and `flux-c2f/`; the
+`*-bidir/` and `scheduler-*/` directories in the same tree are only used by the
+offline configs. The full layout is in the
+[repository README](../README.md#model-weights). Everything is loaded with
+`HF_HUB_OFFLINE=1`.
 
 Making or revising a game takes tens of minutes (an agent writes and plays
 it), so the conversation and its job log survive a page reload. Picking an existing game

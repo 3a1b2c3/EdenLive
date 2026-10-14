@@ -75,6 +75,7 @@ PIPELINE_GAME2V_EDEN_WORLD_V2_14B = Game14BInferencePipelineConfig(
     # shorter than the rollout makes a later AR step read past its end.
     diffusion_model=DiffusionModelConfig(
         seed=_SPEC["seed"],
+        max_latent_frames=_SPEC["max_latent_frames"],
         # The AR cache commits the clean latent, so the cache-update forward
         # runs at t=0.
         context_noise=_SPEC["context_noise"],

@@ -12,7 +12,7 @@
 set -u
 . "$(dirname "$(readlink -f "$0")")/_common.sh"
 
-HOST="${BRIDGE_HOST:-$(hostname -I | awk '{print $1}')}"
+HOST="$BRIDGE_HOST"
 
 mkdir -p .workbench && chmod 700 .workbench
 if [ ! -s .workbench/token ]; then

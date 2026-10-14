@@ -96,16 +96,16 @@ class CLIPImageEncoder(Encoder):
         images = input.reshape(batch_size, *input.shape[-3:])
 
         device = self.image_encoder.device
-        images = (images + 1) / 2.0
+        pixels = ((images.float().clamp(-1, 1) + 1) * 127.5).round().to(torch.uint8)
+        pixels = pixels.permute(0, 2, 3, 1).cpu().numpy()
         # ``CLIPImageProcessor.__call__`` returns a ``BatchFeature`` (dict-like
         # over named tensors) which is moved to device/dtype and unpacked as
         # kwargs into the vision model.
         processed = cast(
             BatchFeature,
             self.image_processor(
-                images=images.to(dtype=torch.float32),
+                images=list(pixels),
                 return_tensors="pt",
-                do_rescale=False,
             ),
         ).to(device, dtype=self.image_encoder.dtype)
         image_embeds: BaseModelOutputWithPooling = self.image_encoder(

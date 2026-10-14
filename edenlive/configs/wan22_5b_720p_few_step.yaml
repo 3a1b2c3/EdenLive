@@ -1,0 +1,113 @@
+# Wan 2.2 5B few-step autoregressive video inference.
+# Recording metadata supplies the actual frame count and temporal prompts.
+model:
+  adapter: wan22_diffusers
+  pretrained_dir: models/EdenLive
+  components:
+    vae:
+      path: vae-5b
+    text_encoder:
+      path: umt5/text_encoder
+    tokenizer:
+      path: umt5/tokenizer
+    scheduler:
+      path: scheduler-5b
+    transformer:
+      path: dit-5b
+  pipeline_class: WanPipeline
+  expand_timesteps: true
+  torch_dtype: bfloat16
+  max_sequence_length: 512
+  proxy_dino:
+    cfg_unconditional_control: same
+    channel_concat_zero_init: true
+    checkpoint_path: vision-encoder/projection.safetensors
+    control_dim: 1024
+    enabled: true
+    image_size:
+    - 480
+    - 832
+    local_files_only: true
+    model_path: vision-encoder/backbone
+    patchify_factor: 1
+    use_cached_latents: false
+    vae_time_compression_ratio: 4
+    video_context_time_axis: latent
+    resize_mode: bilinear
+    projection_autocast: true
+  teacher_forcing_attention_backend: triton
+  dynamic_prompt:
+    enabled: false
+runtime:
+  fsdp2:
+    enabled: false
+  sequence_parallel:
+    enabled: true
+    size: 1
+    axis: temporal
+    layout: balanced_blocks
+  attention_backend:
+    enabled: false
+    backend: native
+  torch_compile:
+    enabled: false
+  kv_cache:
+    enabled: true
+    context:
+      max_latent_frames: 18
+      sink_latent_frames: 6
+      rope_mode: fixed_window
+    offload_generated_chunks: true
+data:
+  dataset:
+    name: recording_manifest
+    params:
+      path: examples/samples/manifest.csv
+      root: examples/samples
+      width: 1280
+      height: 704
+      fps: 24
+      max_frames: null
+      text_mode: chunk
+      dynamic: true
+      chunk_size: 3
+  batch_size: 1
+  shuffle: false
+  num_workers: 0
+  pin_memory: true
+  drop_last: false
+inference:
+  strategy: chunk_causal
+  outputs:
+  - video
+  num_samples: 1
+  height: 704
+  width: 1280
+  num_frames: 117
+  fps: 24
+  chunk_size: 3
+  pack_first_frame: true
+  num_inference_steps: 4
+  guidance_scale: 1.0
+  negative_prompt: Vibrant colors, overexposed, static, blurry details, subtitles,
+    style, artwork, painting, image, still, overall grayish, worst quality, low quality,
+    JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands,
+    poorly drawn face, deformed, disfigured, deformed limbs, fused fingers, three
+    legs
+  seed: 2026092901
+  output_type: np
+  use_image_condition: true
+  scheduler:
+    name: flow_euler
+    stochastic_sampling: true
+    timesteps:
+    - 1000
+    - 937.5
+    - 833.3333333333
+    - 625
+  output_dir: inference/wan22_5b_720p_few_step
+  max_batches: 0
+  save_condition_videos:
+    video_context: proxy
+  condition_video_fps:
+    video_context: 6

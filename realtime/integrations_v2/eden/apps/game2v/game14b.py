@@ -135,12 +135,14 @@ def make_game14b_control_stream(config: Any, session_desc: Any) -> ProxyDinoCont
         ProxyDinoEncoderConfig(
             backbone_repo=component_path(_SPEC, "vision_encoder"),
             projection_path=component_path(_SPEC, "vision_projection"),
+            resize_mode="bicubic_center_crop",
             device=str(config.device),
             compile_encoder=getattr(config, "compile_control_encoder", True),
         ),
         latent_height=pixel_height // spatial_ratio,
         latent_width=pixel_width // spatial_ratio,
         len_t=GAME2V_LEN_T,
+        max_latent_frames=_SPEC["max_latent_frames"],
     )
 
 

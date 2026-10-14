@@ -145,7 +145,7 @@ body.wb-play.wb-starting .layout,body.wb-play.wb-starting #status{visibility:hid
 .wb-loading img{width:min(44rem,80%);height:auto;aspect-ratio:16/9;object-fit:contain;border-radius:.6rem;background:#000}
 .wb-endbar{position:fixed;left:50%;top:calc(4vh + 4.4rem);transform:translateX(-50%);z-index:74;color:var(--text);font:14px/1.5 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#ffffffee;border:1px solid #569cd666;border-radius:.7rem;padding:.5rem .8rem;display:flex;gap:.7rem;align-items:center}
 @media (max-width:860px){.wb-studio{grid-template-columns:1fr;grid-template-rows:minmax(22rem,55vh) minmax(22rem,1fr);overflow-y:auto}.wb-chat{border-right:0;border-bottom:1px solid var(--line)}.wb-frame{grid-template-columns:1fr}}
-/* Geometry from .tmp/design-previews/proposed (1920 x 1080).
+/* Workbench panel geometry at 1920 x 1080.
    Keep runtime video nodes and workflow controls; only their containers move. */
 /* Default theme: VS Code's dark workbench palette. Keep the contrast high
    enough for long sessions while letting the live video remain the visual

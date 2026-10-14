@@ -5,22 +5,10 @@
 
 Two conditions are assembled here:
 
-**First frame.** The reference rollout is ``pack_first_frame: true`` over a
-channel-concat I2V condition built the ``independent`` way (the training
-recipe's ``cached_grey_tail`` is the no-VAE form of the same splice): latent
-frame 0 is the cover encoded alone, and frames 1: are the tail of an
-all-zeros (mid-grey) clip encoded on its own, so they carry no cover
-information and depend only on the frame geometry.
-
-The tail is *not* one latent frame tiled: the streaming VAE's output keeps
-drifting over the first chunks of an all-zeros input (frame 1 differs from
-frames 2+, frame 5 from frame 30). It is therefore encoded through the streaming
-VAE once per resolution, chunk by chunk, out to latent frame 17 -- the last
-frame of an 18-frame attention arena (6 sink + 12 rolling), which is full after
-AR step 5. Chunk ``k < 6`` reads frames ``[3k, 3k + 3)`` of it exactly; from
-chunk 6 on, every chunk reuses frames 15-17. Nothing is encoded per rollout
-beyond the cover itself, and nothing is ever encoded for the whole rollout
-length.
+**First frame.** The reference uses ``masked_video``: encode the cover at
+pixel frame 0 followed by zero pixels through one causal VAE stream. The tail
+retains the cover's temporal influence. Its global time continues advancing
+when the attention arena fills; RoPE slots do not change condition time.
 
 The mask marks latent frame 0 of the rollout only (AR step 0, frame 0). The
 same frame is stamped into the noisy latent and held at ``t=0`` by the
@@ -40,7 +28,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import torch
-from loguru import logger
 from torch import Tensor
 
 from flashdreams.infra.encoder import (
@@ -61,13 +48,6 @@ from .transformer import I2VProxyDinoCtrl
 # 16-channel uniform tag so mask and latent patchify identically; the
 # transformer slices the leading 16 patch entries back to the 4 real channels.
 _MASK_TAG_CHANNELS = 16
-
-GREY_TAIL_LATENT_FRAMES = 18
-"""Latent frames of the all-zeros clip cached per resolution (frames 0-17).
-
-Matches the 18-frame attention arena (sink 6 + window 12). Frame 0 is never
-read -- the cover takes its place -- so the tail proper is frames 1-17.
-"""
 
 
 @dataclass(kw_only=True)
@@ -94,14 +74,13 @@ class Game14BCtrlEncoderCache(StreamingEncoderCache):
     """Per-rollout cache: the cover latent and the grey tail it is spliced onto."""
 
     vae: WanVAECache
-    """Wan VAE cache. The cover and the grey tail are each encoded through a
-    fresh cache of their own, so this slot is not read by the condition path."""
+    """Streaming cache for the cover followed by zero pixels."""
 
     cover_latent: Tensor | None = None
     """``[..., 1, 16, Hl, Wl]`` latent of the cover encoded alone (AR step 0)."""
 
     grey_tail: Tensor | None = None
-    """``[..., 18, 16, Hl, Wl]`` all-zeros clip latent; see the module docstring."""
+    """Most recent masked-video condition chunk; used to recover pixel geometry."""
 
 
 @dataclass(kw_only=True)
@@ -116,19 +95,6 @@ class Game14BCtrlEncoderConfig(EncoderConfig):
     """Streaming Wan VAE encoder; pin its checkpoint to the decoder's."""
 
 
-def grey_tail_window(autoregressive_index: int, len_t: int) -> tuple[int, int]:
-    """Frames ``[start, stop)`` of the cached grey tail AR step ``k`` reads.
-
-    Exact while the 18-frame arena fills (``k < 6`` at ``len_t=3``); after that
-    every chunk occupies the arena's last ``len_t`` slots, and reuses the tail
-    frames that sat there.
-    """
-    start = min(
-        autoregressive_index * len_t, GREY_TAIL_LATENT_FRAMES - len_t
-    )
-    return start, start + len_t
-
-
 class Game14BCtrlEncoder(StreamingVideoEncoder[Game14BCtrlEncoderCache]):
     """Assemble the per-chunk I2V + proxy-DINO control payload."""
 
@@ -138,9 +104,6 @@ class Game14BCtrlEncoder(StreamingVideoEncoder[Game14BCtrlEncoderCache]):
         super().__init__(config)
         self.config: Game14BCtrlEncoderConfig = config
         self.encoder = config.encoder.setup()
-        # The all-zeros tail depends only on the frame geometry, so one tensor
-        # per resolution serves every rollout. Keyed by ``(device, dtype, H, W)``.
-        self._grey_tail_cache: dict[tuple, Tensor] = {}
         # The cover latent depends only on the anchor frame, which a session
         # keeps across restarts; compared by identity, not by value.
         self._cover_cache: tuple[Tensor, Tensor] | None = None
@@ -169,53 +132,6 @@ class Game14BCtrlEncoder(StreamingVideoEncoder[Game14BCtrlEncoderCache]):
         return latent
 
     @torch.no_grad()
-    def grey_tail(self, image: Tensor, len_t: int = 3) -> Tensor:
-        """Latent frames 0-17 of an all-zeros clip at ``image``'s geometry.
-
-        Encoded through the streaming VAE the way a rollout would encode it:
-        the seed frame plus two 4-frame groups at AR 0 (3 latents), then
-        12-frame chunks (3 latents each) until frame 17. Streaming and
-        whole-clip encodes are the same computation, so this is the tail a
-        one-shot ``independent`` encode would produce, cut at frame 17.
-        """
-        key = (image.device, image.dtype, image.shape[-2], image.shape[-1])
-        cached = self._grey_tail_cache.get(key)
-        if cached is not None:
-            return cached
-        ratio = self.temporal_compression_ratio
-        if GREY_TAIL_LATENT_FRAMES % len_t:
-            raise ValueError(
-                f"len_t={len_t} does not tile the {GREY_TAIL_LATENT_FRAMES}-frame arena"
-            )
-        cache = self.encoder.initialize_autoregressive_cache()
-        batch_shape = image.shape[:-4]
-        latents: list[Tensor] = []
-        produced = 0
-        step = 0
-        while produced < GREY_TAIL_LATENT_FRAMES:
-            frames = self.encoder.get_input_temporal_size(step, len_t)
-            zeros = image.new_zeros(*batch_shape, frames, *image.shape[-3:])
-            latent = self.encoder(zeros, autoregressive_index=step, cache=cache)
-            latents.append(latent)
-            produced += int(latent.shape[-4])
-            step += 1
-        tail = torch.cat(latents, dim=-4)[..., :GREY_TAIL_LATENT_FRAMES, :, :, :]
-        if int(tail.shape[-4]) != GREY_TAIL_LATENT_FRAMES:
-            raise RuntimeError(
-                f"grey tail encode produced {tail.shape[-4]} latent frames, "
-                f"expected {GREY_TAIL_LATENT_FRAMES} (temporal ratio {ratio})"
-            )
-        self._grey_tail_cache[key] = tail
-        logger.info(
-            "Game2V 14B: encoded the grey condition tail (latent frames 0-{}) "
-            "once at {}x{}; reused for every rollout from here on",
-            GREY_TAIL_LATENT_FRAMES - 1,
-            image.shape[-2],
-            image.shape[-1],
-        )
-        return tail
-
-    @torch.no_grad()
     def forward(
         self,
         input: Game14BCtrlInput,
@@ -234,7 +150,7 @@ class Game14BCtrlEncoder(StreamingVideoEncoder[Game14BCtrlEncoderCache]):
                     "packed first frame is encoded there and nowhere else."
                 )
             cache.cover_latent = self.encode_cover(input.image)
-            cache.grey_tail = self.grey_tail(input.image, len_t)
+            pixels = input.image
         elif cache.grey_tail is None or cache.cover_latent is None:
             raise ValueError(
                 f"Game14BCtrlEncoder saw AR step {autoregressive_index} before AR "
@@ -242,8 +158,26 @@ class Game14BCtrlEncoder(StreamingVideoEncoder[Game14BCtrlEncoderCache]):
                 "is encoded."
             )
 
-        start, stop = grey_tail_window(autoregressive_index, len_t)
-        condition = cache.grey_tail[..., start:stop, :, :, :]
+        else:
+            sp = self.spatial_compression_ratio
+            pixels = cache.grey_tail.new_empty(
+                *cache.grey_tail.shape[:-4],
+                1,
+                3,
+                cache.grey_tail.shape[-2] * sp,
+                cache.grey_tail.shape[-1] * sp,
+                dtype=torch.float32,
+            )
+        decoded_frames = self.encoder.get_input_temporal_size(
+            autoregressive_index, len_t
+        )
+        zeros = pixels.new_zeros(*pixels.shape[:-4], decoded_frames, *pixels.shape[-3:])
+        if autoregressive_index == 0:
+            zeros[..., :1, :, :, :] = pixels
+        condition = self.encoder(
+            zeros, autoregressive_index=autoregressive_index, cache=cache.vae
+        )
+        cache.grey_tail = condition
         mask = condition.new_zeros(
             *condition.shape[:-3], _MASK_TAG_CHANNELS, *condition.shape[-2:]
         )
@@ -287,10 +221,8 @@ class Game14BCtrlEncoder(StreamingVideoEncoder[Game14BCtrlEncoderCache]):
 
 
 __all__ = [
-    "GREY_TAIL_LATENT_FRAMES",
     "Game14BCtrlEncoder",
     "Game14BCtrlEncoderCache",
     "Game14BCtrlEncoderConfig",
     "Game14BCtrlInput",
-    "grey_tail_window",
 ]

@@ -381,6 +381,9 @@ class WanInferencePipeline(
     def get_num_input_frames(self, autoregressive_index: int) -> int:
         """Number of input video frames the model expects at this AR step."""
         len_t = self._transformer_config.len_t
+        maximum = self.diffusion_model.config.max_latent_frames
+        if maximum is not None:
+            len_t = min(len_t, maximum - autoregressive_index * len_t)
         assert isinstance(self.encoder, StreamingVideoEncoder), (
             f"get_num_input_frames requires a StreamingVideoEncoder; "
             f"got {type(self.encoder).__name__}."
@@ -390,6 +393,9 @@ class WanInferencePipeline(
     def get_num_output_frames(self, autoregressive_index: int) -> int:
         """Number of decoded video frames produced at this AR step."""
         len_t = self._transformer_config.len_t
+        maximum = self.diffusion_model.config.max_latent_frames
+        if maximum is not None:
+            len_t = min(len_t, maximum - autoregressive_index * len_t)
         assert isinstance(self.decoder, StreamingVideoDecoder), (
             f"get_num_output_frames requires a StreamingVideoDecoder; "
             f"got {type(self.decoder).__name__}."
