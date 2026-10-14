@@ -183,7 +183,7 @@ def test_await_gives_up_when_a_game_switch_is_requested(monkeypatch):
     capture = _FakeCapture(open_polls=10_000)
     state = _state(_chunk({'state': 'WON'}), game_capture=capture)
     assert _hold_for_dialog(state) is True
-    state.pending_game_slug = 'nitro-kart'
+    state.pending_game_slug = 'dust2'
     _await_dialog_dismissed(state, threading.Event())
     assert capture.probes == 1
     assert state.dialog_held is False
@@ -200,10 +200,10 @@ def test_start_gate_waits_for_the_first_switch(monkeypatch):
     thread = threading.Thread(target=lambda: (_await_start(state, threading.Event()), done.set()))
     thread.start()
     assert not done.wait(0.1)
-    request_game_switch(state, 'nitro-kart')
+    request_game_switch(state, 'dust2')
     assert done.wait(2.0)
     thread.join()
-    assert state.pending_game_slug == 'nitro-kart'
+    assert state.pending_game_slug == 'dust2'
 
 
 def test_start_gate_releases_on_switch_to_the_current_game(monkeypatch):

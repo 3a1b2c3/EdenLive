@@ -51,6 +51,7 @@ Validation (inside the runtime pod):
 ```bash
 for test in games/tests/*.mjs; do node "$test" || exit; done
 python integrations_v2/eden/tests/check_game_backend.py --render
+python integrations_v2/eden/tests/check_game_preview.py
 pytest integrations_v2/eden/tests -m ci_cpu
 ```
 
@@ -167,17 +168,17 @@ the paced render hides behind generate; `eval`/`decode` are that render's own
 Playwright and JPEG times even when the wait is ~0. Metrics:
 `game_capture_wall_s`, `generate_wall_s`.
 
-On the 8x L20Z pod, a full 12-frame 832x480 chunk's raster+JPEG work is about
-100–123 ms, then sleeps fill the rest of generate so the sim stays live for
-keys. JPEG encoding dominates; the WebGL render itself is under 5 ms.
+Raster and JPEG work runs ahead of generation; pacing sleeps keep the game
+responsive to keys between captures. Rendering cost depends on the game,
+resolution and available WebGL backend.
 
 `GameRenderer` registers NVIDIA's EGL library for Chromium at launch. GPU
 containers ship `libEGL_nvidia.so.0` but register it only when
 `NVIDIA_DRIVER_CAPABILITIES` includes `graphics`; without the vendor JSON, GLVND
 reports Mesa alone, Mesa has no DRI node, and Chromium silently falls back to
-SwiftShader, where the `toDataURL` read-back costs about 4x more (87.4 vs
-32.5 ms per chunk on boxed-in). The renderer writes its own vendor JSON to a
-temporary directory and passes `__EGL_VENDOR_LIBRARY_FILENAMES` plus
+SwiftShader, where rasterization and image read-back are slower. The renderer
+writes its own vendor JSON to a temporary directory and passes
+`__EGL_VENDOR_LIBRARY_FILENAMES` plus
 `--use-angle=gl-egl`, so no system directory is touched and the pod needs no
 change. The variable replaces the vendor list rather than extending it, so Mesa
 is named explicitly to stay available. A missing or unusable library makes the
@@ -200,9 +201,10 @@ Validation without model loading:
 ```bash
 python integrations_v2/eden/tests/check_game_backend.py
 python integrations_v2/eden/tests/check_game_backend.py --render
+python integrations_v2/eden/tests/check_game_preview.py
 ```
 
-`--render` exercises the worker. It renders every frame of each chunk, with
-`ui_frame` set on all frames and `condition_frame` additionally on the
-latent-aligned subset. Burst `duration_s=0` so the check stays a capture
-timing probe rather than a paced generate stand-in.
+`--render` checks all seven games through the real Chromium backend: bundled
+initial states, 24/16 FPS capture timing, JPEG output, prompt events, pause and
+resume, and native demo victories. The preview check also exercises the HTTP
+routes, shared modules, HUD and restart request payload.
