@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Import the skill's MENU_GAME fixture and drive it through GameCaptureWorker.
 
-Run with python integrations_v2/eden/tests/check_standalone_game.py. Needs
+Run with timeout 90s python integrations_v2/eden/tests/check_standalone_game.py. Needs
 Playwright with Chromium, and Three.js 0.161.0 in games/node_modules or at
 EDEN_THREE_MODULE.
 """
@@ -16,7 +16,7 @@ SKILL = REPO / 'skills/game-prototype-turbo'
 sys.path.insert(0, str(SKILL / 'forge/tests'))
 from gate_fixtures import MENU_GAME, MENU_STRATEGY  # noqa: E402
 
-from eden.apps.game2v.game_renderer import GameCaptureWorker  # noqa: E402
+from eden.apps.game2v.game_renderer import GameCaptureWorker, GameRenderer  # noqa: E402
 from eden.apps.game2v.game_timeline import GameTimeline  # noqa: E402
 from eden.apps.game2v.import_game import import_game  # noqa: E402
 
@@ -47,6 +47,25 @@ try:
     cover = games / 'menu-route/cover.png'
     from PIL import Image
     print('captured cover', Image.open(cover).size)
+
+    renderer = GameRenderer('menu-route', games_root=games)
+    try:
+        # Screenshot decoding needs native RAF, but must not advance the game.
+        result = renderer.page.evaluate('''async () => {
+            const clock = () => ({now: performance.now(), ...window.__gameTest.read().clock});
+            const before = clock();
+            const shot = await Promise.race([
+                window.gameBackend.advanceToFrame({events: [], targetTick: 0}),
+                new Promise(resolve => setTimeout(() => resolve(null), 5000)),
+            ]);
+            await new Promise(resolve => setTimeout(resolve, 200));
+            return {captured: Boolean(shot?.ui), before, after: clock()};
+        }''')
+        assert result['captured'], 'Screenshot stalled waiting for a virtual animation frame'
+        assert result['before'] == result['after'], result
+        print('screenshot completed with the simulation clock frozen')
+    finally:
+        renderer.close()
 
     worker = GameCaptureWorker('menu-route', games_root=games)
     try:
