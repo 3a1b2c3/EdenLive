@@ -57,7 +57,7 @@ def torch_sdpa_flash(
 ) -> tuple[Tensor, Tensor | None]:
     """Scaled dot-product attention via Flash Attention backend."""
     out, lse, *_ = _sdpa_flash(query, key, value)
-    return out, (lse if return_lse else None)
+    return out, (lse.unsqueeze(-1) if return_lse else None)
 
 
 class ContextParallelAttention(NativeAttention):

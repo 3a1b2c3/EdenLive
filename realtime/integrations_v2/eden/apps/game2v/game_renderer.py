@@ -236,6 +236,9 @@ class GameRenderer:
             route.fulfill(status=404, body=f'Missing game resource: {rel}')
             return
         body = path.read_bytes()
+        if rel == 'host/html-to-image.js':
+            body = (b'(function(requestAnimationFrame){\n' + body
+                    + b'\n})(window.requestAnimationFrame.bind(window));')
         if rel == f'{self.slug}/index.html' and self.entry.get('host') == STANDALONE_HOST:
             body = standalone_page(body.decode(), self.entry).encode()
         elif rel == f'{self.slug}/index.html':
