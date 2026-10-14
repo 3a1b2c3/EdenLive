@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import {Dust2Game,blocked,EXIT,DEFAULTS,combinePrompt,dynamicPrompt} from '../dust2/game.js';
+const advance=(g,n,u={})=>{for(let i=0;i<n;i++)g.step(u);};
+const quiet=()=>{const g=new Dust2Game();for(const e of g.s.enemies)e.nextShot=1e6;return g;};
+const aim=(g,e)=>{const s=g.s,d=Math.hypot(e.x-s.x,e.z-s.z);s.yaw=Math.atan2(e.x-s.x,s.z-e.z);s.pitch=Math.atan2(1.3-s.y-1.65,d);};
+let g=quiet();aim(g,g.s.enemies[0]);advance(g,9,{fire:true});assert.equal(g.s.kills,1);assert.equal(g.s.ammo,27);assert.equal(g.s.enemies[0].hp,0);
+g=quiet();g.s.yaw=Math.PI;advance(g,9,{fire:true});assert.equal(g.s.kills,0,'Shots facing away miss');
+g=quiet();aim(g,g.s.enemies[0]);g.s.yaw+=.07;assert.equal(g.aimTarget()?.e.id,0,'Small visible aim error is assisted');g.s.yaw-=.25;assert.equal(g.aimTarget(),null,'Assistance is not full auto aim');
+g=quiet();g.s.x=-3.9;g.s.z=3.5;Object.assign(g.s.enemies[0],{x:-3.9,z:-1});aim(g,g.s.enemies[0]);assert.equal(g.aimTarget(),null);advance(g,12,{fire:true});assert.equal(g.s.enemies[0].hp,100,'Crates block shots and assistance');
+assert.equal(blocked({x:0,y:1.6,z:-4},{x:0,y:1.6,z:-6}),false,'Arch hole stays open');assert.equal(blocked({x:0,y:5.8,z:-4},{x:0,y:5.8,z:-6}),true,'Arch top blocks bullets');
+g=quiet();advance(g,1,{fire:true});advance(g,1,{reload:true});const reserve=g.s.reserve,ammo=g.s.ammo;advance(g,30,{fire:true});assert.equal(g.s.ammo,ammo,'Cannot fire while reloading');advance(g,15);assert.equal(g.s.ammo,30);assert.equal(g.s.reserve,reserve-1);
+g=quiet();g.s.ammo=0;g.s.reserve=2;advance(g,1,{fire:true});advance(g,44);assert.equal(g.s.ammo,2);assert.equal(g.s.reserve,0,'Partial magazine respects finite reserve');
+g=quiet();g.s.x=-3.9;g.s.z=4;advance(g,90,{forward:1});assert.ok(g.s.z>=2.37-1e-6,'Crate collision prevents walking through');
+g=quiet();advance(g,24,{side:1,forward:1});assert.ok(Math.hypot(g.s.x,g.s.z-14)<=3.8+1e-8,'Diagonal speed normalized');
+g=new Dust2Game();advance(g,48);assert.equal(g.s.bullets.length,0,'No enemy shot before 2 second windup');const lock=structuredClone(g.s.enemies[0].aim);advance(g,1,{side:1});assert.ok(g.s.events.some(e=>e.kind==='enemy-shot'));assert.deepEqual(g.s.enemies[0].aim,lock,'Burst retains earlier aim');assert.ok(g.living().filter(e=>e.phase!=='idle').length<=2);
+g=new Dust2Game();advance(g,300);assert.ok(g.s.health<100,'Stationary player can be hit');advance(g,1200);assert.equal(g.s.dead,true,'Ignoring fire can lose');
+g=quiet();g.s.x=-3.9;g.s.z=3.5;g.s.bullets=[{id:0,x:-3.9,y:1.1,z:-2,vx:0,vy:0,vz:240,born:0}];g.step();assert.equal(g.s.health,100,'Swept enemy bullet hits cover before player');assert.equal(g.s.bullets.length,0);
+g=quiet();g.s.bullets=[{id:0,x:0,y:1.1,z:12,vx:0,vy:0,vz:100,born:0}];g.step();assert.equal(g.s.health,92,'Fast bullet cannot tunnel through player');
+g=quiet();g.s.z=7;aim(g,g.s.enemies[0]);advance(g,1,{flash:true});advance(g,20,{flash:true});assert.equal(g.s.flashes,1,'Holding flash does not consume two');assert.ok(g.s.enemies[0].blindUntil>g.s.time);assert.equal(g.s.enemies[0].phase,'idle');assert.equal(g.s.grenade,null);
+g=quiet();g.s.grenade={x:-8,y:1,z:5,vx:0,vy:0,vz:0,born:-1};g.step();assert.equal(g.s.enemies[0].blindUntil,0,'Opaque wall blocks a flash');
+g=quiet();g.s.x=EXIT.x;g.s.z=EXIT.z;advance(g,30);assert.equal(g.s.won,false,'Cannot extract before all enemies are cleared');
+g=new Dust2Game();const states=[];for(let i=0;i<2400&&!g.s.dead&&!g.s.won;i++){g.step(g.demoInput());states.push(g.snapshot());}assert.equal(g.s.won,true);assert.equal(g.s.kills,8);assert.equal(g.s.sector,2);assert.ok(g.s.flashCount&&g.s.reloadCount);assert.equal(g.s.flashes,1);assert.ok(g.s.health>0);
+const replay=new Dust2Game();for(const s of states){replay.step(s.input);assert.deepEqual(replay.snapshot(),s);}const checkpoint=new Dust2Game(states[200]);for(const s of states.slice(201)){checkpoint.step(s.input);assert.deepEqual(checkpoint.snapshot(),s);}
+const text=combinePrompt(DEFAULTS.global,dynamicPrompt(states));assert.ok(text.length<=4096);assert.match(text,/grenade bursts/);assert.match(text,/mission is complete/);
+console.log('PASS: assisted aim, occlusion, arch opening, ammo/reload, movement, delayed fixed-aim bursts, damage/death, swept bullets, flash, staged extraction and replay. Demo '+g.s.time.toFixed(2)+'s.');

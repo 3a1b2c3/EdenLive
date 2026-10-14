@@ -41,7 +41,7 @@ pytestmark = pytest.mark.ci_cpu
 def test_captured_ticks_follow_model_fps_not_a_fixed_24():
     """Sim stays 60 Hz; captured-frame spacing is the model's fps."""
     for fps, expected_end in ((16, 45), (24, 30), (8, 90)):
-        timeline = GameTimeline('boxed-in')
+        timeline = GameTimeline('freeze')
         chunk = timeline.begin_chunk(12, fps)
         assert chunk.simulation_tick_end == expected_end
         ticks = [frame.simulation_tick for frame in chunk.frames]
@@ -63,7 +63,7 @@ def test_condition_samples_align_with_latent_stride():
     divisible by the stride, so a global counter would shift the phase by one
     frame every chunk and a restarted rollout would open a frame short.
     """
-    timeline = GameTimeline('boxed-in')
+    timeline = GameTimeline('freeze')
     first = timeline.begin_chunk(9, 16)
     second = timeline.begin_chunk(12, 16)
 
@@ -75,7 +75,7 @@ def test_condition_samples_align_with_latent_stride():
 
 
 def test_condition_stride_survives_reset():
-    timeline = GameTimeline('boxed-in', condition_stride=4)
+    timeline = GameTimeline('freeze', condition_stride=4)
     timeline.begin_chunk(12, 24)
     timeline.reset()
     chunk = timeline.begin_chunk(12, 24)
@@ -89,7 +89,7 @@ def test_restarted_rollout_keeps_a_full_condition_set():
     9-frame causal one. Its condition frames must still be three, exactly as
     the first round's were, even though the timeline was not reset.
     """
-    timeline = GameTimeline('boxed-in')
+    timeline = GameTimeline('freeze')
     for index in range(14):
         timeline.begin_chunk(9 if index == 0 else 12, 16)
     # The in-flight successor is discarded on restart, then the round reopens.
@@ -106,7 +106,7 @@ def test_decode_data_url_returns_rgb():
 
 
 def test_capture_request_renders_every_frame():
-    timeline = GameTimeline('boxed-in')
+    timeline = GameTimeline('freeze')
     chunk = timeline.begin_chunk(8, 16)
     request = _chunk_capture_request(chunk)
     assert request['events'] == []
@@ -118,7 +118,7 @@ def test_capture_request_renders_every_frame():
 
 
 def test_expand_decodes_every_ui_frame_and_conditions_on_the_latent_subset():
-    timeline = GameTimeline('boxed-in')
+    timeline = GameTimeline('freeze')
     chunk = timeline.begin_chunk(9, 16)
     frames = _expand_captured_frames(chunk, _stub_capture(chunk))
     assert [frame.ui_frame[0, 0, 0] for frame in frames] == [10, 20, 30, 40, 50, 60, 70, 80, 90]
@@ -132,21 +132,21 @@ def test_expand_decodes_every_ui_frame_and_conditions_on_the_latent_subset():
 
 
 def test_expand_rejects_frame_count_mismatch():
-    timeline = GameTimeline('boxed-in')
+    timeline = GameTimeline('freeze')
     chunk = timeline.begin_chunk(4, 16)
     with pytest.raises(RuntimeError, match='3 frames'):
         _expand_captured_frames(chunk, _stub_capture(chunk)[:3])
 
 
 def test_hud_envelope_forwards_state_verbatim():
-    payload = envelope('boxed-in', 12, {'moves': 3, 'helpOpen': True})
+    payload = envelope('freeze', 12, {'moves': 3, 'helpOpen': True})
     assert payload == {
         'type': 'game_ui',
-        'slug': 'boxed-in',
+        'slug': 'freeze',
         'frame_id': 12,
         'state': {'moves': 3, 'helpOpen': True},
     }
-    assert envelope('subway-run', 1, None)['state'] is None
+    assert envelope('tracer', 1, None)['state'] is None
 
 
 def test_game_input_payloads_pulse_overlay_actions():
@@ -360,8 +360,8 @@ def stub_renderer(monkeypatch):
 
 
 def test_capture_worker_runs_on_its_own_thread_and_capture_waits(stub_renderer):
-    timeline = GameTimeline('boxed-in')
-    worker = GameCaptureWorker('boxed-in', width=832, height=480)
+    timeline = GameTimeline('freeze')
+    worker = GameCaptureWorker('freeze', width=832, height=480)
     try:
         pending = worker.submit(timeline.begin_chunk(12, 16))
         renderer = _wait_for_renderer(stub_renderer)
@@ -405,8 +405,8 @@ def test_capture_worker_runs_on_its_own_thread_and_capture_waits(stub_renderer):
 
 
 def test_one_worker_overlaps_successive_chunks(stub_renderer):
-    timeline = GameTimeline('boxed-in')
-    worker = GameCaptureWorker('boxed-in')
+    timeline = GameTimeline('freeze')
+    worker = GameCaptureWorker('freeze')
     try:
         first = worker.submit(timeline.begin_chunk(12, 16))
         renderer = _wait_for_renderer(stub_renderer)
@@ -430,8 +430,8 @@ def test_one_worker_overlaps_successive_chunks(stub_renderer):
 
 
 def test_capture_worker_keeps_one_browser_across_chunks(stub_renderer):
-    timeline = GameTimeline('boxed-in')
-    worker = GameCaptureWorker('boxed-in')
+    timeline = GameTimeline('freeze')
+    worker = GameCaptureWorker('freeze')
     try:
         for _ in range(3):
             pending = worker.submit(timeline.begin_chunk(12, 16))
@@ -506,7 +506,7 @@ def _pipeline_state(monkeypatch, *, rank: str, frames_by_step: dict[int, int]):
 
     monkeypatch.setenv('RANK', rank)
     config = SimpleNamespace(
-        game_slug='boxed-in',
+        game_slug='freeze',
         model_video_width=832,
         model_video_height=480,
     )

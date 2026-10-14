@@ -1,371 +1,187 @@
 {
   "games": [
     {
-      "slug": "subway-run",
-      "title": "Subway Run",
-      "description": "A three-lane station runner with parked trains, rooftop coins and low barriers. Change lanes, jump onto train roofs and slide beneath barriers to collect 10 coins before the end of the line.",
-      "prompt": "An open-air metro station with three parallel railway tracks, concrete side platforms, safety strips and structural columns. Parked subway carriages have metal panels, glass windows and flat roofs. Low maintenance barriers span individual tracks, with gold coins above the rails and train roofs. A runner in a sports shirt, cap, backpack and trainers occupies the track corridor. The long station walls frame a clear blue sky, with natural midday sunlight and crisp shadows across the sleepers and platforms.",
-      "cover_prompt": "A close rear view of a runner in a green sports shirt, yellow cap, magenta backpack and blue trousers standing on the center track of an open-air metro station. Three parallel tracks with wooden sleepers recede into the distance; two gold coins hover above the center rails in the middle ground, and parked subway carriages sit far ahead on the center and right tracks while the left track stays open. Orange concrete platforms and tall teal station walls run along both sides beneath a clear blue sky, hard midday sunlight and crisp shadows.",
+      "slug": "freeze",
+      "title": "Cryo Crossing",
+      "description": "Freeze stepping stones across a lava lake and reach the far platform.",
+      "prompt": "First-person traversal of a volcanic cavern above a lava lake. A freeze gun remains visible in the foreground. Small stepping stones lead toward a raised exit platform. Maintain the same cavern layout and weapon identity throughout.",
+      "cover_prompt": "A gun overlooks a lava lake inside a cavern. Small rocky outcrops form a route toward a raised platform.",
       "cover": "cover.png",
       "entry": "main.js",
       "vendor": {
-        "three": "0.161.0"
-      },
-      "controls": [
-        "A / D / Left / Right: change lanes",
-        "Space / W / Up: jump",
-        "S / Down: slide",
-        "R: restart",
-        "Touch buttons: change lanes, jump and slide"
-      ],
-      "modules": [
-        "/assets/user-interface/PrototypeShell.js",
-        "/assets/actor-motion/LaneRunnerMotionController.js",
-        "/assets/world/object/factory/CharacterVisualFactory.js",
-        "/assets/world/object/factory/TrainVisualFactory.js"
-      ]
-    },
-    {
-      "slug": "boxed-in",
-      "title": "Boxed In",
-      "description": "A quiet courtyard Sokoban: walk the garden keeper around an 8-by-7 yard and push both wooden crates onto the marked tiles. You can push one crate at a time but never pull; a crate against the wrong wall is stuck. Undo, restart, or ask for a hint.",
-      "prompt": "Clear daylight over a small enclosed courtyard, seen from an elevated three-quarter view above a tiled stone floor. Low garden walls enclose the paving, with a short masonry pillar at the centre of the yard. Two wooden packing crates rest on the tiles, and two square brass plates are inlaid in the paving nearby. A garden keeper in a work shirt, trousers and a brimmed hat occupies an open tile. Cypress and shrub planters stand just outside the walls, with a strip of grass along one edge. Clear blue sky, hard midday sun and crisp shadows on the stone.",
-      "cover_prompt": "Clear daylight on a small enclosed courtyard, seen from an elevated three-quarter camera looking down across a yellow tiled floor on a terracotta plinth. A garden keeper in a teal work shirt, dark blue trousers and a dark brimmed hat with an orange band stands on a sunlit tile in the left-centre of the yard; two orange wooden packing crates sit toward the middle, and two square brass plates are inlaid in the paving further to the right. A short green masonry pillar stands near the centre, low green garden walls wrap the rectangle, and magenta planters with cypress and shrubs sit just outside the walls along the near and far edges, with a strip of grass along one side. Clear blue sky, hard midday sun, crisp shadows.",
-      "cover": "cover.png",
-      "entry": "main.js",
-      "vendor": {
-        "three": "0.161.0"
-      },
-      "controls": [
-        "WASD / arrow keys: move one tile",
-        "Click a reachable empty tile: walk there",
-        "Z: undo",
-        "H: hint",
-        "R: restart",
-        "Touch buttons: move, undo and hint"
-      ],
-      "modules": [
-        "/assets/user-interface/PrototypeShell.js",
-        "/assets/world/object/factory/CharacterVisualFactory.js",
-        "/assets/world/object/factory/TreeVisualFactory.js"
-      ]
-    },
-    {
-      "slug": "moonstone-run",
-      "title": "Moonstone Run",
-      "description": "The same moonstone collectathon as the original, rendered with box platforms, a boxy robot and disc coins. Hop the seven stones, gather all twelve coins, and stay on the tops — slip into the mist and the run is lost.",
-      "prompt": "Clear daylight on a high rocky plateau, seen from a camera behind and above a small white robot among flat-topped pale boulders standing over a deep mist-filled ravine. A course of large gritty stone tops — a long ridge, stepped slabs, a lookout rock and a slender spire — steps upward across the gaps, with a small steel beacon mast on the highest rock, golden coins hanging in the air above the stone and dark weathered rubble along the crumbling ledges. Bare stone, thin mist in the shaded gaps, blue sky and hard sunlight with crisp shadows.",
-      "cover_prompt": "Clear daylight on a high rocky plateau, seen from a camera behind and above a small white robot standing on a flat-topped pale boulder. A course of large flat-topped rocks — a long ridge, stepped slabs, a lookout rock and a slender spire — steps upward across a deep ravine filled with thin white mist, with a small steel beacon mast on the highest rock; golden coins hang in the air above the stone tops and dark weathered rubble litters the ledges. Blue sky, hard sunlight, crisp shadows on bare gritty stone.",
-      "cover": "cover.png",
-      "entry": "main.js",
-      "vendor": {
-        "three": "0.161.0"
-      },
-      "controls": [
-        "WASD or arrow keys: move across the world",
-        "Space: jump once when grounded",
-        "R: restart the round"
-      ],
-      "modules": [
-        "/assets/user-interface/PrototypeShell.js",
-        "/assets/actor-motion/character/WorldCardinalCharacterMotionController.js",
-        "/assets/world/environment/BoxObstacleField.js",
-        "/assets/world/object/factory/RockVisualFactory.js",
-        "/assets/camera/PositionFollowCameraRig.js"
-      ]
-    },
-    {
-      "slug": "neon-circuit",
-      "title": "Neon Circuit",
-      "description": "The same three-lap neon circuit as the original, rendered with box cars, block towers and simplified palm trees. Steer, keep the throttle pinned, grab green boost packs, and finish first before a rival, the 55-second clock, or a third collision ends the race.",
-      "prompt": "Bright midday sun over a closed-off city street circuit, seen from a low chase camera behind a sports car on grey asphalt between white lane lines. The two-lane road runs through a canyon of glass office towers, roadside palms and billboards, with concrete barriers and painted kerbs along the shoulders and corners and a steel gantry carrying race banners over the black-and-white start line; three rival race cars are out on the circuit and flat green boost markers lie on the tarmac. Clear blue sky with thin high cloud, hard sunlight, crisp shadows and heat shimmer over the road.",
-      "cover_prompt": "Bright midday sun over a closed-off city street circuit, seen from a low camera just behind a sports car sitting on grey asphalt at a black-and-white chequered start line. A steel gantry with race banners spans the two-lane road, concrete barriers and painted kerbs run along both shoulders, and glass office towers, palm trees and billboards line the street ahead; three rival race cars are already away in the distance and flat green boost markers lie on the tarmac. Clear blue sky with thin high cloud, hard sunlight, crisp shadows.",
-      "cover": "cover.png",
-      "entry": "main.js",
-      "vendor": {
-        "three": "0.161.0"
-      },
-      "controls": [
-        "W or ArrowUp: throttle",
-        "S or ArrowDown: brake",
-        "A/D or ArrowLeft/ArrowRight: steer",
-        "R: restart the race"
-      ],
-      "modules": [
-        "/assets/user-interface/PrototypeShell.js",
-        "/assets/user-interface/GameUiFactory.js",
-        "/assets/world/object/factory/VehicleVisualFactory.js",
-        "/assets/world/object/factory/BuildingVisualFactory.js",
-        "/assets/world/object/factory/TreeVisualFactory.js"
-      ]
-    },
-    {
-      "slug": "dead-rush",
-      "title": "DEAD RUSH · City Rush",
-      "description": "The same city-rush rules as the original, rendered with simplified box-and-cylinder assets: a yellow coupe, block buildings and blocky pedestrians on a street grid. Launch pedestrians for 100 points, second hits kill, buildings drain durability — reach 600 before the car is wrecked.",
-      "prompt": "Bright midday sunlight over a real city block, seen from an elevated chase camera above a dark yellow sports coupe on a grid of sunlit streets. Grey asphalt roads marked with yellow centre dashes and white crosswalk bars run between low flat-roofed concrete shops with painted signs and awnings, kerbs, pavements and street lamps along both sides; pedestrians in everyday clothes and work uniforms stand along the walkways, each over a faint coloured ring painted on the ground. Clear blue sky, crisp shadows, sharp daylight on grey asphalt.",
-      "cover_prompt": "Bright midday sunlight over a real city block seen from a low elevated camera looking down the street at a shallow angle. A dark yellow sports coupe rolls along clean grey asphalt marked with yellow centre dashes and white crosswalk bars; low flat-roofed concrete shops with painted signs, awnings and street lamps line both kerbs, and a handful of pedestrians in everyday clothes and work uniforms — a nurse, a firefighter, a police officer, a construction worker — walk the sunlit pavements, each standing on a faint coloured ring painted on the ground. Clear blue sky, hard sunlight, crisp shadows, no haze.",
-      "cover": "cover.png",
-      "entry": "main.js",
-      "vendor": {
-        "three": "0.161.0"
-      },
-      "controls": [
-        "WASD / arrow keys: throttle, reverse, steer",
-        "Space: brake",
-        "Shift: boost",
-        "P: pause",
-        "R: restart",
-        "M: toggle sound"
-      ],
-      "modules": [
-        "/assets/actor-motion/ground-vehicle/ArcadeCarMotionController.js",
-        "/assets/world/environment/PlanarObstacleCollision.js",
-        "/assets/user-interface/PrototypeShell.js",
-        "/assets/world/object/factory/CharacterVisualFactory.js",
-        "/assets/world/object/factory/VehicleVisualFactory.js",
-        "/assets/world/object/factory/BuildingVisualFactory.js"
-      ]
-    },
-    {
-      "slug": "nightfang",
-      "title": "Nightfang",
-      "description": "A side-scrolling street brawler: chain punches, land heavy blows and dodge the vampire wardens. Defeat both wardens to open the gate, then face a dragon with claw attacks and a sweeping fire breath.",
-      "prompt": "An urban shopping street viewed from an elevated side angle, with a lone fighter, two cloaked vampire wardens and a large winged dragon beyond a metal gate. Concrete storefronts with painted signs, recessed doors, rows of glass windows and flat roof ledges line the pavement. Street lamps, utility bins, kerbstones and road markings define the broad roadway; taller buildings form the distant skyline. The fighter wears gloves and a fitted sports jacket. Clear blue sky, natural midday sunlight and crisp contact shadows.",
-      "cover_prompt": "An elevated side view of a gloved fighter standing on the left of a broad urban roadway, with a cloaked vampire further down the street to the right and a second cloaked vampire still further along the block. Concrete shop facades fill the background, with rows of glass windows, recessed doors, roof ledges and a painted sign reading NIGHTFANG. Two street lamps and utility bins line the kerb behind them. Lane dashes and paving seams cross the street beneath clear blue sky, hard midday sunlight and crisp contact shadows.",
-      "cover": "cover.png",
-      "entry": "main.js",
-      "vendor": {
-        "three": "0.161.0"
-      },
-      "controls": [
-        "WASD / arrow keys: move",
-        "J / Space: punch",
-        "K: heavy attack",
-        "Shift / L: dodge",
-        "P / Escape: pause or resume",
-        "R: restart"
-      ],
-      "modules": [
-        "/assets/user-interface/PrototypeShell.js",
-        "/assets/world/object/factory/CharacterVisualFactory.js",
-        "/assets/world/object/factory/FantasyCreatureVisualFactory.js"
-      ]
-    },
-    {
-      "slug": "neon-clash",
-      "title": "NEON CLASH · Street Duel",
-      "description": "A side-view street fight: move, jump, punch, kick and guard as Kai against the CPU rival Raze. Attacks have startup, hit and recovery; guarded blows deal less damage. Knock the rival out to win, or lose if your own health hits zero.",
-      "prompt": "Clear midday sunlight over a city street, seen from a side-on camera looking across a sunlit asphalt roadway. A concrete sidewalk and kerb run along the far side, in front of a low arcade storefront with shuttered bays, a glass door and a painted AFTER HOURS sign. A taller painted building stands to the right with a vertical NEON letter sign and a vending machine at the pavement. Two street lamps stand at either end of the block, and a row of office slabs fills the skyline behind. Two martial artists occupy the roadway: a fighter in a pale gi on the left, a fighter in a dark gi on the right, facing each other across a few metres of asphalt marked with dashed lane lines. Flat blue sky, hard midday sun, crisp shadows.",
-      "cover_prompt": "Clear midday sunlight on a city street, seen from a side-on camera looking across the roadway. A martial artist in a pale cream gi stands on the left of the frame, and a martial artist in a dark gi stands on the right, both facing each other with several metres of asphalt between them. Behind them a low arcade storefront carries a painted AFTER HOURS sign, shuttered shop bays and a glass door; a taller building to the right holds a vertical NEON letter sign and a vending machine. Street lamps stand at both ends of the block, a concrete sidewalk and kerb run along the far side, and office slabs fill the skyline. Dashed lane marks lie on the asphalt. Flat blue sky, hard sunlight, crisp shadows.",
-      "cover": "cover.png",
-      "entry": "main.js",
-      "vendor": {
-        "three": "0.161.0"
-      },
-      "controls": [
-        "A / D or arrows: move",
-        "W / Up / Space: jump",
-        "J: punch",
-        "K: kick",
-        "L: guard",
-        "P / Escape: pause or resume",
-        "R: restart"
-      ],
-      "modules": [
-        "/assets/user-interface/PrototypeShell.js",
-        "/assets/gameplay/ResourcePool.js",
-        "/assets/world/object/factory/CharacterVisualFactory.js"
-      ]
-    },
-    {
-      "slug": "ashen-wilds",
-      "title": "Ashen Wilds",
-      "description": "Third-person melee on a highland meadow: walk a worn path toward a stone circle, spend stamina to strike and roll, lock onto a wild goat and the Stone Warden, and defeat the Warden before your health is gone.",
-      "prompt": "Clear midday sunlight over a highland meadow, seen from behind a plate-armoured knight on a worn dirt path. Green grass and an ochre trail lead toward a distant circle of standing stones, with pines, firs, leafless trees and scattered rocks along both sides. A wayside shrine with an ember bowl and an upright sword sits near the path. Two ruined watchtowers and a broken stone gate occupy the far ridge. A horned goat stands on the grass nearby, and a tall armoured skeletal warden stands inside the stone circle. Flat blue sky, hard midday sun, crisp shadows, no haze.",
-      "cover_prompt": "Clear midday sunlight over a highland meadow, seen from a close chase camera just behind a plate-armoured knight. The knight's helm sits near the centre of the frame and the feet meet the bottom edge, back to camera, sword and round shield in hand, steel plate across the back. A pale-coated horned goat stands on the grass ahead-right. The dirt path runs toward a distant ring of standing stones, ruined watchtowers, a broken gate and a tall skeletal warden. Flat blue sky, hard sunlight, crisp shadows, no haze.",
-      "cover": "cover.png",
-      "entry": "main.js",
-      "vendor": {
-        "three": "0.161.0"
+        "three-demo": "npm:three@0.186.1"
       },
       "controls": [
         "WASD: move",
-        "Shift: sprint",
-        "J: strike",
-        "Space: roll",
-        "Q: lock on",
-        "Arrow keys: orbit camera",
+        "Arrow keys: look / aim",
+        "F: Freeze",
+        "Space: jump",
         "P / Escape: pause",
-        "R: restart"
+        "Play again button: restart"
       ],
-      "modules": [
-        "/assets/user-interface/PrototypeShell.js",
-        "/assets/world/object/factory/CharacterVisualFactory.js",
-        "/assets/world/object/factory/QuadrupedVisualFactory.js",
-        "/assets/world/object/factory/FantasyCreatureVisualFactory.js",
-        "/assets/world/object/factory/TreeVisualFactory.js",
-        "/assets/world/object/factory/RockVisualFactory.js"
-      ]
-    },
-    {
-      "slug": "ashen-vow",
-      "title": "ASHEN VOW · Escape from Erebus",
-      "description": "A circular-arena combat: slash a three-hit combo, dash through telegraphed strikes, and detonate an infernal nova. Defeat two skeletal wardens to unseal Asterion, then bring down the horned guardian so the Last Gate opens.",
-      "prompt": "Clear midday sunlight over a circular stone courtyard, seen from an elevated third-person camera looking across the floor toward a far gateway. A round paved arena sits above a sunken lava moat, ringed by stone columns and brazier bowls. Gold inlay marks the paving rings, and a carved sigil lies on the floor before the gate. A warrior in a crimson cloak, with a gold sword and a round shield, stands on the near side of the arena. Two skeletal wardens occupy the middle of the floor, one in a violet cloak and one in a rust-red cloak. A sealed stone gate with gold fittings stands on the far side. Clear blue sky, hard midday sun, crisp shadows.",
-      "cover_prompt": "Clear midday sunlight on a circular stone courtyard, seen from an elevated camera looking from the near side down toward a far gateway. A warrior in a crimson cloak, gold sword and round shield stands in the lower centre of the frame on the paved arena, facing the gate. Two skeletal wardens stand further in — a violet-cloaked warden to the left of centre and a rust-red-cloaked warden to the right. Stone columns and brazier bowls ring the platform above a sunken lava moat. The far gate is sealed with dark stone and gold bars, and a carved floor sigil lies in front of it. Clear blue sky, hard sunlight, crisp shadows.",
-      "cover": "cover.png",
-      "entry": "main.js",
-      "vendor": {
-        "three": "0.161.0"
-      },
-      "controls": [
-        "WASD / arrow keys: move",
-        "J: slash",
-        "Space: dash",
-        "K: nova",
-        "P / Escape: pause or resume",
-        "R: restart"
-      ],
-      "modules": [
-        "/assets/user-interface/PrototypeShell.js",
-        "/assets/math/BufferGeometryUtils.js",
-        "/assets/world/object/factory/CharacterVisualFactory.js",
-        "/assets/world/object/factory/FantasyCreatureVisualFactory.js"
-      ]
-    },
-    {
-      "slug": "moorland-archer",
-      "title": "Moorland Archer",
-      "description": "A third-person archery adventure on open rolling hills: cross the meadow from the start rise toward the ancient shrine on the far plateau, draw the bow with B and loose auto-aimed arrows at the club-wielding monsters guarding its door. Kill every guard to win; if your five hearts run out, the round is lost.",
-      "prompt": "Clear midday sunlight over rolling green moorland, seen from a third-person chase view behind a lone hooded archer in a green tunic carrying a bow and a back quiver. A winding dirt path runs from a grassy rise through grass tufts, scattered oak and pine groves and boulders toward a grey domed stone shrine with glowing orange runes on its doorway pillars, set on a round plateau to the north. A lake and a shallow stream cut the valley to the west, a campfire ring of stones sits near the shrine approach, five red-roofed village houses stand far to the east, and snow-capped mountains ring the horizon. Three club-wielding monsters idle on the slope before the shrine door. Clear blue sky, hard midday sun, crisp shadows.",
-      "cover_prompt": "Clear midday sunlight over rolling green moorland, seen from a low chase camera just behind a lone archer in a green tunic and pointed green hood, bow in hand and a leather quiver across the back, standing on a pale dirt path in the centre of the frame. The path runs straight uphill between grass tufts to a dark domed stone shrine with an orange-lit doorway on the far rise. A grey boulder and a blue lake lie to the left beyond oak and pine trees, more oaks and red-roofed houses stand to the right, and snow-capped grey mountains fill the horizon. Clear blue sky, hard sunlight, crisp shadows.",
-      "cover": "cover.png",
-      "entry": "main.js",
-      "vendor": {
-        "three": "0.161.0"
-      },
-      "controls": [
-        "WASD: move",
-        "Shift: sprint",
-        "IJKL: orbit camera",
-        "B (hold then release): draw and loose an arrow at the screen-center target",
-        "P / Escape: pause",
-        "R: restart"
-      ],
-      "modules": [
-        "/assets/user-interface/PrototypeShell.js",
-        "/assets/camera/OrbitFollowCameraRig.js",
-        "/assets/actor-motion/character/CameraRelativeCharacterMotionController.js",
-        "/assets/gameplay/ResourcePool.js",
-        "/assets/world/environment/TerrainMeshFactory.js",
-        "/assets/world/object/factory/CharacterVisualFactory.js",
-        "/assets/world/object/factory/FantasyCreatureVisualFactory.js",
-        "/assets/world/object/factory/TreeVisualFactory.js",
-        "/assets/world/object/factory/HouseVisualFactory.js",
-        "/assets/world/object/factory/RockVisualFactory.js"
-      ]
-    },
-    {
-      "slug": "city-walk",
-      "title": "City Walk",
-      "description": "A third-person stroll through an open city grid: walk the sidewalks and crosswalks among autonomous pedestrians and cars that brake for anyone in their path, and step into glowing ground rings for 10 points and 8 extra seconds each. Reach 100 points before the city clock runs out to win.",
-      "prompt": "Clear midday sunlight over a compact city grid, seen from behind a walker in a red shirt and navy trousers. Two-lane asphalt streets with dashed yellow centre lines and zebra crossings frame nine blocks; concrete sidewalks carry street lamps and trees. Apartments, offices, shops, a hotel and glass towers fill eight blocks, and the central block is a lawn park with a stone fountain. Sedans, taxis, vans and a minibus stand in the lanes, pedestrians stand on the sidewalks, and cyan circular markers lie on the pavement. Clear blue sky, hard sun, crisp shadows.",
-      "cover_prompt": "Clear midday sunlight over a city park, seen from a low chase camera behind a walker in a red shirt and navy trousers on a wide concrete sidewalk, back to camera. A round stone fountain stands on the green lawn ahead, a cyan circular marker on the grass before it and two more near the far kerb. Autumn and green trees and street lamps ring the park; beyond, zebra-striped streets hold a green sedan, a blue hatchback and a dark SUV before tall apartment and office buildings. Clear blue sky, hard sunlight, crisp shadows.",
-      "cover": "cover.png",
-      "entry": "main.js",
-      "vendor": {
-        "three": "0.161.0"
-      },
-      "controls": [
-        "WASD: walk (camera-relative)",
-        "IJKL: orbit camera",
-        "P / Escape: pause",
-        "R: restart"
-      ],
-      "modules": [
-        "/assets/user-interface/PrototypeShell.js",
-        "/assets/camera/OrbitFollowCameraRig.js",
-        "/assets/actor-motion/character/CameraRelativeCharacterMotionController.js",
-        "/assets/gameplay/RoundClock.js",
-        "/assets/math/RandomUtils.js",
-        "/assets/math/BufferGeometryUtils.js",
-        "/assets/world/object/factory/BuildingVisualFactory.js",
-        "/assets/world/object/factory/CharacterVisualFactory.js",
-        "/assets/world/object/factory/TreeVisualFactory.js",
-        "/assets/world/object/factory/VehicleVisualFactory.js"
-      ]
-    },
-    {
-      "slug": "lantern-yard",
-      "title": "Lantern Yard",
-      "description": "Walk around a walled garden collecting five glowing lanterns while avoiding a patrolling guard.",
-      "prompt": "A square walled courtyard garden at dusk: stone perimeter walls, a central fountain, hedges and planters forming loose paths, a few trees, stone benches and gravel walkways. Five glowing lanterns sit in different corners and nooks of the garden. A guard in a dark uniform patrols a loop between the hedges.",
-      "cover_prompt": "Eye-level, front-facing wide view of an enclosed yard at dusk. A broad open ground fills the lower two-thirds as the main walkable foreground. Midground: a low perimeter wall spans the full width, with one lantern at the far left and one at the far right. Two trees stand along the wall: a larger one at left-center and a smaller one at right-center. Between them sit a single small standing figure, a central hedge enclosure holding a pedestal with one lantern above it, and a low hedge segment. Open sky lies above.",
-      "cover": "cover.png",
-      "entry": "index.html",
-      "host": "standalone",
-      "vendor": {
-        "three": "0.161.0"
-      },
-      "controls": [
-        "WASD / arrow keys: walk relative to the camera",
-        "Mouse (click to lock) or Q/E: orbit look",
-        "Shift: sprint",
-        "R: restart the round"
-      ],
-      "modules": [
-        "/assets/math/TimeUtils.js",
-        "/assets/user-interface/PrototypeShell.js",
-        "/assets/camera/OrbitFollowCameraRig.js",
-        "/assets/actor-motion/character/CameraRelativeCharacterMotionController.js",
-        "/assets/behavior/WaypointProgressTracker.js",
-        "/assets/gameplay/ResourcePool.js"
-      ],
-      "restart_keys": [
-        "keyr"
-      ],
-      "event_prompts": {},
       "source": {
-        "skill": "game-prototype-turbo",
-        "run": "runs/step3/acceptance"
+        "repository": "eden-game-demo-local",
+        "game": "freeze",
+        "cover": "cover-5c1b58b4-9b70-4c11-9215-621112fe1b48"
       }
     },
     {
-      "slug": "nitro-kart",
-      "title": "Nitro Kart Rush",
-      "description": "Steer a go-kart around a closed loop track, hold drift through corners to charge the nitro gauge, and fire nitro boosts to overtake rival karts.",
-      "prompt": "A sunny cartoon city kart circuit: a closed loop asphalt track with red-white curbs, a few sweeping corners, a checkered start/finish gate with a banner, floating blue nitro boxes on the racing line, low barriers along the edges, and grandstands, palm trees, colorful buildings and balloons around it under a blue sky. The player's kart and three differently colored rival karts line up on the starting grid.",
-      "cover_prompt": "A rear-facing view down a kart racing track with a start gantry. In the foreground, two karts with helmeted drivers sit side by side, left and center-right. A third kart is partly hidden behind the left one. Two smaller karts with drivers sit in the midground near a checkered start line. A banner reading NITRO KART RUSH spans two posts above them. Barriers line both edges as the track curves left. Covered tiered grandstands and a tree stand on the right; a small house, palm trees, a tall tower and a balloon sit in the background.",
+      "slug": "spiders",
+      "title": "Spider Hollow",
+      "description": "Explore a torch-lit cavern and fight giant spiders with an axe.",
+      "prompt": "First-person exploration and axe combat inside a torch-lit stone cave. A single steel axe with a long wooden handle stays in the lower right foreground between swings, its handle extending below the image. The axe moves without visible hands, gloves or arms. Large brown eight-legged spiders crawl on the floor. Maintain the same winding cave, warm orange torches, cool stone walls, weapon and creature identities. No spiderwebs, text or HUD in the scene.",
+      "cover_prompt": "A large steel axe blade and its long wooden handle occupy the right foreground of a stone cave passage. The wooden handle extends below the bottom edge of the image. Only the axe is visible in the foreground, with no hands, gloves or arms. Large brown spiders stand on the rocky floor. Orange wall torches illuminate blue-grey rock walls and stalactites.",
       "cover": "cover.png",
-      "entry": "index.html",
-      "host": "standalone",
+      "entry": "main.js",
       "vendor": {
-        "three": "0.161.0"
+        "three-demo": "npm:three@0.186.1"
       },
       "controls": [
-        "W / Up: accelerate",
-        "S / Down: brake / reverse",
-        "A D / Left Right: steer",
-        "Shift (hold while steering): drift, fills the nitro gauge",
-        "Space: fire a nitro charge",
-        "R: restart after the race ends"
+        "WASD: move",
+        "Arrow keys: look / aim",
+        "F: Swing axe",
+        "Space: jump",
+        "P / Escape: pause",
+        "Play again button: restart"
       ],
-      "modules": [
-        "/assets/math/TimeUtils.js",
-        "/assets/user-interface/PrototypeShell.js",
-        "/assets/camera/PoseFollowCameraRig.js",
-        "/assets/gameplay/ResourcePool.js",
-        "/assets/world/object/factory/BuildingVisualFactory.js",
-        "/assets/world/object/factory/TreeVisualFactory.js"
-      ],
-      "restart_keys": [
-        "keyr"
-      ],
-      "event_prompts": {},
       "source": {
-        "skill": "game-prototype-turbo",
-        "run": "runs/step3/final"
+        "repository": "eden-game-demo-local",
+        "game": "spiders",
+        "cover": "cover-aa9751b3-63db-4cf0-a9d8-7af126aa951a"
+      }
+    },
+    {
+      "slug": "tracer",
+      "title": "Pulse Skirmish",
+      "description": "Fight street robots with twin pulse pistols, blink and recall.",
+      "prompt": "First-person dual-pistol combat in a sunlit stylized city street. Two compact white and orange pulse pistols with glowing cyan cores stay visible in the lower foreground. Red humanoid robots fight among blue cargo crates, ochre and teal buildings and small trees. Maintain weapon identity, street layout and enemy identities. Cyan player projectiles and orange enemy projectiles remain clearly visible. No text or HUD in the scene.",
+      "cover_prompt": "Two compact white and orange futuristic pistols with cyan energy cores occupy the lower left and lower right foreground. Red humanoid robots stand on a sunlit street between ochre and teal buildings. Blue cargo crates with orange straps and small trees line the street.",
+      "cover": "cover.png",
+      "entry": "main.js",
+      "vendor": {
+        "three-demo": "npm:three@0.186.1"
+      },
+      "controls": [
+        "WASD: move",
+        "Arrow keys: look / aim",
+        "F: Fire",
+        "Space: jump",
+        "SHIFT: Blink",
+        "E: Recall",
+        "R: Reload",
+        "P / Escape: pause",
+        "Play again button: restart"
+      ],
+      "source": {
+        "repository": "eden-game-demo-local",
+        "game": "tracer",
+        "cover": "cover-eab28482-2c04-4663-90fa-30bfd078c83b"
+      }
+    },
+    {
+      "slug": "bioshock",
+      "title": "Deepwater Shock",
+      "description": "Use electrical shocks and a pipe wrench in an underwater machine room.",
+      "prompt": "First-person electro bolt and pipe wrench combat in an underwater art deco machine room. Keep the same orange pipe wrench in the right hand and bare electrical left hand visible, teal tiled walls and floor, copper pipes, brass trim, warm lamps, underwater window and central generator. Hostile masked workers approach and attack with their hands. Electric shocks are bright blue; stunned enemies tremble with blue arcs. A shallow pool at the back conducts electricity. Defeated enemies remain on the floor. No text or HUD in the scene.",
+      "cover_prompt": "First-person view inside an underwater art deco machine room. A large orange steel pipe wrench held in the right hand fills the lower right foreground. An open left hand with faint blue electrical veins is visible at lower left. Two hostile masked workers in worn brown and purple work clothes stand ahead on teal floor tiles. Copper pipes, brass beams, boilers and warm lamps line the room. A blue underwater window is on the left wall and a large generator stands farther ahead on the right.",
+      "cover": "cover.png",
+      "entry": "main.js",
+      "vendor": {
+        "three-demo": "npm:three@0.186.1"
+      },
+      "controls": [
+        "WASD: move",
+        "Arrow keys: look / aim",
+        "F: Wrench",
+        "Space: jump",
+        "E: Electro bolt",
+        "P / Escape: pause",
+        "Play again button: restart"
+      ],
+      "source": {
+        "repository": "eden-game-demo-local",
+        "game": "bioshock",
+        "cover": "cover-4aafb801-cab4-4e92-b328-f65a938d48ac"
+      }
+    },
+    {
+      "slug": "godzilla",
+      "title": "Kaiju Rampage",
+      "description": "Breathe fire and stomp through a miniature city as a giant monster.",
+      "prompt": "Third-person elevated following camera behind exactly one giant dark green reptilian kaiju rampaging through a miniature city. There is only one monster in the entire scene, always the same continuous body with jagged dorsal plates and one long tail. Keep the same city layout. The monster breathes a continuous orange-yellow flame jet from its open mouth, burning buildings into chunks and dust. Stomps create ground shockwaves. Warm bronze defense towers fire slow visible orange cannon shells. Collapsed buildings remain as low piles of grey and brown angular concrete blocks and dust. Rubble has no scales, limbs, heads or tails. No additional monsters, duplicate bodies or monster-shaped debris appear. Destroyed buildings never reappear. No text, HUD or human figures.",
+      "cover_prompt": "Third-person elevated rear three-quarter view of a huge dark green Godzilla-like reptilian monster standing in a miniature city. Its full body, thick legs, short arms, jagged dorsal plates and long heavy tail are visible. Rectangular grey concrete buildings line broad empty streets. Some taller warm bronze defense towers have rooftop cannons and glowing amber beacons. Overcast daylight, muted blue-grey sky, no people, text or UI.",
+      "cover": "cover.png",
+      "entry": "main.js",
+      "vendor": {
+        "three-demo": "npm:three@0.186.1"
+      },
+      "controls": [
+        "WASD: move",
+        "Arrow keys: Aim",
+        "F: Breath",
+        "Space: Stomp",
+        "P / Escape: pause",
+        "Play again button: restart"
+      ],
+      "source": {
+        "repository": "eden-game-demo-local",
+        "game": "godzilla",
+        "cover": "cover-ea1583d6-34f5-403d-8514-03bd8f9a3991"
+      }
+    },
+    {
+      "slug": "arcadeduel",
+      "title": "Arcade Duel",
+      "description": "Fight a martial arts duel with combos, kicks and energy attacks.",
+      "prompt": "A side-view arcade fighting match between exactly two martial artists, one in blue on the left and one in orange on the right, on a raised teal arena platform with dark pillars behind them. Keep their identities and the arena consistent. Full bodies stay visible. Fast punches, spinning kicks, rising uppercuts, jumping and brief dash afterimages follow the fighters. Crescent energy projectiles fly horizontally and disappear on impact. Brief sparks mark contact. A blocked strike meets raised forearms; a missed strike does not hurt the other fighter. No additional fighters, weapons, text or HUD.",
+      "cover_prompt": "Two martial artists facing each other on a raised fighting platform. Both fighters stand with their fists raised. Pillars stand behind the platform.",
+      "cover": "cover.png",
+      "entry": "main.js",
+      "vendor": {
+        "three-demo": "npm:three@0.186.1"
+      },
+      "controls": [
+        "A / D: move",
+        "F: Combo",
+        "Space: jump",
+        "G: Guard",
+        "E: Uppercut · 15 energy",
+        "R: Wave · 30 energy",
+        "SHIFT: Dash · 10 energy",
+        "P / Escape: pause",
+        "Play again button: restart"
+      ],
+      "source": {
+        "repository": "eden-game-demo-local",
+        "game": "arcadeduel",
+        "cover": "cover-28cc608d-6e97-48e7-af4e-58c545f0fd84"
+      }
+    },
+    {
+      "slug": "dust2",
+      "title": "Desert Crossfire",
+      "description": "Clear a desert passage with a rifle, cover and flashbangs.",
+      "prompt": "First-person rifle combat through a sunlit sandy desert alley, stone arch, courtyard and right-hand passage. Keep the same rifle, hands, architecture and wooden crates. Helmeted soldiers in green fatigues aim, fire short bursts, react to hits and fall when defeated. Cover blocks gunfire. Rifle shots show brief muzzle flashes, recoil, ejected casings and impact sparks. Flashbangs burst briefly and stunned soldiers stop firing. Keep the geography and enemy identities consistent, no extra soldiers or on-screen text, no HUD or blood.",
+      "cover_prompt": "A rifle held by two hands in the foreground of a desert alley. Armed soldiers stand ahead among wooden crates. An arched gateway, shuttered buildings and barrels line the alley.",
+      "cover": "cover.png",
+      "entry": "main.js",
+      "vendor": {
+        "three-demo": "npm:three@0.186.1"
+      },
+      "controls": [
+        "WASD: move",
+        "Arrow keys: Aim",
+        "F: Fire",
+        "Space: jump",
+        "R: Reload",
+        "E: Flashbang",
+        "P / Escape: pause",
+        "Play again button: restart"
+      ],
+      "source": {
+        "repository": "eden-game-demo-local",
+        "game": "dust2",
+        "cover": "cover-b456b17c-d789-4c08-8d00-98d86c47e910"
       }
     }
   ]

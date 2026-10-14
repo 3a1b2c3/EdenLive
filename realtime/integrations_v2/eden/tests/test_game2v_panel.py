@@ -63,7 +63,7 @@ def _config(slug: str, cover: Path) -> Game2VSessionConfig:
     )
 
 
-def _state(slug: str = "subway-run", *, cover: Path | None = None) -> Game2VModelState:
+def _state(slug: str = "tracer", *, cover: Path | None = None) -> Game2VModelState:
     cover = cover or Path("/tmp/old.png")
     state = Game2VModelState.__new__(Game2VModelState)
     state.config = _config(slug, cover)
@@ -142,33 +142,32 @@ def test_extensions_manifest_lists_panel_script(isolated_extension):
 
 
 def test_panel_lists_registered_games_and_rewrites_play_page(isolated_extension):
-    session = SimpleNamespace(model_loop=SimpleNamespace(state=_state("subway-run")))
+    session = SimpleNamespace(model_loop=SimpleNamespace(state=_state("tracer")))
     register_game2v_panel(session)
 
     async def body(client):
         listed = await client.get("/ext/game2v/games")
         payload = await listed.json()
-        assert payload["current"] == "subway-run"
+        assert payload["current"] == "tracer"
         slugs = {game["slug"] for game in payload["games"]}
-        assert "subway-run" in slugs
-        assert "boxed-in" in slugs
-        page = await client.get("/ext/game2v/play/subway-run")
+        assert "tracer" in slugs
+        assert "freeze" in slugs
+        page = await client.get("/ext/game2v/play/tracer")
         html = await page.text()
         assert page.status == 200
         assert "window.gameSlug=" in html
         assert "/ext/game2v/host/play-page.js" in html
         assert "/shared/host/play-page.js" not in html
         # The game's own asset tree, not the shared games/assets/.
-        assert '"/assets/": "/game/subway-run/assets/"' in html
-        assert '"three": "/vendor/three.module.js"' in html
-        subway = next(game for game in payload["games"] if game["slug"] == "subway-run")
-        assert subway["cover"] == "files/subway-run/cover.png"
+        assert '"/assets/": "/game/tracer/assets/"' in html
+        assert '"three": "/vendor/three-demo.module.js"' in html
+        subway = next(game for game in payload["games"] if game["slug"] == "tracer")
+        assert subway["cover"] == "files/tracer/cover.png"
         # A hand-ported game has no generation source; a workbench game does.
         assert subway["source"] == ""
-        made = next(game for game in payload["games"] if game["slug"] == "nitro-kart")
-        assert made["source"] == "game-prototype-turbo"
+        assert slugs == {"freeze", "spiders", "tracer", "bioshock", "godzilla", "arcadeduel", "dust2"}
         assert "/game/game/" not in html
-        assert '<base href="/game/subway-run/">' in html
+        assert '<base href="/game/tracer/">' in html
         assert "/shared/recorder/" not in html
         script = await client.get("/ext/game2v/panel.js")
         assert script.status == 200
@@ -181,32 +180,32 @@ def test_panel_lists_registered_games_and_rewrites_play_page(isolated_extension)
 
 
 def test_panel_switch_sets_pending_slug(isolated_extension):
-    state = _state("subway-run")
+    state = _state("tracer")
     session = SimpleNamespace(model_loop=SimpleNamespace(state=state))
     register_game2v_panel(session)
 
     async def body(client):
         bad = await client.post("/ext/game2v/switch", json={"slug": "not-a-game"})
         assert bad.status == 400
-        ok = await client.post("/ext/game2v/switch", json={"slug": "boxed-in"})
+        ok = await client.post("/ext/game2v/switch", json={"slug": "freeze"})
         assert ok.status == 200
         payload = await ok.json()
-        assert payload["current"] == "boxed-in"
-        assert state.pending_game_slug == "boxed-in"
-        same = await client.post("/ext/game2v/switch", json={"slug": "subway-run"})
+        assert payload["current"] == "freeze"
+        assert state.pending_game_slug == "freeze"
+        same = await client.post("/ext/game2v/switch", json={"slug": "tracer"})
         assert same.status == 200
         assert state.pending_game_slug is None
         # "Play again" rewinds even though the slug has not changed.
-        again = await client.post("/ext/game2v/switch", json={"slug": "subway-run", "restart": True})
+        again = await client.post("/ext/game2v/switch", json={"slug": "tracer", "restart": True})
         assert again.status == 200
-        assert state.pending_game_slug == "subway-run"
+        assert state.pending_game_slug == "tracer"
         assert state.pending_game_restart is True
 
     asyncio.run(_with_client(body))
 
 
 def test_panel_home_rearms_the_gate(isolated_extension):
-    state = _state("subway-run")
+    state = _state("tracer")
     state.config = replace(state.config, wait_for_start=True)
     state.start_requested = True
     state.started = True
@@ -227,7 +226,7 @@ def test_panel_home_rearms_the_gate(isolated_extension):
 
 
 def test_panel_metrics_reports_completed_chunk_and_clears_on_switch(isolated_extension):
-    state = _state("subway-run")
+    state = _state("tracer")
     state.browser_metrics_lock = threading.Lock()
     state.browser_metrics_epoch = 0
     state.browser_metrics = None
@@ -240,7 +239,7 @@ def test_panel_metrics_reports_completed_chunk_and_clears_on_switch(isolated_ext
 
         _publish_browser_metrics(state, {"chunk_fps": 12.5, "model_step_wall_s": 2.0}, epoch=0)
         snapshot = browser_metrics_snapshot(state)
-        assert snapshot["slug"] == "subway-run"
+        assert snapshot["slug"] == "tracer"
         snapshot["chunk_fps"] = 0  # A caller cannot mutate the published result.
         response = await client.get("/ext/game2v/metrics")
         model = (await response.json())["model"]
@@ -248,7 +247,7 @@ def test_panel_metrics_reports_completed_chunk_and_clears_on_switch(isolated_ext
         assert model["model_step_ms"] == 2000.0
         assert model["age_s"] >= 0
 
-        request_game_switch(state, "boxed-in")
+        request_game_switch(state, "freeze")
         _publish_browser_metrics(state, {"chunk_fps": 9.0, "model_step_wall_s": 1.0}, epoch=0)
         cleared = await client.get("/ext/game2v/metrics")
         assert await cleared.json() == {"model": None}
@@ -267,16 +266,16 @@ def test_switch_game_rewinds_rollout_and_changes_slug(tmp_path, monkeypatch):
     )
     monkeypatch.setitem(sys.modules, "eden.apps.game2v.game14b", fake)
     monkeypatch.setattr("eden.apps.game2v.session.is_distributed_initialized", lambda: False)
-    state = _state("subway-run", cover=cover)
+    state = _state("tracer", cover=cover)
     closed = []
     state.game_capture = SimpleNamespace(close=lambda: closed.append(True))
-    request_game_switch(state, "boxed-in")
-    assert state.pending_game_slug == "boxed-in"
+    request_game_switch(state, "freeze")
+    assert state.pending_game_slug == "freeze"
     _apply_pending_game_switch(state)
-    assert state.config.game_slug == "boxed-in"
-    assert state.config.conditioning.prompt == "scene for boxed-in"
+    assert state.config.game_slug == "freeze"
+    assert state.config.conditioning.prompt == "scene for freeze"
     assert state.config.conditioning.first_frame_path == cover
-    assert state.game_timeline.game_slug == "boxed-in"
+    assert state.game_timeline.game_slug == "freeze"
     assert state.cache is None
     assert state.anchor_frame is None
     assert state.ar_index == 0
@@ -285,28 +284,28 @@ def test_switch_game_rewinds_rollout_and_changes_slug(tmp_path, monkeypatch):
     assert closed == [True]
     assert state.static_prompt == ""
     assert state.prompt_events == []
-    request_game_switch(state, "boxed-in")
+    request_game_switch(state, "freeze")
     _apply_pending_game_switch(state)
-    assert state.config.game_slug == "boxed-in"
+    assert state.config.game_slug == "freeze"
     # The same slug with a restart rewinds instead of being a no-op, so "play
     # again" begins from the first frame rather than continuing the round.
     state.cache = object()
     state.ar_index = 6
-    request_game_switch(state, "boxed-in", restart=True)
+    request_game_switch(state, "freeze", restart=True)
     assert state.pending_game_restart is True
     _apply_pending_game_switch(state)
     assert state.cache is None
     assert state.ar_index == 0
     assert state.pending_game_restart is False
-    _switch_game(state, "subway-run")
-    assert state.config.game_slug == "subway-run"
-    assert state.config.conditioning.prompt == "scene for subway-run"
+    _switch_game(state, "tracer")
+    assert state.config.game_slug == "tracer"
+    assert state.config.conditioning.prompt == "scene for tracer"
 
 
 def _gate_state(monkeypatch, *, started):
     """A started session whose gate is armed, with the rollout state it rewinds."""
     monkeypatch.setattr("eden.apps.game2v.session.is_distributed_initialized", lambda: False)
-    state = _state("subway-run")
+    state = _state("tracer")
     state.config = replace(state.config, wait_for_start=True)
     state.started = started
     state.start_requested = started

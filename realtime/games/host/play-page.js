@@ -9,9 +9,23 @@ import {createInput} from '/ext/game2v/host/input.js';
 const input = createInput();
 input.bind({KeyR: 'restart'});
 input.attach();
+window.addEventListener('blur', () => input.clear());
+window.addEventListener('keydown', event => { if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault(); });
 const {createRuntime} = await import(`/game/${window.gameSlug}/main.js`);
 const runtime = await createRuntime({input, mode: 'play', restart: () => runtime.reset()});
 runtime.reset();
+let overlay = null;
+if (runtime.canvas.id === 'film') {
+  const {mount} = await import('/host/demo-overlay.js');
+  const sheet = document.createElement('link');
+  sheet.rel = 'stylesheet';
+  sheet.href = '/ext/game2v/files/host/demo-overlay.css';
+  document.head.append(sheet);
+  const root = document.createElement('div');
+  root.className = 'demo-hud';
+  document.body.append(root);
+  overlay = mount(root, {onRestart: () => runtime.reset()});
+}
 const surface = document.querySelector('#app') || document.body;
 function surfaceSize() {
   const rect = surface.getBoundingClientRect();
@@ -31,6 +45,7 @@ function frame(now) {
   if (input.consumePress('restart')) runtime.reset();
   runtime.update(dt, input);
   runtime.render(dt);
+  overlay?.update(runtime.read());
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

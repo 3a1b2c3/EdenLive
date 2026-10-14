@@ -11,13 +11,48 @@ installation commands in the same Python environment used by `torchrun`:
 pip install -e ./integrations_v2/eden
 pip install playwright
 python -m playwright install chromium
-npm install --prefix games --no-save --package-lock=false three@0.161.0
+npm install --prefix games
 ```
 
 Use `EDEN_GAMES_ROOT` for a different resource directory. `EDEN_THREE_MODULE`
-can point to an existing Three.js 0.161.0 `build/three.module.js` instead of npm
-installation. Games are checkout resources, not included in the Eden wheel.
+can override the workbench Three.js 0.161.0 build. The seven bundled games use
+`three-demo` (an npm alias for Three.js 0.186.1), installed by the same command. Games are checkout resources, not included in the Eden wheel.
 Playwright is loaded lazily only by Eden's rank-zero model loop.
+
+## Bundled games
+
+The seven games are imported from `eden-game-demo-local` and run locally within
+this checkout: Cryo Crossing (`freeze`), Spider Hollow (`spiders`), Pulse Skirmish
+(`tracer`), Deepwater Shock (`bioshock`), Kaiju Rampage (`godzilla`), Arcade Duel
+(`arcadeduel`), and Desert Crossfire (`dust2`). Their source cover IDs are recorded
+in `games/registry.json`. No separate demo server is required.
+
+Each game keeps its gameplay and scene modules, `cover.png`, the matching
+`first-frame.png` proxy, and `initial-state.json`. `host/demo-runtime.js` adapts
+these modules to `createRuntime()`: it accumulates the host's 60 Hz time and steps
+the game at its native 24 Hz. Captures remain at the selected model FPS. The
+adapter collects every intervening state for `dynamicPrompt()` and publishes the
+result through the existing HUD/event channel. Enable `--dynamic-prompt` to feed
+these descriptions back into the model.
+
+Start and replay restore the bundled initial state. The **Play again** HUD button
+requests a full rollout restart, including the model cache and reference frame.
+R remains available for reload or special abilities. P/Escape pauses and resumes.
+The proxy canvas contains no HUD; health, resources, objectives and outcomes are
+separate overlays over the displayed video. The live proxy preview uses the same
+adapter and controls.
+
+The games use Three.js 0.186.1 through `/vendor/three-demo.module.js`; generated
+workbench projects retain their existing Three.js 0.161.0 contract. Both versions
+are pinned in `games/package.json`.
+
+Validation (inside the runtime pod):
+
+```bash
+for test in games/tests/*.mjs; do node "$test" || exit; done
+python integrations_v2/eden/tests/check_game_backend.py --render
+pytest integrations_v2/eden/tests -m ci_cpu
+```
 
 ## Importing a generated game
 

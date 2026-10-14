@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {SpiderGame,FPS,center,dynamicPrompt} from '../spiders/game.js';
+const tick=(g,n,input={})=>{const states=[];for(let i=0;i<n;i++)states.push(g.step(typeof input==='function'?input():input));return states;};
+const closeEnemy=()=>{const g=new SpiderGame();g.s.spiders[0].x=g.s.x;g.s.spiders[0].z=g.s.z-2.65;g.s.spiders.slice(1).forEach((e,i)=>{e.z=-15-i*3;});return g;};
+const hit=closeEnemy(),first=tick(hit,9,{fire:true});assert.equal(hit.s.spiders[0].hp,1);assert.equal(first.flatMap(s=>s.events).filter(e=>e.kind==='axe-hit').length,1);tick(hit,8,{fire:true});assert.equal(hit.s.spiders[0].hp,1,'No repeated damage inside one swing');tick(hit,13,{fire:true});assert.equal(hit.s.kills,1);assert.match(dynamicPrompt([hit.s,...first]),/strikes/);
+const miss=closeEnemy();miss.s.yaw=Math.PI;tick(miss,10,{fire:true});assert.equal(miss.s.kills,0);assert.equal(miss.s.spiders[0].hp,2,'Facing away misses');
+const high=closeEnemy();high.s.pitch=.7;tick(high,10,{fire:true});assert.equal(high.s.spiders[0].hp,2,'Aiming at ceiling misses');
+const far=new SpiderGame();far.s.spiders[0].z=-6;tick(far,10,{fire:true});assert.equal(far.s.spiders[0].hp,2,'Out of range misses');
+const bitten=closeEnemy();tick(bitten,100);assert.ok(bitten.s.health<100);tick(bitten,600);assert.equal(bitten.s.dead,true);const terminal=bitten.s.health;tick(bitten,12,{fire:true});assert.equal(bitten.s.health,terminal);
+const dodge=closeEnemy();dodge.s.spiders[0].z=dodge.s.z-1.8;dodge.s.spiders[0].biteAt=0;const evade=tick(dodge,15,{forward:-1});assert.equal(dodge.s.health,100);assert.ok(evade.some(s=>s.events.some(e=>e.kind==='bite-dodged')));
+const wall=new SpiderGame();tick(wall,400,{side:1});assert.ok(wall.s.x<=center(wall.s.z)+3.5);const collision=closeEnemy();tick(collision,10,{forward:1});assert.ok(Math.hypot(collision.s.x-collision.s.spiders[0].x,collision.s.z-collision.s.spiders[0].z)>=1.35-1e-8);
+const demo=new SpiderGame(),inputs=[],states=[];while(!demo.s.won&&!demo.s.dead&&demo.s.frame<FPS*60){const u=demo.demoInput();inputs.push(u);states.push(demo.step(u));}assert.equal(demo.s.won,true);assert.equal(demo.s.kills,6);assert.ok(demo.s.time<30);assert.equal(states.flatMap(s=>s.events).filter(e=>e.kind==='spider-killed').length,6);
+const replay=new SpiderGame();inputs.forEach(u=>replay.step(u));assert.deepEqual(replay.snapshot(),demo.snapshot(),'Exact state/action replay');const checkpoint=new SpiderGame(states[39]);inputs.slice(40).forEach(u=>checkpoint.step(u));assert.deepEqual(checkpoint.snapshot(),demo.snapshot(),'Saved covers resume deterministically');
+console.log('PASS: range, direction, pitch, single contact per swing, health/death, dodging, walls, body collision, six kills and deterministic replay. Demo cleared in '+demo.s.time+' s.');

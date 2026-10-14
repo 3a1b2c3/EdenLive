@@ -142,7 +142,7 @@ class Game2VSessionConfig:
     fixed_camera: bool = True
     """Ignore browser camera controls for this game-to-video shell."""
 
-    game_slug: str = "boxed-in"
+    game_slug: str = "freeze"
     """Local WebGameVault game used for the conditioning timeline."""
 
     control_stream_factory: (

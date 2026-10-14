@@ -104,7 +104,7 @@ class Cam2VApplicationDefaults:
     fixed_camera: bool = True
     """Keep the initial camera pose while the game input is not connected."""
 
-    game_slug: str = "boxed-in"
+    game_slug: str = "freeze"
     """Vendored WebGameVault game used by the Game2V timeline."""
 
     control_stream_factory: Callable[[Any, Any], Any] | None = None

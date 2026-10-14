@@ -270,7 +270,7 @@ def test_first_frame_comes_from_each_games_own_cover(slug: str) -> None:
 
 def test_covers_differ_between_games() -> None:
     slugs = registered_game_slugs()
-    assert {"subway-run", "boxed-in"} <= set(slugs)
+    assert {"tracer", "freeze"} <= set(slugs)
     assert len({game_cover_path(slug) for slug in slugs}) == len(slugs)
     prompts = {
         slug: resolve_game14b_conditioning({"game": slug}).prompt for slug in slugs
@@ -282,7 +282,7 @@ def test_explicit_image_and_prompt_override_the_registry(tmp_path) -> None:
     image = tmp_path / "frame.png"
     image.write_bytes(b"not really a png, only the path is read here")
     conditioning = resolve_game14b_conditioning(
-        {"game": "boxed-in", "image_path": image, "prompt": "a custom prompt"}
+        {"game": "freeze", "image_path": image, "prompt": "a custom prompt"}
     )
     assert conditioning.first_frame_path == image
     assert conditioning.prompt == "a custom prompt"

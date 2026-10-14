@@ -225,6 +225,9 @@ class GameRenderer:
             rel = f'{self.slug}/{rel}'
         if rel == 'vendor/three.module.js':
             path = Path(os.environ.get('EDEN_THREE_MODULE', self.root / 'node_modules/three/build/three.module.js')).resolve()
+        elif rel in ('vendor/three-demo.module.js', 'vendor/three.core.js'):
+            name = 'three.module.js' if rel.endswith('three-demo.module.js') else 'three.core.js'
+            path = self.root / 'node_modules/three-demo/build' / name
         elif rel == 'vendor/rapier.es.js':
             path = Path(os.environ.get('EDEN_RAPIER_MODULE', self.root / 'node_modules/@dimforge/rapier3d-compat/rapier.es.js')).resolve()
         else:

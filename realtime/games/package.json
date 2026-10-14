@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "three": "0.161.0",
+    "three-demo": "npm:three@0.186.1"
+  }
+}

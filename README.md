@@ -70,7 +70,7 @@ cd realtime
 pip install --no-deps -e ./flashdreams -e ./apps/cam2v -e ./integrations_v2/eden
 pip install -r requirements.txt
 python -m playwright install chromium
-npm install --prefix games three@0.161.0
+npm install --prefix games
 cd ..
 
 # 3. Offline inference: manifest reading and video I/O, then this package.
@@ -145,9 +145,9 @@ points at them:
 
 ```
 examples/samples/
-  manifest.csv          id, prompt, proxy_video, first_frame
-  boxed-in/             cover.png, first-frame.png, prompts.json, prompts.txt, recording.mp4
-  dead-rush/            same five files
+  manifest.csv        id, prompt, proxy_video, first_frame
+  cryo-crossing/       cover.png, first-frame.png, prompts.json, prompts.txt, recording.mp4
+  pulse-skirmish/      same five files
 ```
 
 `recording.mp4` is the greybox proxy (1280x704) and `first-frame.png` its first frame.
@@ -155,6 +155,19 @@ examples/samples/
 model as `first_frame`. `prompts.json` carries the full recording metadata — the
 `staticPrompt` used in the manifest plus timed `dynamicPrompts`; `prompts.txt` is the
 same content, readable.
+
+The samples come from the following recordings in `eden-live-demo`:
+
+| Sample | Scene | Source recording ID |
+| --- | --- | --- |
+| `cryo-crossing` — Cryo Crossing | Freeze stepping stones across a lava lake with a cryo-blaster. | `dcb95336e0284002af4408b6d95b4253` |
+| `pulse-skirmish` — Pulse Skirmish | Fight combat robots with twin pulse pistols along a sunlit street. | `d3c694b7f5f4427c8f64ad4cfc1a27ba` |
+
+Both recordings contain 717 frames at 24 FPS (29.875 seconds). The original proxy
+videos, reference images, and prompt JSON are copied unchanged; all inference inputs
+are bundled here, so `eden-live-demo` is not needed to run them. Few-step inference
+processes both full recordings by default; bidirectional inference uses the frame
+limits below.
 
 Two models ship, each in two inference modes. Every config in
 `edenlive/configs/` is self-contained — one file, no includes:
@@ -202,7 +215,7 @@ python -m edenlive.scripts.infer \
 Videos and the conditions used to produce them are written to
 `<inference.output_dir>/save/inference/base/` (`inference/<config name>/` by default):
 the generated `.mp4`, the proxy control video, the first frame, and the prompt.
-Filenames use the manifest `id` (for example, `boxed-in.mp4`). Only the first
+Filenames use the manifest `id` (for example, `cryo-crossing.mp4`). Only the first
 rank in each sequence-parallel group saves artifacts.
 The default `recording_manifest` dataset reads static prompts and timed events
 from each recording's `prompts.json` and saves input indices, requests, and
@@ -223,6 +236,12 @@ FLUX worker:
 cd realtime
 bash start.sh 14b      # or 5b; renders GAME from deploy.conf from the first step
 ```
+
+The game library includes Cryo Crossing (`freeze`, the default), Spider Hollow
+(`spiders`), Pulse Skirmish (`tracer`), Deepwater Shock (`bioshock`), Kaiju Rampage
+(`godzilla`), Arcade Duel (`arcadeduel`), and Desert Crossfire (`dust2`). These
+interactive games include their own reference frames and starting states.
+
 
 The workbench — a game library, a chat that builds new games from a text description,
 and a play window — needs all four services:

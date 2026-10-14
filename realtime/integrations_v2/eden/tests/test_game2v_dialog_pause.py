@@ -27,7 +27,7 @@ def _frame(ui_state):
         logical_time_s=0.0,
         simulation_tick=4,
         input_sequence=0,
-        game_slug='boxed-in',
+        game_slug='freeze',
         ui_state=ui_state,
     )
 
@@ -194,7 +194,7 @@ def test_start_gate_waits_for_the_first_switch(monkeypatch):
     monkeypatch.setattr('eden.apps.game2v.session.is_distributed_initialized', lambda: False)
     state = SimpleNamespace(
         start_requested=False, pending_game_slug=None,
-        config=SimpleNamespace(game_slug='boxed-in'),
+        config=SimpleNamespace(game_slug='freeze'),
     )
     done = threading.Event()
     thread = threading.Thread(target=lambda: (_await_start(state, threading.Event()), done.set()))
@@ -212,9 +212,9 @@ def test_start_gate_releases_on_switch_to_the_current_game(monkeypatch):
     state = SimpleNamespace(
         start_requested=False, pending_game_slug=None, pending_home=False,
         pending_game_restart=False,
-        config=SimpleNamespace(game_slug='boxed-in'),
+        config=SimpleNamespace(game_slug='freeze'),
     )
-    request_game_switch(state, 'boxed-in')
+    request_game_switch(state, 'freeze')
     assert state.pending_game_slug is None
     _await_start(state, threading.Event())
 

@@ -23,7 +23,7 @@ def test_game2v_registers_paired_ui_without_renderer_constructor_args(use_ui):
         postprocess_comparison=False,
         postprocess_enabled=False,
         pose_integrator_factory=CameraPoseIntegrator,
-        game_slug='boxed-in',
+        game_slug='freeze',
     )
     session = Game2VSession(pipeline=object(), config=config,
                            session_desc=SessionDesc(), use_ui=use_ui)
@@ -41,7 +41,7 @@ def test_ui_loop_forwards_presented_game_metadata():
     loop._prompt_chunk = None
     model = torch.zeros(3, 2, 2)
     game = torch.ones(3, 2, 2)
-    meta = envelope('boxed-in', 4, {'moves': 2})
+    meta = envelope('freeze', 4, {'moves': 2})
     loop.presented_model_frames = lambda: (model, game)
     loop.presented_model_metadata = lambda channel: meta if channel == 1 else None
     loop._presentation_manager = SimpleNamespace(

@@ -66,7 +66,7 @@ cd realtime
 pip install --no-deps -e ./flashdreams -e ./apps/cam2v -e ./integrations_v2/eden
 pip install -r requirements.txt
 python -m playwright install chromium
-npm install --prefix games three@0.161.0
+npm install --prefix games
 cd ..
 
 # 3. 离线推理：manifest 读取和视频读写，然后装本包。
@@ -136,15 +136,26 @@ model:
 
 ```
 examples/samples/
-  manifest.csv          id, prompt, proxy_video, first_frame
-  boxed-in/             cover.png, first-frame.png, prompts.json, prompts.txt, recording.mp4
-  dead-rush/            同样的五个文件
+  manifest.csv        id, prompt, proxy_video, first_frame
+  cryo-crossing/       cover.png, first-frame.png, prompts.json, prompts.txt, recording.mp4
+  pulse-skirmish/      同样的五个文件
 ```
 
 `recording.mp4` 是灰盒 proxy（1280x704），`first-frame.png` 是它的第一帧；`cover.png`
 是这一帧的写实渲染，manifest 把它作为 `first_frame` 喂给模型。`prompts.json` 保留完整的
 录制元信息 —— manifest 使用的 `staticPrompt`，以及带时间戳的 `dynamicPrompts`；
 `prompts.txt` 是同样内容的可读版本。
+
+两个测例来自 `eden-live-demo` 的以下录制：
+
+| 测例 | 场景 | 原录制 ID |
+| --- | --- | --- |
+| `cryo-crossing` — 冰桥渡熔岩（Cryo Crossing） | 用冰冻枪在熔岩湖上冻结踏脚石，逐步穿越。 | `dcb95336e0284002af4408b6d95b4253` |
+| `pulse-skirmish` — 脉冲巷战（Pulse Skirmish） | 在阳光下的街巷中双持脉冲枪，与战斗机器人交火。 | `d3c694b7f5f4427c8f64ad4cfc1a27ba` |
+
+两段录制均为 24 FPS、717 帧（29.875 秒）。原始 proxy 视频、参考图片和 prompt JSON
+均原样复制，推理输入全部随本仓库提供，运行时不依赖 `eden-live-demo`。
+Few-step 默认处理两段完整录制；双向推理按下文的帧数上限截取。
 
 两个模型，各两种推理模式。`edenlive/configs/` 下每个配置都是自包含的 —— 一个文件，
 没有 include：
@@ -188,7 +199,7 @@ python -m edenlive.scripts.infer \
 
 生成的视频以及生成时用到的条件写到 `<inference.output_dir>/save/inference/base/`
 （默认 `inference/<配置名>/`）：生成的 `.mp4`、proxy 控制视频、首帧和 prompt。
-文件名使用 manifest 的 `id`（例如 `boxed-in.mp4`）；每个序列并行组只由第一个 rank 保存产物。
+文件名使用 manifest 的 `id`（例如 `cryo-crossing.mp4`）；每个序列并行组只由第一个 rank 保存产物。
 默认 `recording_manifest` 从录制目录的 `prompts.json` 读取静态文本及动态事件，
 按录制时间戳和指定空间变换准备输入，同时保存实际输入索引、请求及配置。
 
@@ -203,6 +214,11 @@ python -m edenlive.scripts.infer \
 cd realtime
 bash start.sh 14b      # 或 5b；从第一步起就渲染 deploy.conf 里的 GAME
 ```
+
+实时游戏库包含七款游戏：冰桥渡熔岩（`freeze`，默认）、蛛穴探险（`spiders`）、
+脉冲巷战（`tracer`）、深海电击（`bioshock`）、巨兽破城（`godzilla`）、
+街机对决（`arcadeduel`）和沙漠交火（`dust2`）。每款都自带参考首帧及匹配的初始状态。
+
 
 工作台（游戏库、用文字描述生成新游戏的对话、播放窗口）需要四个服务：
 

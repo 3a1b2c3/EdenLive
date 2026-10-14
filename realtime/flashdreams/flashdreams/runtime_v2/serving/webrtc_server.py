@@ -1104,15 +1104,14 @@ class WebRTCServer:
     async def _serve_game_vendor(self, request: web.Request) -> web.Response:
         """Serve the shared Three.js build the games import as ``/vendor/``."""
         filename = request.match_info["filename"]
-        if filename != "three.module.js":
-            raise web.HTTPNotFound()
         root = _games_root()
-        path = Path(
-            os.environ.get(
-                "EDEN_THREE_MODULE",
-                root / "node_modules" / "three" / "build" / "three.module.js",
-            )
-        )
+        if filename == "three.module.js":
+            path = Path(os.environ.get("EDEN_THREE_MODULE", root / "node_modules/three/build/three.module.js"))
+        elif filename in ("three-demo.module.js", "three.core.js"):
+            name = "three.module.js" if filename == "three-demo.module.js" else "three.core.js"
+            path = root / "node_modules/three-demo/build" / name
+        else:
+            raise web.HTTPNotFound()
         if not path.is_file():
             raise web.HTTPNotFound()
         return web.Response(body=path.read_bytes(), content_type="text/javascript")
@@ -1144,7 +1143,7 @@ class WebRTCServer:
             entry.get("slug")
             for entry in json.loads(registry.read_text()).get("games", [])
         }
-        if slug not in slugs:
+        if slug not in slugs and slug not in {"host", "runtime"}:
             raise web.HTTPNotFound()
         return self._game_file_response(root / slug / request.match_info["tail"], root=root)
 

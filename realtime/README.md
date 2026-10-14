@@ -65,11 +65,11 @@ python -m playwright install chromium
 for CUDA 12.8, with the torchvision build of the same torch release. Chromium
 is what captures the proxy game, both for the cover image and for the frames
 the model conditions on. `three.js` is not in the tree (`games/node_modules` is
-git-ignored); the renderer serves it from `games/node_modules/three`, pinned to
-0.161.0:
+git-ignored); the renderer serves it from `games/node_modules/three`, pinned in `games/package.json` (0.186.1 for bundled games and 0.161.0 for
+workbench-generated projects):
 
 ```bash
-npm install --prefix games three@0.161.0
+npm install --prefix games
 ```
 
 Everything deployment-specific -- where the weights are, which addresses and
@@ -127,7 +127,7 @@ bash stop.sh
 Then open `APP_PORT` (8089 by default) on the GPU host. `NPROC` sets how many
 ranks `torchrun` starts, one per GPU -- set it to the number of GPUs you want to
 use. `GAME` picks which cover the session falls back to; the slugs come from
-[`games/registry.json`](games/registry.json) and default to `subway-run`.
+[`games/registry.json`](games/registry.json) and default to `freeze`.
 
 When the bridge and the app are on different hosts, copy `.workbench/token`
 from the bridge to the app's `realtime/` directory: both sides authenticate

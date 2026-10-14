@@ -29,7 +29,7 @@ pytestmark = pytest.mark.ci_cpu
 
 def _chunk(lines_by_frame):
     """One chunk whose frames publish the given ``(id, type, text)`` events."""
-    timeline = GameTimeline('boxed-in')
+    timeline = GameTimeline('freeze')
     packet = timeline.begin_chunk(len(lines_by_frame), 16)
     frames = []
     for frame, lines in zip(packet.frames, lines_by_frame):
@@ -46,7 +46,7 @@ def _state(*, rank='0', lifetime=1, last_chunk=None):
     from flashdreams.runtime_v2.session_desc import SessionDesc
 
     config = SimpleNamespace(
-        game_slug='boxed-in',
+        game_slug='freeze',
         prompt_event_chunks=lifetime,
     )
     state = Game2VModelState(
@@ -67,21 +67,21 @@ def _state(*, rank='0', lifetime=1, last_chunk=None):
 def test_registry_static_prompt(tmp_path):
     registry = {
         'games': [
-            {'slug': 'boxed-in', 'prompt': '  A quiet courtyard.  '},
-            {'slug': 'subway-run'},
+            {'slug': 'freeze', 'prompt': '  A quiet courtyard.  '},
+            {'slug': 'tracer'},
         ],
     }
     (tmp_path / 'registry.json').write_text(json.dumps(registry))
 
-    assert game_static_prompt('boxed-in', games_root=tmp_path) == 'A quiet courtyard.'
-    assert game_static_prompt('subway-run', games_root=tmp_path) == ''
+    assert game_static_prompt('freeze', games_root=tmp_path) == 'A quiet courtyard.'
+    assert game_static_prompt('tracer', games_root=tmp_path) == ''
     assert game_static_prompt('missing', games_root=tmp_path) == ''
-    assert game_static_prompt('boxed-in', games_root=tmp_path / 'absent') == ''
+    assert game_static_prompt('freeze', games_root=tmp_path / 'absent') == ''
 
 
 def test_shipped_registries_declare_a_static_prompt():
     """Both vendored games describe their scene, which is the prompt base."""
-    for slug in ('boxed-in', 'subway-run'):
+    for slug in ('freeze', 'tracer'):
         assert game_static_prompt(slug)
 
 
@@ -111,7 +111,7 @@ def test_event_lines_skip_entries_without_a_prompt():
     assert _chunk_event_lines(None) == []
     bare = GameFramePacket(
         game_frame_id=1, logical_time_s=0.0, simulation_tick=1,
-        input_sequence=0, game_slug='boxed-in', ui_state={'moves': 1},
+        input_sequence=0, game_slug='freeze', ui_state={'moves': 1},
     )
     assert _chunk_event_lines(replace(_chunk([[]]), frames=(bare,))) == []
 
@@ -119,14 +119,14 @@ def test_event_lines_skip_entries_without_a_prompt():
 def test_prompt_is_static_until_a_chunk_has_been_simulated(monkeypatch, tmp_path):
     monkeypatch.setenv('EDEN_GAMES_ROOT', str(tmp_path))
     (tmp_path / 'registry.json').write_text(json.dumps(
-        {'games': [{'slug': 'boxed-in', 'prompt': 'A quiet courtyard.'}]}
+        {'games': [{'slug': 'freeze', 'prompt': 'A quiet courtyard.'}]}
     ))
     state = _state()
 
     assert _compose_chunk_prompt(state) == ('A quiet courtyard.', ())
     # Resolved once; a registry change mid-rollout does not move it.
     (tmp_path / 'registry.json').write_text(json.dumps(
-        {'games': [{'slug': 'boxed-in', 'prompt': 'Changed.'}]}
+        {'games': [{'slug': 'freeze', 'prompt': 'Changed.'}]}
     ))
     assert _compose_chunk_prompt(state) == ('A quiet courtyard.', ())
 
@@ -134,7 +134,7 @@ def test_prompt_is_static_until_a_chunk_has_been_simulated(monkeypatch, tmp_path
 def test_event_lines_last_the_configured_number_of_chunks(monkeypatch, tmp_path):
     monkeypatch.setenv('EDEN_GAMES_ROOT', str(tmp_path))
     (tmp_path / 'registry.json').write_text(json.dumps(
-        {'games': [{'slug': 'boxed-in', 'prompt': 'A quiet courtyard.'}]}
+        {'games': [{'slug': 'freeze', 'prompt': 'A quiet courtyard.'}]}
     ))
     state = _state(lifetime=2, last_chunk=_chunk([
         [(1, 'keeper.moved', 'The keeper steps left.')],
@@ -161,7 +161,7 @@ def test_event_lines_last_the_configured_number_of_chunks(monkeypatch, tmp_path)
 def test_recurring_sentence_is_restated_by_its_newest_chunk(monkeypatch, tmp_path):
     """The same sentence refreshes its lifetime; a different one is added."""
     monkeypatch.setenv('EDEN_GAMES_ROOT', str(tmp_path))
-    (tmp_path / 'registry.json').write_text(json.dumps({'games': [{'slug': 'boxed-in', 'prompt': ''}]}))
+    (tmp_path / 'registry.json').write_text(json.dumps({'games': [{'slug': 'freeze', 'prompt': ''}]}))
     state = _state(lifetime=3, last_chunk=_chunk([
         [(1, 'lane.changed', 'The runner shifts into the left lane.')],
     ]))
@@ -256,7 +256,7 @@ def test_dynamic_prompt_encodes_only_when_the_text_changes(monkeypatch, tmp_path
     """
     monkeypatch.setenv('EDEN_GAMES_ROOT', str(tmp_path))
     (tmp_path / 'registry.json').write_text(json.dumps(
-        {'games': [{'slug': 'boxed-in', 'prompt': 'A quiet courtyard.'}]}
+        {'games': [{'slug': 'freeze', 'prompt': 'A quiet courtyard.'}]}
     ))
     encoded: list[str] = []
     replaced: list[str] = []
@@ -293,7 +293,7 @@ def test_dynamic_prompt_encodes_only_when_the_text_changes(monkeypatch, tmp_path
 def test_dynamic_prompt_is_rejected_without_a_text_encoder(monkeypatch, tmp_path):
     monkeypatch.setenv('EDEN_GAMES_ROOT', str(tmp_path))
     (tmp_path / 'registry.json').write_text(json.dumps(
-        {'games': [{'slug': 'boxed-in', 'prompt': 'A quiet courtyard.'}]}
+        {'games': [{'slug': 'freeze', 'prompt': 'A quiet courtyard.'}]}
     ))
     state = _state(last_chunk=_chunk([[]]))
     state.config.dynamic_prompt = True
