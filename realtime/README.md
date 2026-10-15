@@ -11,24 +11,14 @@ SPDX-License-Identifier: Apache-2.0
   <a href="LICENSE"><img alt="License: Apache 2.0" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"></a>
 </p>
 
-A trimmed fork of [NVIDIA FlashDreams](https://github.com/NVIDIA/flashdreams)
-carrying only what the two **Eden game2v** models need to serve interactive
-sessions: the `eden` integration, the framework code it imports, and the game
-renders that drive it.
-
-This tree is the real-time serving path for [EdenLive](../README.md) and lives
-inside that repository. Its `eden` package is the FlashDreams integration, a
-different package from `edenlive/` at the repository root; neither imports the
-other. Both install into one environment, described in the
-[repository README](../README.md#installation).
-
-FlashDreams itself is a high-performance inference and serving library for
-interactive autoregressive video and world models. For every other model, the
-full documentation, and the developer guides, use upstream.
+Real-time serving for [EdenLive](../README.md), based on
+[NVIDIA FlashDreams](https://github.com/NVIDIA/flashdreams).
+Installation: [repository README](../README.md#installation).
+FlashDreams documentation: [upstream](https://github.com/NVIDIA/flashdreams).
 
 ## System Requirements
 
-- NVIDIA GPU with **80 GB VRAM or more** (e.g. H100 80GB), see notes below.
+- NVIDIA GPU with **80 GB VRAM or more** (e.g. H100 80GB).
 - NVIDIA driver from the **R580 series or newer** (default compatible with CUDA 13.x)
 - **CUDA 13.x** (PyTorch `2.13.0+cu130`, the build [`requirements.txt`](requirements.txt)
   is pinned against; a CUDA 12.8 driver takes the `cu128` wheel index instead)
@@ -41,17 +31,10 @@ full documentation, and the developer guides, use upstream.
   [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
   (optional, only for the container workflow)
 
-> Development and testing were performed on GPUs with **80 GB of VRAM or more**.
-> Inference can fail (out-of-memory) on consumer and even enthusiast GPUs.
-> Per-model GPU and VRAM requirements are listed on each model page in
-> [the model gallery](https://nvidia.github.io/flashdreams/main/models/index.html).
-
 ## Quickstart
 
-The launch scripts call whatever `python` and `torchrun` are on `PATH` and set
-up nothing of their own, so install into the environment you will activate
-before launching. `torch` has to come first and from the wheel index matching
-your driver; `requirements.txt` then installs the rest, including this tree:
+The launch scripts use `python` from the active environment.
+Install dependencies:
 
 ```bash
 cd realtime
@@ -63,77 +46,59 @@ pip install -r requirements.txt
 python -m playwright install chromium
 ```
 
-`cu130` matches a CUDA 13 driver; use `https://download.pytorch.org/whl/cu128`
-for CUDA 12.8, with the torchvision build of the same torch release. Chromium
-is what captures the proxy game, both for the cover image and for the frames
-the model conditions on. `three.js` is not in the tree (`games/node_modules` is
-git-ignored); the renderer serves it from `games/node_modules/three`, pinned in `games/package.json` (0.186.1 for bundled games and 0.161.0 for
-workbench-generated projects):
+For CUDA 12.8, use `https://download.pytorch.org/whl/cu128`.
+Install game rendering dependencies:
 
 ```bash
 npm install --prefix games
 ```
 
-Everything deployment-specific -- where the weights are, which addresses and
-ports the services bind, how many GPUs to use -- lives in
-[`deploy.conf`](deploy.conf). Edit it once; the scripts read it and take no
-arguments. To keep a second deployment, copy `deploy.conf` to
-`deploy.local.conf` (git-ignored): when that file exists it is sourced after
-`deploy.conf` and its values win.
+Configure the weight directory, service addresses, ports, and GPU count in
+[`deploy.conf`](deploy.conf). `MODEL_ROOT` specifies the weight directory.
 
-Weights come from `MODEL_ROOT` in that file (see below), not from Hugging Face.
-For offline inference as well, follow the single-environment install in the
-[repository README](../README.md#installation), which adds the root package on
-top of the steps above.
+### Configure and start TURN
+
+Set `TURN_HOST` (the relay address reachable by the browser), `TURN_IFACE`
+(the relay interface), and `TURN_SECRET` (your own password) in
+`deploy.conf`. On the GPU host, start TURN before either model launcher:
+
+```bash
+apt-get install coturn  # First-time installation
+bash turn_server.sh
+```
+
+Neither `start.sh` nor `launch.sh` starts TURN automatically.
 
 ### Launch the workbench
 
-The page is a workbench in three parts, and nothing renders until a game is
-played. The game library (`#/`) lists every registered game. The workbench
-(`#/studio/<id>`) is a conversation: the first message builds a game, later
-ones revise it, and the right side tries the proxy game and renders its
-photoreal first frame. The play window is an overlay that streams the model's
-video and stops rendering when closed. Conversations are stored by the bridge
-in `.workbench/conversations/`.
-Four services, in this order -- the first three are independent of each other,
-the app wants them up first.
+The workbench provides a game library, game generation, and video playback.
+The bridge host requires the `claude` CLI, `claude auth login`, and first-run trust confirmation.
+Game generation uses `--dangerously-skip-permissions`.
 
 ```bash
-# 1. TURN relay, on the GPU host. A browser outside the server's subnet has no
-#    direct UDP path to it, and its connection stalls without the relay. Set
-#    TURN_SECRET in deploy.conf first; this prints the address to put in
-#    TURN_HOST.
+# 1. TURN relay, GPU host; skip if already running
 bash turn_server.sh
 
-# 2. Workbench bridge, on the host that has the `claude` CLI. It runs the
-#    game-generation jobs. `claude` must be on PATH, already logged in
-#    (`claude auth login`) and past the first-run trust prompt: the bridge runs
-#    it unattended with `--dangerously-skip-permissions` and has no key of its
-#    own. Set EDEN_WORKBENCH_CLAUDE if the binary is not named `claude`.
-#    The bridge writes the shared token both sides use to .workbench/token;
-#    this prints the address to put in BRIDGE_HOST.
+# 2. Workbench bridge, Claude CLI host
 bash workbench_bridge.sh
 
-# 3. FLUX worker, on the GPU host. Renders the photoreal first frame.
-bash workbench_flux.sh            # or `bash workbench_flux.sh <gpu>`
+# 3. FLUX first-frame service, GPU host
+bash workbench_flux.sh
 
-# 4. The model app, on the GPU host. Starts the FLUX worker itself when it is
-#    not already running.
+# 4. Model service, GPU host
 bash launch.sh
 
-# Stop everything this host is running: the app, the FLUX worker,
-# the bridge and the relay. Run it on each host that has services up.
+# Stop services on this host
 bash stop.sh
 ```
 
-Then open `APP_PORT` (8089 by default) on the GPU host. `NPROC` sets how many
-ranks `torchrun` starts, one per GPU -- set it to the number of GPUs you want to
-use. `GAME` picks which cover the session falls back to; the slugs come from
-[`games/registry.json`](games/registry.json) and default to `freeze`.
+Open `http://<host>:8089` (`APP_PORT` in `deploy.conf`).
+`NPROC` specifies the GPU count; the default 5B deployment uses one GPU.
+`GAME` selects a game from
+[`games/registry.json`](games/registry.json); the default is `freeze`.
 
-When the bridge and the app are on different hosts, copy `.workbench/token`
-from the bridge to the app's `realtime/` directory: both sides authenticate
-with it, and the app refuses to start without it.
+For separate hosts, copy the bridge's `.workbench/token` to the GPU host's
+`realtime/` directory and set `BRIDGE_HOST`; leave it empty for a single-host deployment.
 
 Weights live in one directory, `MODEL_ROOT` in [`deploy.conf`](deploy.conf),
 which defaults to `models/EdenLive` under the repository root. A relative path
@@ -147,9 +112,7 @@ offline configs. The full layout is in the
 [repository README](../README.md#model-weights). Everything is loaded with
 `HF_HUB_OFFLINE=1`.
 
-Making or revising a game takes tens of minutes (an agent writes and plays
-it), so the conversation and its job log survive a page reload. Picking an existing game
-takes a few seconds. `launch.sh` logs to `.eden_app.log`.
+`launch.sh` logs to `.eden_app.log`.
 
 ### How the four services fit together
 
@@ -161,63 +124,34 @@ browser ──8089──> model app (GPU server, rank 0)
 browser <──3478──── TURN relay (media path for off-subnet clients)
 ```
 
-Rank zero owns the browser-facing side: the page, the Chromium proxy render,
-and the `/ext/workbench/` proxy. The bridge runs wherever the `claude` CLI is
-installed, which need not be the GPU server, and it is reached with a shared
-token written to `.workbench/token` on its first run (`launch.sh` reads the
-same file).
-
-The TURN relay is the one that fails quietly. Media needs a UDP path the page
-load does not, so a client on another subnet has no route to the server without
-it. An address pointing at a relay that is not there is worse than none: the
-browser stalls in "gathering candidates" for ten seconds and then fails,
-instead of falling back. `turn_server.sh` is not supervised -- it needs
-starting again after a host restart. Leave `TURN_HOST` unset to skip the relay
-entirely, which only works when the browser and the server share a subnet.
-
 ### Without the workbench
 
-`start.sh` is the older path: it renders from the first step with no home
-screen and no generation, and needs neither the bridge nor the FLUX worker.
+Run a registered game on the GPU host:
 
 ```bash
+bash turn_server.sh  # Configure TURN first; skip if already running
 bash start.sh 5b      # or 14b; defaults to MODEL in deploy.conf
 ```
 
-It reads the same `deploy.conf`. A second argument of `--no-compile` skips
-transformer compilation, for when only time-to-first-chunk matters.
+`start.sh` reads `deploy.conf`. Pass `--no-compile` as the second argument to disable compilation.
 
 ## Supported models
-
-This is a deployment-only fork: it carries the two Eden game2v models and the
-framework code they need, nothing else. For the full model gallery, see
-[upstream FlashDreams](https://github.com/NVIDIA/flashdreams).
 
 | Application slug | Model |
 | --- | --- |
 | `game2v-eden-world-v2-5b-taehv` | Eden game2v 5B, TAEHV decoder |
 | `game2v-eden-world-v2-14b-taehv` | Eden game2v 14B, TAEHV decoder |
 
-Both decode with LightTAE rather than the Wan VAE. The non-TAEHV pipeline
-configs stay in `game5b_config.py` and `game14b_config.py` because the two
-shipped variants are `derive_config`'d from them, but they are not registered as
-applications and cannot be launched.
-
-The `cam2v-eden-*` slugs in
-[`integrations_v2/eden/pyproject.toml`](integrations_v2/eden/pyproject.toml) are
-kept because `game2v` shares their conditioning code.
-
+Both models use the TAEHV (LightTAE) decoder.
 
 ## Contributing
 
-Send changes to [upstream FlashDreams](https://github.com/NVIDIA/flashdreams).
-This fork exists to deploy the Eden game2v models and is not the place for new
-integrations.
+FlashDreams contributions: [upstream repository](https://github.com/NVIDIA/flashdreams).
 
-Use [GitHub Issues](https://github.com/NVIDIA/flashdreams/issues) to report defects or request improvements.
+FlashDreams issues: [GitHub Issues](https://github.com/NVIDIA/flashdreams/issues).
 
-Join us on the [NVIDIA Omniverse Discord](https://discord.com/invite/nvidiaomniverse)
-to share your results and take part in technical discussion! Channel: [`#flashdreams`](https://discord.gg/cMt2mHm4aN)
+Community: [NVIDIA Omniverse Discord](https://discord.com/invite/nvidiaomniverse),
+channel [`#flashdreams`](https://discord.gg/cMt2mHm4aN).
 
 ## Security
 
@@ -234,7 +168,7 @@ repository is REUSE-compliant; see [`REUSE.toml`](REUSE.toml) and
 
 ## Citation
 
-If FlashDreams is useful in your research or product, please cite the project:
+FlashDreams references:
 
 ```bibtex
 @misc{flashdreams2026,

@@ -24,7 +24,7 @@ fi
 running flux || bash workbench_flux.sh
 
 serve app .eden_app.log \
-  torchrun --nproc_per_node="$NPROC" run.py "$APP" \
+  python -m torch.distributed.run --nproc_per_node="$NPROC" run.py "$APP" \
   --mode webrtc --host "$APP_HOST" --port "$APP_PORT" -- \
   --no-ui --no-compile --total-blocks 10000 \
   --game "$GAME" --wait-for-start

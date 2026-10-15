@@ -9,12 +9,11 @@
 set -u
 . "$(dirname "$(readlink -f "$0")")/_common.sh"
 APP=$(app_slug "${1:-$MODEL}") || exit 1
-COMPILE="${2:-}"
 
 serve app .eden_app.log \
-  torchrun --nproc_per_node="$NPROC" run.py "$APP" \
+  python -m torch.distributed.run --nproc_per_node="$NPROC" run.py "$APP" \
   --mode webrtc --host "$APP_HOST" --port "$APP_PORT" -- \
-  --no-ui --total-blocks 10000 $COMPILE \
+  --no-ui --no-compile --total-blocks 10000 \
   --game "$GAME"
 echo "$APP on $NPROC GPUs, http://$APP_HOST:$APP_PORT/"
 tail -f .eden_app.log

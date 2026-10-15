@@ -1,5 +1,4 @@
 Sample: Cryo Crossing (cryo-crossing)
-Source recording: dcb95336e0284002af4408b6d95b4253
 Duration: 29.875s (29875 ms)
 
 STATIC PROMPT

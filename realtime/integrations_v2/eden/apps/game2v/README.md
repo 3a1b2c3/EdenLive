@@ -21,11 +21,11 @@ Playwright is loaded lazily only by Eden's rank-zero model loop.
 
 ## Bundled games
 
-The seven games are imported from `eden-game-demo-local` and run locally within
-this checkout: Cryo Crossing (`freeze`), Spider Hollow (`spiders`), Pulse Skirmish
-(`tracer`), Deepwater Shock (`bioshock`), Kaiju Rampage (`godzilla`), Arcade Duel
-(`arcadeduel`), and Desert Crossfire (`dust2`). Their source cover IDs are recorded
-in `games/registry.json`. No separate demo server is required.
+The seven games ship with this checkout and run locally: Cryo Crossing (`freeze`),
+Spider Hollow (`spiders`), Pulse Skirmish (`tracer`), Deepwater Shock
+(`deepwater-shock`), Kaiju Rampage (`kaiju-rampage`), Arcade Duel (`arcadeduel`),
+and Desert Crossfire (`desert-crossfire`). They are listed in
+`games/registry.json`. No separate demo server is required.
 
 Each game keeps its gameplay and scene modules, `cover.png`, the matching
 `first-frame.png` proxy, and `initial-state.json`. `host/demo-runtime.js` adapts

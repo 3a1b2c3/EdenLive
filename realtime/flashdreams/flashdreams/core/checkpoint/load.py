@@ -49,7 +49,6 @@ from flashdreams.core.io.disk import (
 )
 from flashdreams.core.io.s3_filesystem import S3FileSystem, S3StorageReader
 
-_OMNIDREAMS_CHECKPOINT_CREDENTIAL_PATH = "credentials/s3_checkpoint.secret"
 _OMNIDREAMS_CHECKPOINT_LOCAL_CACHE_DIR = os.path.expanduser(
     os.getenv("FLASHDREAMS_CACHE_DIR", "~/.cache/flashdreams")
 )
@@ -546,18 +545,20 @@ def _download_checkpoint_from_huggingface_url(
 
 
 def get_storage_reader(
-    checkpoint_path: str, credential_path: str = _OMNIDREAMS_CHECKPOINT_CREDENTIAL_PATH
+    checkpoint_path: str, credential_path: str | None = None
 ) -> FileSystemReader:
     """Return the right storage reader for an S3 or local checkpoint path.
 
     Args:
         checkpoint_path: ``s3://`` URI or local path.
-        credential_path: S3 credentials path (used only for S3 paths).
+        credential_path: Explicit credential file, required for S3 paths.
 
     Returns:
         ``S3StorageReader`` for ``s3://`` paths, ``FileSystemReader`` otherwise.
     """
     if checkpoint_path.startswith("s3://"):
+        if credential_path is None:
+            raise ValueError("credential_path is required for S3 checkpoints")
         return S3StorageReader(credential_path=credential_path, path=checkpoint_path)
     else:
         return FileSystemReader(checkpoint_path)
@@ -568,7 +569,7 @@ def load_distributed_checkpoint(
     checkpoint_path: str,
     check_success: bool = False,
     local_cache_dir: str | None = _OMNIDREAMS_CHECKPOINT_LOCAL_CACHE_DIR,
-    credential_path: str = _OMNIDREAMS_CHECKPOINT_CREDENTIAL_PATH,
+    credential_path: str | None = None,
 ) -> torch.nn.Module:
     """Load a DCP checkpoint into ``model`` in-place.
 
@@ -659,7 +660,7 @@ def load_distributed_checkpoint(
 def load_single_checkpoint(
     checkpoint_path: str,
     local_cache_dir: str = _OMNIDREAMS_CHECKPOINT_LOCAL_CACHE_DIR,
-    credential_path: str = _OMNIDREAMS_CHECKPOINT_CREDENTIAL_PATH,
+    credential_path: str | None = None,
     map_location: str | torch.device = "cpu",
     checkpoint_min_free_gb: float | None = None,
 ) -> dict[str, torch.Tensor]:
@@ -673,7 +674,7 @@ def load_single_checkpoint(
             ``.safetensors`` file, or to an HF-style ``*.safetensors.index.json``
             (shards are merged on first load and cached).
         local_cache_dir: Directory for S3 / merged-safetensors caches.
-        credential_path: S3 credentials path.
+        credential_path: Explicit credential file, required for S3 paths.
         map_location: Device to map tensors to (``.pt`` / ``.pth`` / ``.ckpt`` only).
         checkpoint_min_free_gb: Optional first-run free-space requirement in
             GiB for Hugging Face checkpoint downloads. The
@@ -1137,10 +1138,12 @@ def _resolve_streamable_safetensors_path(
 def _load_checkpoint_from_s3(
     s3_path: str,
     ext: str,
-    credential_path: str,
+    credential_path: str | None,
     map_location: str | torch.device = "cpu",
 ) -> dict[str, torch.Tensor]:
     """Load checkpoint from S3."""
+    if credential_path is None:
+        raise ValueError("credential_path is required for S3 checkpoints")
     logger.info(f"Downloading checkpoint from S3: {s3_path}")
     s3_fs = S3FileSystem(credential_path=credential_path)
     with s3_fs.create_stream(s3_path, "rb") as stream:
@@ -1189,7 +1192,7 @@ def load_checkpoint(
     model: None = None,
     checkpoint_type: Literal["auto", "single", "distributed"] = "auto",
     local_cache_dir: str = _OMNIDREAMS_CHECKPOINT_LOCAL_CACHE_DIR,
-    credential_path: str = _OMNIDREAMS_CHECKPOINT_CREDENTIAL_PATH,
+    credential_path: str | None = None,
     map_location: str | torch.device = "cpu",
     check_success: bool = False,
     checkpoint_min_free_gb: float | None = None,
@@ -1202,7 +1205,7 @@ def load_checkpoint(
     model: torch.nn.Module,
     checkpoint_type: Literal["auto", "single", "distributed"] = "auto",
     local_cache_dir: str = _OMNIDREAMS_CHECKPOINT_LOCAL_CACHE_DIR,
-    credential_path: str = _OMNIDREAMS_CHECKPOINT_CREDENTIAL_PATH,
+    credential_path: str | None = None,
     map_location: str | torch.device = "cpu",
     check_success: bool = False,
     checkpoint_min_free_gb: float | None = None,
@@ -1214,7 +1217,7 @@ def load_checkpoint(
     model: torch.nn.Module | None = None,
     checkpoint_type: Literal["auto", "single", "distributed"] = "auto",
     local_cache_dir: str = _OMNIDREAMS_CHECKPOINT_LOCAL_CACHE_DIR,
-    credential_path: str = _OMNIDREAMS_CHECKPOINT_CREDENTIAL_PATH,
+    credential_path: str | None = None,
     map_location: str | torch.device = "cpu",
     check_success: bool = False,
     checkpoint_min_free_gb: float | None = None,
@@ -1233,7 +1236,7 @@ def load_checkpoint(
             formats use ``load_state_dict``.
         checkpoint_type: ``"auto"``, ``"single"``, or ``"distributed"``.
         local_cache_dir: Directory for caches.
-        credential_path: S3 credentials path.
+        credential_path: Explicit credential file, required for S3 paths.
         map_location: Device to map tensors to (single-file only).
         check_success: Verify DCP load actually changed weights.
         checkpoint_min_free_gb: Optional first-run free-space requirement in

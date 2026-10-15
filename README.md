@@ -1,45 +1,47 @@
 <div align="center">
 
-# Eden
+# EdenLive
 
 **EdenLive: Real-Time Generative Rendering from Any Reference**
 
-[![Project Page](https://img.shields.io/badge/Project-Page-blue)](xxx)
-[![Paper](https://img.shields.io/badge/arXiv-xxx-b31b1b)](xxx)
-[![Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-yellow)](xxx)
+[![Project Page](https://img.shields.io/badge/Project-Page-blue)](https://vast-eden.ai/?p=edenlive)
+[![Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-yellow)](https://huggingface.co/VAST-AI/EdenLive)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green)](LICENSE)
 
-[Project Page](xxx) · [Paper](xxx) · [Models](xxx) · [Demo](xxx)
+[Project Page](https://vast-eden.ai/?p=edenlive) · [Code](https://github.com/VAST-AI-Research/EdenLive) · [Models](https://huggingface.co/VAST-AI/EdenLive)
 
 **English** · [简体中文](README_zh.md)
 
-By [Vast AI](xxx)
+Zehuan Huang<sup>1,*</sup>, Tian-Xing Xu<sup>1,*</sup>, Chunli Peng<sup>1,*</sup>, Cheng Zhang<sup>1,*</sup>, Yifei Song<sup>1,†</sup>, Zeyi Zheng<sup>1,†</sup>, Zhipeng Yu<sup>1</sup>, Peng Wang<sup>1,‡</sup>, Yan-Pei Cao<sup>1,✉</sup>
+
+\* Equal contribution · † Intern at VAST · ‡ Project lead · ✉ Corresponding author
+
+<sup>1</sup>[VAST](https://www.tripo3d.ai/) · [Project Eden](https://vast-eden.ai/)
 
 </div>
 
-> **Placeholders.** Links marked `xxx` and the weight download are not yet
-> published. See [Before publishing](#before-publishing).
-
 <div align="center">
-  <video src="docs/assets/generated.mp4" width="100%" controls loop muted autoplay playsinline></video>
+  <video src="docs/assets/official-introduction.mp4" width="100%" controls playsinline></video>
 </div>
 
 ## Overview
 
-Eden generates video from three inputs: a **text prompt**, a **first frame**, and a
-**proxy control video**. The model keeps the proxy's layout, camera motion, and timing
-while replacing its appearance with photorealistic detail. This makes the output
-*directable*: you author the motion in a game engine or previz tool and let the model
-render it.
+EdenLive renders a **proxy or reference video stream**, a **target first frame**,
+and a **text prompt** into refined or stylized video. References can come from
+2D/3D scenes, existing engines, or recordings. Upstream code maintains interaction
+state; the model handles visual rendering.
 
 Control is injected through a **vision encoder**: a post-trained DINOv3 encoder embeds
 each proxy frame, and those features condition the diffusion transformer.
 
+The [project page](https://vast-eden.ai/?p=edenlive) demonstrates over 24 FPS,
+minute-scale generation, and 480P/720P output. The 5B model supports
+single-GPU deployment at 720P.
+
 ## Installation
 
 One Python environment runs both the offline inference in `edenlive/` and the
-real-time service in `realtime/`. The versions below are the ones in the environment
-this release was verified in:
+real-time service in `realtime/`.
 
 | | Verified version |
 | --- | --- |
@@ -51,12 +53,8 @@ this release was verified in:
 | imageio / imageio-ffmpeg | 2.37.4 / 0.6.0 |
 | Node.js | 22 (only to fetch three.js for the game renders) |
 
-Install in this order. PyTorch comes first and from the CUDA index, and every
-in-tree package goes in with `--no-deps`: their declared requirements would
-otherwise let pip replace the CUDA build of torch with a PyPI one.
-
 ```bash
-git clone xxx EdenLive
+git clone https://github.com/VAST-AI-Research/EdenLive.git EdenLive
 cd EdenLive
 
 conda create -n edenlive python=3.10 -y
@@ -73,14 +71,10 @@ python -m playwright install chromium
 npm install --prefix games
 cd ..
 
-# 3. Offline inference: manifest reading and video I/O, then this package.
-pip install decord==0.6.0 pandas==2.3.3 pyarrow==25.0.1 imageio==2.37.4 imageio-ffmpeg==0.6.0
+# 3. Offline inference and video I/O dependencies.
+pip install av==17.1.0 decord==0.6.0 pandas==2.3.3 pyarrow==25.0.1 imageio==2.37.4 imageio-ffmpeg==0.6.0
 pip install --no-deps -e .
 ```
-
-The root package imports as `edenlive`. `realtime/` installs a separate package
-that imports as `eden` (the FlashDreams integration); the two do not import each
-other.
 
 The default 5B bidirectional profile uses FA4 temporal text
 attention and requires SM90, BF16, `flash-attn-4==4.0.0b31`, and
@@ -90,12 +84,11 @@ existing environment to preserve PyTorch. See [`docs/zh/wan22-fa4.md`](docs/zh/w
 ## Model weights
 
 ```bash
-# TODO: publish weights and replace.
-huggingface-cli download xxx --local-dir ./models/EdenLive
+hf download VAST-AI/EdenLive --local-dir ./models/EdenLive
 ```
 
 Everything loads from one directory, `models/EdenLive` under the repository root by
-default (about 210 GB in total). Nothing is pulled from the Hub at run time.
+default (about 210 GB in total).
 
 ```
 models/EdenLive/
@@ -115,25 +108,12 @@ models/EdenLive/
   flux-c2f/           Diffusers FLUX tree + c2f_lora.safetensors   workbench first frame (real-time only)
 ```
 
-The offline configs set `model.pretrained_dir: models/EdenLive`, a path relative to
-the working directory, and name each component under it (`model.components.*.path`).
-Run from the repository root, or point it elsewhere:
+The default weight directory is `models/EdenLive`, relative to the working directory.
+To specify another directory:
 
 ```bash
 python -m edenlive.scripts.infer --config ... model.pretrained_dir=/data/EdenLive
 ```
-
-To run a different DiT against the same VAE, T5 and CLIP, override that one component:
-
-```yaml
-model:
-  components:
-    transformer:
-      path: /path/to/our-dit     # absolute, or relative to pretrained_dir
-```
-
-`model.pipeline_class` names the pipeline to assemble — `WanImageToVideoPipeline` for
-the 14B I2V line, `WanPipeline` for the 5B TI2V line.
 
 The real-time service reads the same tree through `MODEL_ROOT` in
 [`realtime/deploy.conf`](realtime/deploy.conf).
@@ -150,37 +130,17 @@ examples/samples/
   pulse-skirmish/      same five files
 ```
 
-`recording.mp4` is the greybox proxy (1280x704) and `first-frame.png` its first frame.
-`cover.png` is the photoreal render of that frame, and it is what the manifest feeds the
-model as `first_frame`. `prompts.json` carries the full recording metadata — the
-`staticPrompt` used in the manifest plus timed `dynamicPrompts`; `prompts.txt` is the
-same content, readable.
-
-The samples come from the following recordings in `eden-live-demo`:
-
-| Sample | Scene | Source recording ID |
-| --- | --- | --- |
-| `cryo-crossing` — Cryo Crossing | Freeze stepping stones across a lava lake with a cryo-blaster. | `dcb95336e0284002af4408b6d95b4253` |
-| `pulse-skirmish` — Pulse Skirmish | Fight combat robots with twin pulse pistols along a sunlit street. | `d3c694b7f5f4427c8f64ad4cfc1a27ba` |
-
-Both recordings contain 717 frames at 24 FPS (29.875 seconds). The original proxy
-videos, reference images, and prompt JSON are copied unchanged; all inference inputs
-are bundled here, so `eden-live-demo` is not needed to run them. Few-step inference
-processes both full recordings by default; bidirectional inference uses the frame
-limits below.
-
-Two models ship, each in two inference modes. Every config in
-`edenlive/configs/` is self-contained — one file, no includes:
+`recording.mp4` is the greybox proxy (1280x704), and `first-frame.png` is its first frame.
+`cover.png` is a photoreal render of that frame; the manifest's `first_frame` points to this file.
+`prompts.json` contains `staticPrompt` and timestamped `dynamicPrompts`;
+`prompts.txt` is the corresponding text version.
 
 | Mode | Wan2.1-I2V-14B @ 480p | Wan2.2-TI2V-5B @ 720p |
 | --- | --- | --- |
 | Bidirectional | `wan21_14b_480p_bidir.yaml` | `wan22_5b_720p_bidir.yaml` |
 | Few-step (chunk-AR) | `wan21_14b_480p_few_step.yaml` | `wan22_5b_720p_few_step.yaml` |
 
-Every config already points at `examples/samples/manifest.csv`, so the commands below
-run from the repository root as they are.
-
-**Bidirectional** — all frames denoise jointly, highest quality:
+**Bidirectional inference**: all frames are denoised jointly.
 
 ```bash
 torchrun --nproc_per_node=2 -m edenlive.scripts.infer \
@@ -188,7 +148,12 @@ torchrun --nproc_per_node=2 -m edenlive.scripts.infer \
   runtime.sequence_parallel.size=2
 ```
 
-**Few-step** — chunk-autoregressive, 4 steps per chunk, near real time:
+```bash
+python -m edenlive.scripts.infer \
+  --config edenlive/configs/wan22_5b_720p_bidir.yaml
+```
+
+**Few-step inference**: chunk-autoregressive sampling, 4 steps per chunk.
 
 ```bash
 torchrun --nproc_per_node=2 -m edenlive.scripts.infer \
@@ -196,52 +161,26 @@ torchrun --nproc_per_node=2 -m edenlive.scripts.infer \
   runtime.sequence_parallel.size=2
 ```
 
-The 5B profiles generate 1280x704 on one GPU. Bidirectional inference samples
-the beginning of the recording at timestamp-aligned intervals, capped at 121
-frames; few-step inference uses its full duration. The corresponding 14B cap
-is 81 frames. Both few-step profiles use fixed-window RoPE with a total window
-of 18 latent frames, including 6 sink frames and the current chunk of 3.
-
-```bash
-python -m edenlive.scripts.infer \
-  --config edenlive/configs/wan22_5b_720p_bidir.yaml
-```
-
 ```bash
 python -m edenlive.scripts.infer \
   --config edenlive/configs/wan22_5b_720p_few_step.yaml
 ```
 
-Videos and the conditions used to produce them are written to
-`<inference.output_dir>/save/inference/base/` (`inference/<config name>/` by default):
-the generated `.mp4`, the proxy control video, the first frame, and the prompt.
-Filenames use the manifest `id` (for example, `cryo-crossing.mp4`). Only the first
-rank in each sequence-parallel group saves artifacts.
-The default `recording_manifest` dataset reads static prompts and timed events
-from each recording's `prompts.json` and saves input indices, requests, and
-resolved configurations. The 14B bidirectional profile loads its weights
-from `dit-14b-bidir`.
+**Real-time service**: uses game frames as input and streams video over WebRTC.
+Configure the weight directory, service addresses, ports, and GPU count in
+[`realtime/deploy.conf`](realtime/deploy.conf).
+5B uses one GPU by default. Set `NPROC` for multi-GPU inference.
 
-**Streaming service** — interactive real-time inference. The proxy comes from a game
-running in the browser instead of a recorded file, and frames are served over WebRTC as
-they are generated. This path lives in [`realtime/`](realtime/); its settings — weight
-tree, addresses, ports, GPU count — live in
-[`realtime/deploy.conf`](realtime/deploy.conf), and the scripts read it.
-
-To play the games already in [`realtime/games/registry.json`](realtime/games/registry.json),
-one command on the GPU host is enough — it needs neither the workbench bridge nor the
-FLUX worker:
+Set `TURN_HOST` (the relay address reachable by the browser), `TURN_IFACE`
+(the relay interface), and `TURN_SECRET` (your own password) in
+`realtime/deploy.conf`. To run existing games, execute on the GPU host:
 
 ```bash
 cd realtime
-bash start.sh 14b      # or 5b; renders GAME from deploy.conf from the first step
+apt-get install coturn  # First-time installation
+bash turn_server.sh    # Start TURN first
+bash start.sh 14b       # Model service; or use 5b
 ```
-
-The game library includes Cryo Crossing (`freeze`, the default), Spider Hollow
-(`spiders`), Pulse Skirmish (`tracer`), Deepwater Shock (`bioshock`), Kaiju Rampage
-(`godzilla`), Arcade Duel (`arcadeduel`), and Desert Crossfire (`dust2`). These
-interactive games include their own reference frames and starting states.
-
 
 The workbench — a game library, a chat that builds new games from a text description,
 and a play window — needs all four services. Its first-frame renderer (the FLUX worker)
@@ -250,55 +189,39 @@ runs FLUX.2 \[klein\] 9B under the FLUX Non-Commercial License, so the workbench
 images it generates (see [License](#license)). Playing registered games with `start.sh`
 does not load FLUX.
 
+The bridge host requires the `claude` CLI, `claude auth login`, and first-run trust confirmation.
+Game generation uses `--dangerously-skip-permissions`.
+For separate hosts, copy the bridge's `.workbench/token` to the GPU host's `realtime/`
+directory and set `BRIDGE_HOST`; leave it empty for a single-host deployment.
+
 ```bash
 cd realtime
 
-# 1. TURN relay, on the GPU host. Media needs a UDP path the page load does not,
-#    so a browser on another subnet cannot receive video without it. Set
-#    TURN_SECRET in deploy.conf first, then TURN_HOST to the address this prints.
-#    Leave TURN_HOST empty to skip the relay (browser on the server's subnet only).
+# 1. TURN relay, GPU host; skip if already running
 bash turn_server.sh
 
-# 2. Workbench bridge, on the machine that has the `claude` CLI (logged in with
-#    `claude auth login` and past the first-run trust prompt; it runs unattended
-#    with --dangerously-skip-permissions). It writes the shared token to
-#    .workbench/token; copy that file to the GPU host if it is another machine,
-#    and set BRIDGE_HOST there. On a single machine leave BRIDGE_HOST empty.
+# 2. Workbench bridge, Claude CLI host
 bash workbench_bridge.sh
 
-# 3. FLUX worker, on the GPU host. Renders the photoreal first frame.
+# 3. FLUX first-frame service, GPU host
 bash workbench_flux.sh
 
-# 4. The model app, on the GPU host. Starts the FLUX worker itself if step 3 was
-#    skipped, and refuses to start without .workbench/token.
+# 4. Model service, GPU host
 bash launch.sh
 
-# Stop whatever this host started.
+# Stop services on this host
 bash stop.sh
 ```
 
-Open `http://<host>:8089` (`APP_PORT` in `deploy.conf`). The page has three parts,
-and nothing renders until you press play:
-
-- **Game library** -- every registered game as a card. Clicking one opens it in the
-  play window; games made in the workbench can also be reopened there.
-- **Workbench** -- a chat on the left and the result on the right. The first message
-  describes a game and builds it; later messages revise the same game. The right side
-  has a tab to try the proxy game in the browser and a tab to caption and render its
-  photoreal first frame. **New game** starts a new conversation.
-- **Play window** -- an overlay over the page that streams the model's video. Closing
-  it stops rendering; when a round ends you can replay or close.
-
-`NPROC` sets how many ranks `torchrun` starts — one per GPU.
+Open `http://<host>:8089` (`APP_PORT` in `deploy.conf`).
 
 | Model | Application slug |
 | --- | --- |
 | 5B | `game2v-eden-world-v2-5b-taehv` |
 | 14B | `game2v-eden-world-v2-14b-taehv` |
 
-Both decode with the TAEHV decoder rather than the Wan VAE, trading some fidelity for
-latency. See [`realtime/README.md`](realtime/README.md) for the service topology and the
-developer guides.
+The real-time service uses the TAEHV decoder. See [`realtime/README.md`](realtime/README.md)
+for the service topology and developer documentation.
 
 ## Your own data
 
@@ -317,26 +240,14 @@ python -m edenlive.scripts.infer --config CONFIG.yaml \
   data.dataset.params.root=/data
 ```
 
-Frame count comes from recording timestamps and profile FPS, rounded down to
-`1 mod 4`. Override `data.dataset.params.max_frames` to shorten a clip, preserving
-the configured limits for bidirectional profiles. The original `manifest` dataset
-remains available for separate configurations with general prompt/video inputs.
-
-## Before publishing
-
-- [ ] Replace every `xxx` link: project page, paper, model repo, demo, clone URL.
-- [ ] Publish the `models/EdenLive` tree and fill in the download command.
-- [ ] Add more example results alongside `docs/assets/generated.mp4`.
-- [ ] Fill in the citation authors, venue, and link.
-
 ## Citation
 
 ```bibtex
-@article{edenlive2026,
-  title   = {EdenLive: Real-Time Generative Rendering from Any Reference},
-  author  = {xxx},
-  journal = {xxx},
-  year    = {2026}
+@misc{edenlive2026,
+  title  = {EdenLive: Real-Time Generative Rendering from Any Reference},
+  author = {Zehuan Huang and Tian-Xing Xu and Chunli Peng and Cheng Zhang and Yifei Song and Zeyi Zheng and Zhipeng Yu and Peng Wang and Yan-Pei Cao},
+  year   = {2026},
+  url    = {https://vast-eden.ai/?p=edenlive}
 }
 ```
 
@@ -370,11 +281,6 @@ The model weights are distributed separately and are **not** all Apache 2.0:
 | `clip/` (LAION CLIP ViT-H/14 / OpenCLIP) | [MIT](https://huggingface.co/laion/CLIP-ViT-H-14-laion2B-s32B-b79K) |
 | `vision-encoder/` (DINOv3 and derivatives) | [DINOv3 License](https://github.com/facebookresearch/dinov3/blob/main/LICENSE.md) |
 | `flux-c2f/` (FLUX.2 \[klein\] 9B plus our LoRA; workbench first frame only) | [FLUX Non-Commercial License](https://huggingface.co/black-forest-labs/FLUX.2-klein-9B/blob/main/LICENSE.md) — non-commercial, non-production use only |
-
-FLUX public end-user or production deployment is not automatically permitted by
-being free of charge or described as a demo; check the license and obtain a
-separate authorization from Black Forest Labs where required. These restrictions
-apply to the model and LoRA, not to independently Apache-licensed project code.
 
 Each component ships its own license and notice files alongside the weights; see the model
 repository's README for details.

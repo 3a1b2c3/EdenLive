@@ -1,8 +1,7 @@
 # Shared setup for the launch scripts. Sourced, not run.
 #
-# Reads deploy.conf, then deploy.local.conf if it exists, and exports what the
-# Python side reads. Also keeps the pid of each service this deployment
-# starts, so a later launch or stop only touches those processes.
+# Reads deploy.conf and exports the settings used by the Python services.
+# Tracks the processes started by this deployment.
 
 # bash 3.2 only exits the function when `exit` runs inside one, so step back
 # out of it and then out of the sourced file.
@@ -18,13 +17,10 @@ die() {
 cd "$(dirname "$(readlink -f "${BASH_SOURCE[1]}")")" || exit 1
 
 . ./deploy.conf
-if [ -f deploy.local.conf ]; then
-  . ./deploy.local.conf
-fi
 
 # A relative MODEL_ROOT is read from the Eden repository root.
 if [ -z "$MODEL_ROOT" ]; then
-  die "set MODEL_ROOT in deploy.local.conf"
+  die "set MODEL_ROOT in deploy.conf"
 fi
 if [ "${MODEL_ROOT:0:1}" != "/" ]; then
   MODEL_ROOT="$(cd .. && pwd)/$MODEL_ROOT"
