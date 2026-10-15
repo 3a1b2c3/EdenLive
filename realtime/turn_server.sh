@@ -11,7 +11,7 @@
 set -u
 . "$(dirname "$(readlink -f "$0")")/_common.sh"
 
-[ -n "$TURN_SECRET" ] || die "set TURN_SECRET in deploy.local.conf"
+[ -n "$TURN_SECRET" ] || die "set TURN_SECRET in deploy.conf"
 command -v turnserver >/dev/null || die "turnserver not found; install coturn"
 
 IP="${1:-$(ip -4 -o addr show "$TURN_IFACE" 2>/dev/null | awk '{print $4}' | cut -d/ -f1)}"

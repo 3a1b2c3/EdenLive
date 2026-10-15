@@ -813,7 +813,6 @@ function mount() {
     say(loadNote, "The first video chunk can take a few dozen seconds.");
     loading.hidden = false;
     applyPlayLanguage();
-    showTransportError();
     endbar.hidden = true;
     modal.hidden = false;
     stopMetrics();
@@ -825,6 +824,7 @@ function mount() {
     loadTimer = setTimeout(() => {
       if (!loading.hidden) say(loadNote, "The video is taking longer than expected. Close and retry, or check the server logs.", "error");
     }, LOAD_TIMEOUT_MS);
+    showTransportError();
     // The WebRTC page can have connected media cached before this modal opens.
     // Check synchronously as well as through media events so a replayed frame
     // never leaves the workbench covered by the start card.
@@ -836,7 +836,10 @@ function mount() {
       .then(() => {
         if (metricsEpoch === requestEpoch && !modal.hidden && target?.slug === game.slug) startMetrics();
       })
-      .catch((error) => say(loadNote, error.message, "error"));
+      .catch((error) => {
+        clearTimeout(loadTimer);
+        say(loadNote, error.message, "error");
+      });
     document.activeElement?.blur?.();
   }
 
