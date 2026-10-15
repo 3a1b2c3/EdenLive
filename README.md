@@ -12,7 +12,7 @@
 
 **English** · [简体中文](README_zh.md)
 
-Zehuan Huang<sup>1,*</sup>, Tian-Xing Xu<sup>1,*</sup>, Chunli Peng<sup>1,*</sup>, Cheng Zhang<sup>1,*</sup>, Yifei Song<sup>1,†</sup>, Zeyi Zheng<sup>1,†</sup>, Zhipeng Yu<sup>1</sup>, Peng Wang<sup>1,‡</sup>, Yan-Pei Cao<sup>1,✉</sup>
+Zehuan Huang<sup>1,*</sup>, Tianxing Xu<sup>1,*</sup>, Chunli Peng<sup>1,*</sup>, Cheng Zhang<sup>1,*</sup>, Yifei Song<sup>1,†</sup>, Zeyi Zheng<sup>1,†</sup>, Zhipeng Yu<sup>1</sup>, Peng Wang<sup>1,‡</sup>, Yanpei Cao<sup>1,✉</sup>
 
 \* Equal contribution · † Intern at VAST · ‡ Project lead · ✉ Corresponding author
 
@@ -243,7 +243,7 @@ python -m edenlive.scripts.infer --config CONFIG.yaml \
 ```bibtex
 @misc{edenlive2026,
   title  = {EdenLive: Real-Time Generative Rendering from Any Reference},
-  author = {Zehuan Huang and Tian-Xing Xu and Chunli Peng and Cheng Zhang and Yifei Song and Zeyi Zheng and Zhipeng Yu and Peng Wang and Yan-Pei Cao},
+  author = {Zehuan Huang and Tianxing Xu and Chunli Peng and Cheng Zhang and Yifei Song and Zeyi Zheng and Zhipeng Yu and Peng Wang and Yanpei Cao},
   year   = {2026},
   url    = {https://vast-eden.ai/?p=edenlive}
 }
