@@ -20,9 +20,7 @@ Zehuan Huang<sup>1,*</sup>, Tian-Xing Xu<sup>1,*</sup>, Chunli Peng<sup>1,*</sup
 
 </div>
 
-<div align="center">
-  <video src="docs/assets/official-introduction.mp4" width="100%" controls playsinline></video>
-</div>
+https://github.com/user-attachments/assets/19978f5c-329d-4dce-a952-25c3b3187baf
 
 ## 简介
 
