@@ -5,7 +5,12 @@ This product is licensed under the Apache License, Version 2.0;
 the full license text is reproduced in LICENSE at the repository root
 and in LICENSES/Apache-2.0.txt.
 
-No third-party source is physically vendored into this repository.
+EdenLive modifications: Copyright (c) 2026 Vast AI.
+Modified by Vast AI for EdenLive; original FlashDreams notices are retained.
+
+Vendored third-party source includes html-to-image and GameBlocks-derived
+modules in skills/game-prototype-turbo/assets/. These retain their MIT
+licenses and original copyright notices; see THIRD-PARTY-NOTICES and REUSE.toml.
 
 Third-party software attributions, source-level redistribution
 disclosures, and the full per-dependency license inventory are

@@ -220,7 +220,9 @@ bash start.sh 14b      # 或 5b；从第一步起就渲染 deploy.conf 里的 GA
 街机对决（`arcadeduel`）和沙漠交火（`dust2`）。每款都自带参考首帧及匹配的初始状态。
 
 
-工作台（游戏库、用文字描述生成新游戏的对话、播放窗口）需要四个服务：
+工作台（游戏库、用文字描述生成新游戏的对话、播放窗口）需要四个服务。它的首帧渲染（FLUX
+worker）运行的是 FLUX.2 \[klein\] 9B，适用 FLUX 非商用许可，因此工作台**仅限非商业用途**，
+且该许可要求对生成的图片做内容过滤（见[许可](#许可)）。用 `start.sh` 只玩已注册的游戏不会加载 FLUX。
 
 ```bash
 cd realtime
@@ -306,14 +308,35 @@ python -m edenlive.scripts.infer --config CONFIG.yaml \
 ## 致谢
 
 基于 [Wan2.1 / Wan2.2](https://github.com/Wan-Video)、
-🤗 [Diffusers](https://github.com/huggingface/diffusers) 和
-[DINOv3](https://github.com/facebookresearch/dinov3) 构建。
+🤗 [Diffusers](https://github.com/huggingface/diffusers)、
+[DINOv3](https://github.com/facebookresearch/dinov3)、Black Forest Labs 的
+[FLUX.2 \[klein\]](https://bfl.ai/models/flux-2-klein) 以及
+[LightX2V](https://huggingface.co/lightx2v/Autoencoders) 的 LightTAE 解码器构建。
+游戏渲染使用 [three.js](https://threejs.org)，工作台的游戏生成 skill 基于
+[GameBlocks](https://github.com/xt4d/GameBlocks)。
 
 `realtime/` 下的实时流式服务基于
 [NVIDIA FlashDreams](https://github.com/NVIDIA/flashdreams)。
 
 ## 许可
 
-Apache 2.0 —— 见 [LICENSE](LICENSE)。模型权重与上游 Wan checkpoint 各自适用其自身许可。
-`realtime/` 同为 Apache 2.0，保留自己的 [LICENSE](realtime/LICENSE) 与
-[NOTICE](realtime/NOTICE)。
+本仓库自有代码采用 Apache 2.0 —— 见 [LICENSE](LICENSE) 与 [NOTICE](NOTICE)。`realtime/` 同为
+Apache 2.0，保留自己的 [LICENSE](realtime/LICENSE)、[NOTICE](realtime/NOTICE) 与
+[THIRD-PARTY-NOTICES](realtime/THIRD-PARTY-NOTICES)。内置的 html-to-image 与
+GameBlocks 衍生 skill 模块保留 MIT 许可及原作者版权声明；逐文件范围见
+[REUSE.toml](realtime/REUSE.toml)。
+
+模型权重单独发布，且**并非全部**是 Apache 2.0：
+
+| 组件 | 许可 |
+| --- | --- |
+| `dit-*`、`vae-*`、`umt5/`、`scheduler-*`、`decoder-*` | Apache 2.0 |
+| `clip/`（LAION CLIP ViT-H/14 / OpenCLIP） | [MIT](https://huggingface.co/laion/CLIP-ViT-H-14-laion2B-s32B-b79K) |
+| `vision-encoder/`（DINOv3 及其衍生物） | [DINOv3 License](https://github.com/facebookresearch/dinov3/blob/main/LICENSE.md) |
+| `flux-c2f/`（FLUX.2 \[klein\] 9B 加我们的 LoRA，仅用于工作台首帧） | [FLUX 非商用许可](https://huggingface.co/black-forest-labs/FLUX.2-klein-9B/blob/main/LICENSE.md) —— 仅限非商业、非生产用途 |
+
+免费或以 demo 名义提供服务，并不自动满足 FLUX 的许可条件。公开面向终端用户
+或生产部署时，应核对许可并在需要时取得 Black Forest Labs 的单独授权。限制
+适用于模型及 LoRA，不改变本项目独立 Apache 代码的许可。
+
+每个组件的许可证和声明文件随权重一起分发，详见模型仓库的 README。

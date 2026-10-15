@@ -35,9 +35,9 @@ export function cameraAt(s){
  let reach=1;for(const b of s.buildings){if(b.hp<=0)continue;const hit=segmentBox(target,desired,boxOf(b),.8);if(hit!==null)reach=Math.min(reach,Math.max(.25,hit-.035));}
  return{position:[target.x+(desired.x-target.x)*reach,target.y+(desired.y-target.y)*reach,target.z+(desired.z-target.z)*reach],target:[target.x,target.y,target.z]};
 }
-export class GodzillaGame{
+export class KaijuRampageGame{
  constructor(snapshot){this.s=snapshot?structuredClone(snapshot):{
-  kind:'godzilla',frame:0,time:0,x:0,y:0,z:30,yaw:Math.atan2(-11,18),pitch:-.08,
+  kind:'kaiju-rampage',frame:0,time:0,x:0,y:0,z:30,yaw:Math.atan2(-11,18),pitch:-.08,
   health:100,heat:0,overheated:false,breathing:false,breathStrength:0,breath:null,fireFrames:0,
   stompAt:-10,stomps:0,targets:0,destroyed:0,dead:false,won:false,hurtAt:-10,stride:0,
   buildings:BUILDINGS.map(b=>({...b,hp:b.maxHp,collapseAt:null,burnAt:-10,hitAt:-10,cause:null,nextShot:2.5+b.id*.6,chargeAt:null,aim:null})),
@@ -98,7 +98,7 @@ export class GodzillaGame{
  }
 }
 export const DEFAULTS={
- first:'Third-person elevated rear three-quarter view of a huge dark green Godzilla-like reptilian monster standing in a miniature city. Its full body, thick legs, short arms, jagged dorsal plates and long heavy tail are visible. Rectangular grey concrete buildings line broad empty streets. Some taller warm bronze defense towers have rooftop cannons and glowing amber beacons. Overcast daylight, muted blue-grey sky, no people, text or UI.',
+ first:'Third-person elevated rear three-quarter view of a huge dark green kaiju-style reptilian monster standing in a miniature city. Its full body, thick legs, short arms, jagged dorsal plates and long heavy tail are visible. Rectangular grey concrete buildings line broad empty streets. Some taller warm bronze defense towers have rooftop cannons and glowing amber beacons. Overcast daylight, muted blue-grey sky, no people, text or UI.',
  global:'Third-person elevated following camera behind exactly one giant dark green reptilian kaiju rampaging through a miniature city. There is only one monster in the entire scene, always the same continuous body with jagged dorsal plates and one long tail. Keep the same city layout. The monster breathes a continuous orange-yellow flame jet from its open mouth, burning buildings into chunks and dust. Stomps create ground shockwaves. Warm bronze defense towers fire slow visible orange cannon shells. Collapsed buildings remain as low piles of grey and brown angular concrete blocks and dust. Rubble has no scales, limbs, heads or tails. No additional monsters, duplicate bodies or monster-shaped debris appear. Destroyed buildings never reappear. No text, HUD or human figures.',seed:68427,
 };
 export function dynamicPrompt(states){

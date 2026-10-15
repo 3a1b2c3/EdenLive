@@ -1,3 +1,5 @@
+<!-- Modified by Vast AI for EdenLive. Copyright (c) 2026 Vast AI. -->
+
 # FlashDreams Cam2V application
 
 Reusable interactive camera-to-video application infrastructure. Model packages

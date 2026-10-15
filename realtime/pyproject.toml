@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 Vast AI
+# Modified by Vast AI for EdenLive.
 # Installed with pip, not uv: see requirements.txt. The [tool.uv] workspace,
 # index overrides and build-isolation settings that used to live here only
 # applied to `uv sync`, which this deployment does not use. What remains

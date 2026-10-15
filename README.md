@@ -244,7 +244,11 @@ interactive games include their own reference frames and starting states.
 
 
 The workbench — a game library, a chat that builds new games from a text description,
-and a play window — needs all four services:
+and a play window — needs all four services. Its first-frame renderer (the FLUX worker)
+runs FLUX.2 \[klein\] 9B under the FLUX Non-Commercial License, so the workbench is
+**for non-commercial use only**, and that license requires content filtering on the
+images it generates (see [License](#license)). Playing registered games with `start.sh`
+does not load FLUX.
 
 ```bash
 cd realtime
@@ -339,14 +343,38 @@ remains available for separate configurations with general prompt/video inputs.
 ## Acknowledgements
 
 Built on [Wan2.1 / Wan2.2](https://github.com/Wan-Video),
-🤗 [Diffusers](https://github.com/huggingface/diffusers), and
-[DINOv3](https://github.com/facebookresearch/dinov3).
+🤗 [Diffusers](https://github.com/huggingface/diffusers),
+[DINOv3](https://github.com/facebookresearch/dinov3),
+[FLUX.2 \[klein\]](https://bfl.ai/models/flux-2-klein) by Black Forest Labs, and the
+[LightX2V](https://huggingface.co/lightx2v/Autoencoders) LightTAE decoders. The game
+renders use [three.js](https://threejs.org), and the workbench's game-generation skill
+builds on [GameBlocks](https://github.com/xt4d/GameBlocks).
 
 The real-time streaming service under `realtime/` builds on
 [NVIDIA FlashDreams](https://github.com/NVIDIA/flashdreams).
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE). Model weights and the upstream Wan checkpoints carry
-their own licenses. `realtime/` is also Apache 2.0 and keeps its own
-[LICENSE](realtime/LICENSE) and [NOTICE](realtime/NOTICE).
+First-party code is licensed under Apache 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+`realtime/` is also Apache 2.0 and keeps its own [LICENSE](realtime/LICENSE),
+[NOTICE](realtime/NOTICE) and [THIRD-PARTY-NOTICES](realtime/THIRD-PARTY-NOTICES).
+The vendored html-to-image bundle and GameBlocks-derived skill modules retain
+their MIT licenses and original copyright notices; per-file scope is recorded
+in [REUSE.toml](realtime/REUSE.toml).
+
+The model weights are distributed separately and are **not** all Apache 2.0:
+
+| Component | License |
+| --- | --- |
+| `dit-*`, `vae-*`, `umt5/`, `scheduler-*`, `decoder-*` | Apache 2.0 |
+| `clip/` (LAION CLIP ViT-H/14 / OpenCLIP) | [MIT](https://huggingface.co/laion/CLIP-ViT-H-14-laion2B-s32B-b79K) |
+| `vision-encoder/` (DINOv3 and derivatives) | [DINOv3 License](https://github.com/facebookresearch/dinov3/blob/main/LICENSE.md) |
+| `flux-c2f/` (FLUX.2 \[klein\] 9B plus our LoRA; workbench first frame only) | [FLUX Non-Commercial License](https://huggingface.co/black-forest-labs/FLUX.2-klein-9B/blob/main/LICENSE.md) — non-commercial, non-production use only |
+
+FLUX public end-user or production deployment is not automatically permitted by
+being free of charge or described as a demo; check the license and obtain a
+separate authorization from Black Forest Labs where required. These restrictions
+apply to the model and LoRA, not to independently Apache-licensed project code.
+
+Each component ships its own license and notice files alongside the weights; see the model
+repository's README for details.

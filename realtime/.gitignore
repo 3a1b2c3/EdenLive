@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 Vast AI
+# Modified by Vast AI for EdenLive.
 .clangd
 compile_commands.json
 

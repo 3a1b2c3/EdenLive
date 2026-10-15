@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import {GodzillaGame,FPS,breathRay,cameraAt,distanceToBuilding,dynamicPrompt,combinePrompt,DEFAULTS} from '../godzilla/game.js';
+import {KaijuRampageGame,FPS,breathRay,cameraAt,distanceToBuilding,dynamicPrompt,combinePrompt,DEFAULTS} from '../kaiju-rampage/game.js';
 const tick=(g,n,u={})=>Array.from({length:n},()=>g.step(typeof u==='function'?u():u));
-const quiet=()=>{const g=new GodzillaGame();g.s.buildings.forEach(b=>b.nextShot=999);return g;};
+const quiet=()=>{const g=new KaijuRampageGame();g.s.buildings.forEach(b=>b.nextShot=999);return g;};
 const fire=quiet();assert.equal(breathRay(fire.s).target,0);tick(fire,20,{fire:true});assert.equal(fire.s.buildings[0].hp,50);assert.equal(fire.s.targets,0);tick(fire,20,{fire:true});assert.equal(fire.s.targets,1);assert.equal(fire.s.buildings[0].hp,0);assert.ok(fire.s.buildings[0].collapseAt>0);assert.equal(fire.s.buildings[0].cause,'fire');
 const miss=quiet();miss.s.yaw=Math.PI;tick(miss,45,{fire:true});assert.equal(miss.s.destroyed,0,'Wrong aim misses');
 const far=quiet();far.s.x=0;far.s.z=38;far.s.yaw=Math.atan2(-11,62);tick(far,40,{fire:true});assert.equal(far.s.buildings[4].hp,100,'Distant tower is outside breath range');
@@ -15,11 +15,11 @@ const bounds=quiet();bounds.s.yaw=0;tick(bounds,700,{side:1});assert.ok(bounds.s
 const shell=quiet();shell.s.shells=[{id:0,owner:0,x:0,y:4.5,z:35,vx:0,vy:0,vz:-240,born:0}];shell.step({});assert.equal(shell.s.health,92,'Segment collision catches a fast shell');assert.equal(shell.s.shells.length,0);
 const cover=quiet();cover.s.x=-11;cover.s.z=0;cover.s.shells=[{id:0,owner:5,x:-11,y:5,z:20,vx:0,vy:0,vz:-480,born:0}];cover.step({});assert.equal(cover.s.health,100);assert.equal(cover.s.shells.length,0,'Intact building stops the shell');
 const disabled=quiet();const tower=disabled.s.buildings[0];tower.chargeAt=0;tower.aim={x:0,y:4.5,z:30};disabled.hurtBuilding(tower,100,'fire');tick(disabled,30);assert.equal(disabled.s.shells.length,0,'Destroyed tower cannot finish its shot');
-const dying=new GodzillaGame();tick(dying,1800);assert.equal(dying.s.dead,true);assert.equal(dying.s.health,0);const deadBuildings=dying.s.destroyed;tick(dying,100,{fire:true,jump:true,forward:1});assert.equal(dying.s.destroyed,deadBuildings);
+const dying=new KaijuRampageGame();tick(dying,1800);assert.equal(dying.s.dead,true);assert.equal(dying.s.health,0);const deadBuildings=dying.s.destroyed;tick(dying,100,{fire:true,jump:true,forward:1});assert.equal(dying.s.destroyed,deadBuildings);
 const collateral=quiet();for(const b of collateral.s.buildings)if(!b.target)collateral.hurtBuilding(b,100,'stomp');collateral.step({});assert.equal(collateral.s.targets,0);assert.equal(collateral.s.won,false,'Only defense towers count toward victory');
-const demo=new GodzillaGame(),inputs=[],states=[];
+const demo=new KaijuRampageGame(),inputs=[],states=[];
 while(!demo.s.dead&&!demo.s.won&&demo.s.frame<FPS*60){const u=demo.demoInput();inputs.push(u);states.push(demo.step(u));assert.ok(demo.s.buildings.every(b=>b.hp===0||distanceToBuilding(demo.s.x,demo.s.z,b)>=2.6-1e-8));const camera=cameraAt(demo.s);assert.ok([...camera.position,...camera.target].every(Number.isFinite));}
 assert.equal(demo.s.won,true);assert.equal(demo.s.targets,6);assert.ok(demo.s.stomps>0);assert.ok(states.some(s=>s.overheated));assert.ok(states.flatMap(s=>s.events).some(e=>e.kind==='tower-shot'));
-const replay=new GodzillaGame();inputs.forEach(u=>replay.step(u));assert.deepEqual(replay.snapshot(),demo.snapshot());for(const i of [40,150,300]){const resumed=new GodzillaGame(states[i]);inputs.slice(i+1).forEach(u=>resumed.step(u));assert.deepEqual(resumed.snapshot(),demo.snapshot(),'Exact checkpoint replay including shells, heat and collapse state');}
+const replay=new KaijuRampageGame();inputs.forEach(u=>replay.step(u));assert.deepEqual(replay.snapshot(),demo.snapshot());for(const i of [40,150,300]){const resumed=new KaijuRampageGame(states[i]);inputs.slice(i+1).forEach(u=>resumed.step(u));assert.deepEqual(resumed.snapshot(),demo.snapshot(),'Exact checkpoint replay including shells, heat and collapse state');}
 assert.match(dynamicPrompt(states),/All six/);for(let i=0;i<states.length;i+=12)assert.ok(combinePrompt(DEFAULTS.global,dynamicPrompt(states.slice(i,i+12))).length<=4096);
 console.log(`PASS: breath aim/range/occlusion, heat lock/cooling, stomp cooldown, ram/collision, shells/cover/death, target scoring, camera and deterministic replay. Demo ${demo.s.time}s, ${demo.s.health} HP, ${demo.s.stomps} stomps.`);

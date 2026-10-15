@@ -1,0 +1,38 @@
+EdenLive
+Copyright (c) 2026 Vast AI.
+
+This product is licensed under the Apache License, Version 2.0; see LICENSE.
+
+The real-time serving tree under realtime/ is a trimmed fork of NVIDIA
+FlashDreams (https://github.com/NVIDIA/flashdreams), Apache License 2.0,
+Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. Its own NOTICE,
+THIRD-PARTY-NOTICES and REUSE.toml list the third-party components it
+depends on and the MIT-licensed source it redistributes (html-to-image, and the
+GameBlocks modules the game-generation skill is built on).
+
+The game-prototype-turbo skill under realtime/skills/ builds its module library
+on GameBlocks (https://github.com/xt4d/GameBlocks), MIT License, Copyright (c)
+2026 Weihao Cheng. See realtime/skills/game-prototype-turbo/NOTICE for the
+notice that travels with the skill and its generated games.
+
+The offline inference package (edenlive/) builds on Wan2.1 / Wan2.2
+(Apache-2.0, https://github.com/Wan-Video) and Hugging Face Diffusers
+(Apache-2.0, https://github.com/huggingface/diffusers). It does not
+redistribute their source.
+
+Model weights are not part of this repository. They are distributed
+separately, each component with its own license and notice files:
+
+  dit-*, vae-*, umt5/, scheduler-*   Apache-2.0 (derived from Wan2.1 / Wan2.2)
+  clip/                                    MIT (LAION CLIP ViT-H/14, trained
+                                            using OpenCLIP; original MIT notices retained)
+  decoder-*                                 Apache-2.0 (LightX2V LightTAE,
+                                            https://huggingface.co/lightx2v/Autoencoders)
+  vision-encoder/                           DINOv3 License (Meta Platforms, Inc.)
+  flux-c2f/                                 FLUX Non-Commercial License v2.1
+                                            (FLUX.2 [klein] 9B, Black Forest Labs Inc.,
+                                            with a LoRA fine-tuned by Vast AI);
+                                            used only by the real-time workbench's
+                                            first-frame renderer; non-commercial, non-production use only.
+                                            Public end-user deployment may require
+                                            separate authorization from Black Forest Labs.

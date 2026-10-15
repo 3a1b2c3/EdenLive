@@ -1,3 +1,5 @@
+<!-- Modified by Vast AI for EdenLive. Copyright (c) 2026 Vast AI. -->
+
 # Contributing to FlashDreams
 
 Thanks for your interest in contributing to **FlashDreams**. This project

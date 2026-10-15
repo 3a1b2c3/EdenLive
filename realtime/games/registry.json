@@ -79,7 +79,7 @@
       }
     },
     {
-      "slug": "bioshock",
+      "slug": "deepwater-shock",
       "title": "Deepwater Shock",
       "description": "Use electrical shocks and a pipe wrench in an underwater machine room.",
       "prompt": "First-person electro bolt and pipe wrench combat in an underwater art deco machine room. Keep the same orange pipe wrench in the right hand and bare electrical left hand visible, teal tiled walls and floor, copper pipes, brass trim, warm lamps, underwater window and central generator. Hostile masked workers approach and attack with their hands. Electric shocks are bright blue; stunned enemies tremble with blue arcs. A shallow pool at the back conducts electricity. Defeated enemies remain on the floor. No text or HUD in the scene.",
@@ -100,16 +100,16 @@
       ],
       "source": {
         "repository": "eden-game-demo-local",
-        "game": "bioshock",
+        "game": "deepwater-shock",
         "cover": "cover-4aafb801-cab4-4e92-b328-f65a938d48ac"
       }
     },
     {
-      "slug": "godzilla",
+      "slug": "kaiju-rampage",
       "title": "Kaiju Rampage",
       "description": "Breathe fire and stomp through a miniature city as a giant monster.",
       "prompt": "Third-person elevated following camera behind exactly one giant dark green reptilian kaiju rampaging through a miniature city. There is only one monster in the entire scene, always the same continuous body with jagged dorsal plates and one long tail. Keep the same city layout. The monster breathes a continuous orange-yellow flame jet from its open mouth, burning buildings into chunks and dust. Stomps create ground shockwaves. Warm bronze defense towers fire slow visible orange cannon shells. Collapsed buildings remain as low piles of grey and brown angular concrete blocks and dust. Rubble has no scales, limbs, heads or tails. No additional monsters, duplicate bodies or monster-shaped debris appear. Destroyed buildings never reappear. No text, HUD or human figures.",
-      "cover_prompt": "Third-person elevated rear three-quarter view of a huge dark green Godzilla-like reptilian monster standing in a miniature city. Its full body, thick legs, short arms, jagged dorsal plates and long heavy tail are visible. Rectangular grey concrete buildings line broad empty streets. Some taller warm bronze defense towers have rooftop cannons and glowing amber beacons. Overcast daylight, muted blue-grey sky, no people, text or UI.",
+      "cover_prompt": "Third-person elevated rear three-quarter view of a huge dark green kaiju-style reptilian monster standing in a miniature city. Its full body, thick legs, short arms, jagged dorsal plates and long heavy tail are visible. Rectangular grey concrete buildings line broad empty streets. Some taller warm bronze defense towers have rooftop cannons and glowing amber beacons. Overcast daylight, muted blue-grey sky, no people, text or UI.",
       "cover": "cover.png",
       "entry": "main.js",
       "vendor": {
@@ -125,7 +125,7 @@
       ],
       "source": {
         "repository": "eden-game-demo-local",
-        "game": "godzilla",
+        "game": "kaiju-rampage",
         "cover": "cover-ea1583d6-34f5-403d-8514-03bd8f9a3991"
       }
     },
@@ -158,7 +158,7 @@
       }
     },
     {
-      "slug": "dust2",
+      "slug": "desert-crossfire",
       "title": "Desert Crossfire",
       "description": "Clear a desert passage with a rifle, cover and flashbangs.",
       "prompt": "First-person rifle combat through a sunlit sandy desert alley, stone arch, courtyard and right-hand passage. Keep the same rifle, hands, architecture and wooden crates. Helmeted soldiers in green fatigues aim, fire short bursts, react to hits and fall when defeated. Cover blocks gunfire. Rifle shots show brief muzzle flashes, recoil, ejected casings and impact sparks. Flashbangs burst briefly and stunned soldiers stop firing. Keep the geography and enemy identities consistent, no extra soldiers or on-screen text, no HUD or blood.",

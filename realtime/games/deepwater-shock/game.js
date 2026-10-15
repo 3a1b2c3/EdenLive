@@ -25,9 +25,9 @@ export function segmentBox(a,b,box,pad=0){
 }
 export const blocked=(a,b)=>BLOCKS.some(box=>segmentBox(a,b,box)!==null);
 const point=(x,y,z)=>({x,y,z});
-export class BioshockGame{
+export class DeepwaterShockGame{
  constructor(snapshot){this.s=snapshot?structuredClone(snapshot):{
-  kind:'bioshock',frame:0,time:0,x:-1.3,y:0,z:9,yaw:0,pitch:-.08,vy:0,grounded:true,
+  kind:'deepwater-shock',frame:0,time:0,x:-1.3,y:0,z:9,yaw:0,pitch:-.08,vy:0,grounded:true,
   health:100,eve:100,kills:0,dead:false,won:false,attackAt:-10,impactDone:true,
   shockAt:-10,cast:null,waterUntil:0,waterNextTick:0,lastHit:null,hurtAt:-10,
   swings:0,shocks:0,waterCasts:0,comboHits:0,

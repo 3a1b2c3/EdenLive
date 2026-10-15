@@ -1,66 +1,146 @@
+# Modified by Vast AI for EdenLive. Copyright (c) 2026 Vast AI.
 version = 1
-SPDX-PackageName = "FlashDreams"
-SPDX-PackageSupplier = "NVIDIA Corporation <flashdreams@nvidia.com>"
-SPDX-PackageDownloadLocation = "https://github.com/NVIDIA/flashdreams"
+SPDX-PackageName = "EdenLive real-time serving"
+SPDX-PackageSupplier = "Vast AI"
+SPDX-PackageDownloadLocation = "https://github.com/VAST-AI-Research/EdenLive-Official"
 
-# Files in this repository that do not (or cannot reasonably) carry a per-file
-# SPDX header are licensed via this manifest, per REUSE 3.3.
-#
-# All first-party FlashDreams source is Apache-2.0; per-file SPDX headers are
-# the authoritative source for files that carry them, and the table below
-# fills the gaps for config, build, asset, and documentation files where an
-# inline header would be intrusive or break tooling.
-#
-# Third-party dependencies are NOT declared here: they are consumed at
-# runtime through Python's import system (no source redistribution). Their
-# attributions live in NOTICE.
-
-# --- Default: every other file in the repo is NVIDIA-authored Apache-2.0 ---
+# Per-file notices are retained. Third-party overrides below take precedence.
 [[annotations]]
 path = "**"
 precedence = "aggregate"
-SPDX-FileCopyrightText = "Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved."
 SPDX-License-Identifier = "Apache-2.0"
 
-# --- Documentation and prose. Apache-2.0 for parity with the rest of the
-#     project, so code snippets quoted in docs match the source license. ---
+# NVIDIA FlashDreams source and upstream documentation/configuration.
+
 [[annotations]]
-path = ["**.md", "**.rst"]
+path = [
+    "flashdreams/**",
+    "apps/**",
+    ".gitignore",
+    ".pre-commit-config-base.yaml",
+    ".pre-commit-config.yaml",
+    "ARCHITECTURE.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "NOTICE",
+    "README.md",
+    "REUSE.toml",
+    "SECURITY.md",
+    "THIRD-PARTY-NOTICES",
+    "pyproject.toml"
+]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved."
 SPDX-License-Identifier = "Apache-2.0"
 
-# --- Configuration / build / CI / shell scripts ---
+# EdenLive-owned source, documentation, game code and skill additions.
+# This does not certify third-party character or artwork rights.
+
 [[annotations]]
 path = [
-    ".pre-commit-config.yaml",
-    ".pre-commit-config-base.yaml",
-    ".gitignore",
-    "pyproject.toml",
-    "requirements.txt",
-    "start.sh",
+    "integrations_v2/eden/**",
+    "games/**",
+    "skills/game-prototype-turbo/**",
+    "_common.sh",
+    "deploy.conf",
     "launch.sh",
+    "requirements.txt",
+    "run.py",
+    "start.sh",
     "stop.sh",
     "turn_server.sh",
     "workbench_bridge.sh",
     "workbench_flux.sh",
-    "_common.sh",
-    "deploy.conf",
+    "flashdreams/flashdreams/runtime_v2/distributed_sync.py",
+    "flashdreams/flashdreams/runtime_v2/serving/extensions.py"
 ]
 precedence = "aggregate"
-SPDX-FileCopyrightText = "Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved."
+SPDX-FileCopyrightText = "Copyright (c) 2026 Vast AI"
 SPDX-License-Identifier = "Apache-2.0"
 
-# --- Binary assets (game covers, renderer frames) carry no inline header.
-#     They are NVIDIA-authored unless otherwise noted in NOTICE. ---
+# Vast AI modifications to files retained from FlashDreams.
+
 [[annotations]]
 path = [
-    "games/**.png",
-    "games/**.json",
-    "apps/**.ppm",
+    ".gitignore",
+    ".pre-commit-config.yaml",
+    "ARCHITECTURE.md",
+    "CONTRIBUTING.md",
+    "NOTICE",
+    "LICENSE",
+    "README.md",
+    "REUSE.toml",
+    "THIRD-PARTY-NOTICES",
+    "apps/README.md",
+    "apps/cam2v/README.md",
+    "apps/cam2v/cam2v/application.py",
+    "apps/cam2v/cam2v/controls.py",
+    "apps/cam2v/cam2v/defaults.py",
+    "apps/cam2v/cam2v/session.py",
+    "apps/cam2v/cam2v/ui.py",
+    "apps/cam2v/pyproject.toml",
+    "apps/cam2v/tests/test_application.py",
+    "apps/cam2v/tests/test_ui_cuda.py",
+    "flashdreams/flashdreams/api_v2/README.md",
+    "flashdreams/flashdreams/api_v2/application.py",
+    "flashdreams/flashdreams/api_v2/client_window.py",
+    "flashdreams/flashdreams/api_v2/loop.py",
+    "flashdreams/flashdreams/api_v2/session.py",
+    "flashdreams/flashdreams/core/attention/cp.py",
+    "flashdreams/flashdreams/core/attention/kvcache.py",
+    "flashdreams/flashdreams/core/attention/rope.py",
+    "flashdreams/flashdreams/core/attention/rope_kernel.py",
+    "flashdreams/flashdreams/core/checkpoint/load.py",
+    "flashdreams/flashdreams/core/distributed/__init__.py",
+    "flashdreams/flashdreams/core/distributed/context_parallel.py",
+    "flashdreams/flashdreams/infra/compile.py",
+    "flashdreams/flashdreams/infra/cuda_graph.py",
+    "flashdreams/flashdreams/infra/diffusion/model/base.py",
+    "flashdreams/flashdreams/infra/diffusion/scheduler/base.py",
+    "flashdreams/flashdreams/infra/diffusion/scheduler/fm.py",
+    "flashdreams/flashdreams/infra/encoder/image/clip.py",
+    "flashdreams/flashdreams/infra/encoder/text/umt5.py",
+    "flashdreams/flashdreams/infra/pipeline/base.py",
+    "flashdreams/flashdreams/infra/postprocess/stream.py",
+    "flashdreams/flashdreams/infra/profiler.py",
+    "flashdreams/flashdreams/infra/runner_io.py",
+    "flashdreams/flashdreams/recipes/taehv/__init__.py",
+    "flashdreams/flashdreams/recipes/taehv/impl.py",
+    "flashdreams/flashdreams/recipes/wan/autoencoder/vae.py",
+    "flashdreams/flashdreams/recipes/wan/pipeline.py",
+    "flashdreams/flashdreams/recipes/wan/transformer/impl/modules.py",
+    "flashdreams/flashdreams/recipes/wan/transformer/impl/network.py",
+    "flashdreams/flashdreams/recipes/wan/transformer/wan21.py",
+    "flashdreams/flashdreams/runtime_v2/README.md",
+    "flashdreams/flashdreams/runtime_v2/application_runner.py",
+    "flashdreams/flashdreams/runtime_v2/blit_model_output_to_screen_loop.py",
+    "flashdreams/flashdreams/runtime_v2/cli.py",
+    "flashdreams/flashdreams/runtime_v2/client_window_factory.py",
+    "flashdreams/flashdreams/runtime_v2/event_buffer.py",
+    "flashdreams/flashdreams/runtime_v2/mp4_client_window.py",
+    "flashdreams/flashdreams/runtime_v2/mp4_output_sink.py",
+    "flashdreams/flashdreams/runtime_v2/native_window_client_window.py",
+    "flashdreams/flashdreams/runtime_v2/null_client_window.py",
+    "flashdreams/flashdreams/runtime_v2/presentation_manager.py",
+    "flashdreams/flashdreams/runtime_v2/serving/web/app.js",
+    "flashdreams/flashdreams/runtime_v2/serving/web/index.html",
+    "flashdreams/flashdreams/runtime_v2/serving/webrtc_server.py",
+    "flashdreams/flashdreams/runtime_v2/session_desc.py",
+    "flashdreams/flashdreams/runtime_v2/session_runner.py",
+    "flashdreams/flashdreams/runtime_v2/slangpy_ui_loop.py",
+    "flashdreams/flashdreams/runtime_v2/slangpy_ui_renderer.py",
+    "flashdreams/flashdreams/runtime_v2/step_result.py",
+    "flashdreams/flashdreams/runtime_v2/user_input_event.py",
+    "flashdreams/flashdreams/runtime_v2/video_encoder.py",
+    "flashdreams/flashdreams/runtime_v2/webrtc_client_window.py",
+    "flashdreams/pyproject.toml",
+    "pyproject.toml"
 ]
 precedence = "aggregate"
-SPDX-FileCopyrightText = "Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved."
+SPDX-FileCopyrightText = [
+    "Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.",
+    "Copyright (c) 2026 Vast AI",
+]
 SPDX-License-Identifier = "Apache-2.0"
 
 # --- Vendored third-party browser bundle: html-to-image (UMD build). ---
@@ -68,4 +148,95 @@ SPDX-License-Identifier = "Apache-2.0"
 path = "games/host/html-to-image.js"
 precedence = "override"
 SPDX-FileCopyrightText = "Copyright (c) 2017-2023 W.Y."
+SPDX-License-Identifier = "MIT"
+
+# --- GameBlocks modules redistributed unmodified by the game-prototype-turbo
+#     skill (https://github.com/xt4d/GameBlocks). ---
+[[annotations]]
+path = [
+    "skills/game-prototype-turbo/assets/actor-motion/GeneralObjectModelController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/GeneralVehicleMotionController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/KinematicBatchResolver.js",
+    "skills/game-prototype-turbo/assets/actor-motion/PlateTiltController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/SnakeMotionController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/aircraft/AirplaneModelController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/aircraft/AirplaneMotionController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/character/BaseCharacterMotionController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/character/HeadingRelativeCharacterMotionController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/character/MouseLookCharacterMotionController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/character/WorldCardinalCharacterMotionController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/character/WorldTargetCharacterMotionController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/ground-vehicle/ArcadeCarMotionController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/ground-vehicle/CarModelController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/ground-vehicle/DriftingPlugin.js",
+    "skills/game-prototype-turbo/assets/actor-motion/ground-vehicle/DynamicCarBatchResolver.js",
+    "skills/game-prototype-turbo/assets/actor-motion/ground-vehicle/DynamicCarMotionController.js",
+    "skills/game-prototype-turbo/assets/actor-motion/ground-vehicle/DynamicCarRapierConfig.js",
+    "skills/game-prototype-turbo/assets/behavior/AgentPathNavigator.js",
+    "skills/game-prototype-turbo/assets/behavior/CombatBehaviorDirector.js",
+    "skills/game-prototype-turbo/assets/behavior/NearbyAvoidanceSteering.js",
+    "skills/game-prototype-turbo/assets/behavior/WaypointDriver.js",
+    "skills/game-prototype-turbo/assets/behavior/WaypointProgressTracker.js",
+    "skills/game-prototype-turbo/assets/camera/BaseCameraRig.js",
+    "skills/game-prototype-turbo/assets/camera/FirstPersonCameraRig.js",
+    "skills/game-prototype-turbo/assets/camera/LookOffsetCameraRig.js",
+    "skills/game-prototype-turbo/assets/camera/PositionFollowCameraRig.js",
+    "skills/game-prototype-turbo/assets/gameplay/AimResolver.js",
+    "skills/game-prototype-turbo/assets/gameplay/CombatPlay.js",
+    "skills/game-prototype-turbo/assets/gameplay/FlightPlay.js",
+    "skills/game-prototype-turbo/assets/gameplay/RaceCheckpointLapPlay.js",
+    "skills/game-prototype-turbo/assets/gameplay/SnakePlay.js",
+    "skills/game-prototype-turbo/assets/gameplay/WaveSpawnDirector.js",
+    "skills/game-prototype-turbo/assets/gameplay/combat/ProjectileManager.js",
+    "skills/game-prototype-turbo/assets/math/RandomUtils.js",
+    "skills/game-prototype-turbo/assets/math/ScalarUtils.js",
+    "skills/game-prototype-turbo/assets/math/Vector3Utils.js",
+    "skills/game-prototype-turbo/assets/math/WorldBasis.js",
+    "skills/game-prototype-turbo/assets/user-interface/DomHudRenderer.js",
+    "skills/game-prototype-turbo/assets/user-interface/HeadingRelativeRadar.js",
+    "skills/game-prototype-turbo/assets/user-interface/MinimapProjector2D.js",
+    "skills/game-prototype-turbo/assets/user-interface/NotificationQueue.js",
+    "skills/game-prototype-turbo/assets/user-interface/RaceMinimap.js",
+    "skills/game-prototype-turbo/assets/user-interface/StorageSettingsStore.js",
+    "skills/game-prototype-turbo/assets/user-interface/UiStateModel.js",
+    "skills/game-prototype-turbo/assets/world/Object3DUtils.js",
+    "skills/game-prototype-turbo/assets/world/environment/PlanarUtils.js",
+    "skills/game-prototype-turbo/assets/world/environment/TerrainMeshFactory.js",
+    "skills/game-prototype-turbo/assets/world/environment/TerrainSampler.js",
+    "skills/game-prototype-turbo/assets/world/environment/WorldBoundsColliderFactory.js",
+    "skills/game-prototype-turbo/assets/world/object/FpsWeaponViewModel.js",
+    "skills/game-prototype-turbo/assets/world/object/HealthBarView.js",
+    "skills/game-prototype-turbo/assets/world/object/ProjectileObject.js",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "Copyright (c) 2026 Weihao Cheng"
+SPDX-License-Identifier = "MIT"
+
+# --- GameBlocks modules modified by Vast AI for the game-prototype-turbo skill. ---
+[[annotations]]
+path = [
+    "skills/game-prototype-turbo/assets/behavior/GridPathPlanner.js",
+    "skills/game-prototype-turbo/assets/camera/PoseFollowCameraRig.js",
+    "skills/game-prototype-turbo/assets/gameplay/combat/ProjectileWeaponSystem.js",
+    "skills/game-prototype-turbo/assets/math/TimeUtils.js",
+    "skills/game-prototype-turbo/assets/user-interface/FlightHud.js",
+    "skills/game-prototype-turbo/assets/world/environment/ArenaEnvironment.js",
+    "skills/game-prototype-turbo/assets/world/environment/BoardEnvironment.js",
+    "skills/game-prototype-turbo/assets/world/environment/NaturalEnvironment.js",
+    "skills/game-prototype-turbo/assets/world/environment/RaceTrackEnvironment.js",
+    "skills/game-prototype-turbo/assets/world/environment/SpawnAreaSampler.js",
+    "skills/game-prototype-turbo/assets/world/object/PickupObject.js",
+    "skills/game-prototype-turbo/assets/world/object/factory/PickupVisualFactory.js",
+    "skills/game-prototype-turbo/assets/world/object/factory/ProjectileVisualFactory.js",
+    "skills/game-prototype-turbo/assets/world/object/factory/RockVisualFactory.js",
+    "skills/game-prototype-turbo/assets/world/visual-effects/GroundClickIndicator.js",
+    "skills/game-prototype-turbo/assets/world/visual-effects/JetFlame.js",
+    "skills/game-prototype-turbo/assets/world/visual-effects/VehicleTireMarkRenderer.js",
+    "skills/game-prototype-turbo/assets/world/visual-effects/WeaponEffectsSystem.js",
+]
+precedence = "override"
+SPDX-FileCopyrightText = [
+    "Copyright (c) 2026 Weihao Cheng",
+    "Copyright (c) 2026 Vast AI",
+]
 SPDX-License-Identifier = "MIT"
