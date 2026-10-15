@@ -156,18 +156,17 @@ model as `first_frame`. `prompts.json` carries the full recording metadata — t
 `staticPrompt` used in the manifest plus timed `dynamicPrompts`; `prompts.txt` is the
 same content, readable.
 
-The samples come from the following recordings in `eden-live-demo`:
+The two samples are recordings of the bundled games:
 
-| Sample | Scene | Source recording ID |
-| --- | --- | --- |
-| `cryo-crossing` — Cryo Crossing | Freeze stepping stones across a lava lake with a cryo-blaster. | `dcb95336e0284002af4408b6d95b4253` |
-| `pulse-skirmish` — Pulse Skirmish | Fight combat robots with twin pulse pistols along a sunlit street. | `d3c694b7f5f4427c8f64ad4cfc1a27ba` |
+| Sample | Scene |
+| --- | --- |
+| `cryo-crossing` — Cryo Crossing | Freeze stepping stones across a lava lake with a cryo-blaster. |
+| `pulse-skirmish` — Pulse Skirmish | Fight combat robots with twin pulse pistols along a sunlit street. |
 
-Both recordings contain 717 frames at 24 FPS (29.875 seconds). The original proxy
-videos, reference images, and prompt JSON are copied unchanged; all inference inputs
-are bundled here, so `eden-live-demo` is not needed to run them. Few-step inference
-processes both full recordings by default; bidirectional inference uses the frame
-limits below.
+Both recordings contain 717 frames at 24 FPS (29.875 seconds). Every inference input —
+proxy video, reference image and prompt JSON — is bundled here, so the samples run
+straight from this checkout. Few-step inference processes both full recordings by
+default; bidirectional inference uses the frame limits below.
 
 Two models ship, each in two inference modes. Every config in
 `edenlive/configs/` is self-contained — one file, no includes:
@@ -238,8 +237,8 @@ bash start.sh 14b      # or 5b; renders GAME from deploy.conf from the first ste
 ```
 
 The game library includes Cryo Crossing (`freeze`, the default), Spider Hollow
-(`spiders`), Pulse Skirmish (`tracer`), Deepwater Shock (`bioshock`), Kaiju Rampage
-(`godzilla`), Arcade Duel (`arcadeduel`), and Desert Crossfire (`dust2`). These
+(`spiders`), Pulse Skirmish (`tracer`), Deepwater Shock (`deepwater-shock`), Kaiju Rampage
+(`kaiju-rampage`), Arcade Duel (`arcadeduel`), and Desert Crossfire (`desert-crossfire`). These
 interactive games include their own reference frames and starting states.
 
 

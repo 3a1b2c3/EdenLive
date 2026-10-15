@@ -51,7 +51,7 @@ Mock first frames use proxy PNGs; only smoke output is actual generated video.
 
 Validation (2026-10-13): mechanics and browser checks passed, including holding
 guard, a guard input after one second of CPU windup, clean condition captures,
-mobile/fullscreen controls, mock victory/replay and switching back to Bioshock.
+mobile/fullscreen controls, mock victory/replay and switching back to Deepwater Shock.
 Shared display-mode regression passed. Real AI demo completed an 11-hit combo
 and KO: 213/213 received and decoded, zero dropped frames, RTP loss and NACKs.
 State/action replay and third-frame prompts matched; the WebM fully decodes.

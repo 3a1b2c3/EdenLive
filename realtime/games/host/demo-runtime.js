@@ -1,4 +1,4 @@
-// Shared adapter for the seven fixed-step games imported from eden-game-demo-local.
+// Shared adapter for the seven fixed-step games bundled under games/.
 export function createDemoRuntime(host, {Game, FPS, config, createScene, dynamicPrompt}, initial) {
   const scene = createScene();
   let game, elapsed = 0, steps = 0, eventId = 0, pending = [], paused = false;

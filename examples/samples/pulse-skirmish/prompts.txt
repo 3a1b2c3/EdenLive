@@ -1,5 +1,4 @@
 Sample: Pulse Skirmish (pulse-skirmish)
-Source recording: d3c694b7f5f4427c8f64ad4cfc1a27ba
 Duration: 29.875s (29875 ms)
 
 STATIC PROMPT

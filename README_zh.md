@@ -146,15 +146,15 @@ examples/samples/
 录制元信息 —— manifest 使用的 `staticPrompt`，以及带时间戳的 `dynamicPrompts`；
 `prompts.txt` 是同样内容的可读版本。
 
-两个测例来自 `eden-live-demo` 的以下录制：
+两个测例是随仓库提供的游戏录制：
 
-| 测例 | 场景 | 原录制 ID |
-| --- | --- | --- |
-| `cryo-crossing` — 冰桥渡熔岩（Cryo Crossing） | 用冰冻枪在熔岩湖上冻结踏脚石，逐步穿越。 | `dcb95336e0284002af4408b6d95b4253` |
-| `pulse-skirmish` — 脉冲巷战（Pulse Skirmish） | 在阳光下的街巷中双持脉冲枪，与战斗机器人交火。 | `d3c694b7f5f4427c8f64ad4cfc1a27ba` |
+| 测例 | 场景 |
+| --- | --- |
+| `cryo-crossing` — 冰桥渡熔岩（Cryo Crossing） | 用冰冻枪在熔岩湖上冻结踏脚石，逐步穿越。 |
+| `pulse-skirmish` — 脉冲巷战（Pulse Skirmish） | 在阳光下的街巷中双持脉冲枪，与战斗机器人交火。 |
 
-两段录制均为 24 FPS、717 帧（29.875 秒）。原始 proxy 视频、参考图片和 prompt JSON
-均原样复制，推理输入全部随本仓库提供，运行时不依赖 `eden-live-demo`。
+两段录制均为 24 FPS、717 帧（29.875 秒）。proxy 视频、参考图片和 prompt JSON 等推理输入
+全部随本仓库提供，克隆后即可直接运行。
 Few-step 默认处理两段完整录制；双向推理按下文的帧数上限截取。
 
 两个模型，各两种推理模式。`edenlive/configs/` 下每个配置都是自包含的 —— 一个文件，
@@ -216,8 +216,8 @@ bash start.sh 14b      # 或 5b；从第一步起就渲染 deploy.conf 里的 GA
 ```
 
 实时游戏库包含七款游戏：冰桥渡熔岩（`freeze`，默认）、蛛穴探险（`spiders`）、
-脉冲巷战（`tracer`）、深海电击（`bioshock`）、巨兽破城（`godzilla`）、
-街机对决（`arcadeduel`）和沙漠交火（`dust2`）。每款都自带参考首帧及匹配的初始状态。
+脉冲巷战（`tracer`）、深海电击（`deepwater-shock`）、巨兽破城（`kaiju-rampage`）、
+街机对决（`arcadeduel`）和沙漠交火（`desert-crossfire`）。每款都自带参考首帧及匹配的初始状态。
 
 
 工作台（游戏库、用文字描述生成新游戏的对话、播放窗口）需要四个服务。它的首帧渲染（FLUX

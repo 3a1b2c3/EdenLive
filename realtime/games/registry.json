@@ -18,12 +18,7 @@
         "Space: jump",
         "P / Escape: pause",
         "Play again button: restart"
-      ],
-      "source": {
-        "repository": "eden-game-demo-local",
-        "game": "freeze",
-        "cover": "cover-5c1b58b4-9b70-4c11-9215-621112fe1b48"
-      }
+      ]
     },
     {
       "slug": "spiders",
@@ -43,12 +38,7 @@
         "Space: jump",
         "P / Escape: pause",
         "Play again button: restart"
-      ],
-      "source": {
-        "repository": "eden-game-demo-local",
-        "game": "spiders",
-        "cover": "cover-aa9751b3-63db-4cf0-a9d8-7af126aa951a"
-      }
+      ]
     },
     {
       "slug": "tracer",
@@ -71,12 +61,7 @@
         "R: Reload",
         "P / Escape: pause",
         "Play again button: restart"
-      ],
-      "source": {
-        "repository": "eden-game-demo-local",
-        "game": "tracer",
-        "cover": "cover-eab28482-2c04-4663-90fa-30bfd078c83b"
-      }
+      ]
     },
     {
       "slug": "deepwater-shock",
@@ -97,12 +82,7 @@
         "E: Electro bolt",
         "P / Escape: pause",
         "Play again button: restart"
-      ],
-      "source": {
-        "repository": "eden-game-demo-local",
-        "game": "deepwater-shock",
-        "cover": "cover-4aafb801-cab4-4e92-b328-f65a938d48ac"
-      }
+      ]
     },
     {
       "slug": "kaiju-rampage",
@@ -122,12 +102,7 @@
         "Space: Stomp",
         "P / Escape: pause",
         "Play again button: restart"
-      ],
-      "source": {
-        "repository": "eden-game-demo-local",
-        "game": "kaiju-rampage",
-        "cover": "cover-ea1583d6-34f5-403d-8514-03bd8f9a3991"
-      }
+      ]
     },
     {
       "slug": "arcadeduel",
@@ -150,12 +125,7 @@
         "SHIFT: Dash · 10 energy",
         "P / Escape: pause",
         "Play again button: restart"
-      ],
-      "source": {
-        "repository": "eden-game-demo-local",
-        "game": "arcadeduel",
-        "cover": "cover-28cc608d-6e97-48e7-af4e-58c545f0fd84"
-      }
+      ]
     },
     {
       "slug": "desert-crossfire",
@@ -177,12 +147,7 @@
         "E: Flashbang",
         "P / Escape: pause",
         "Play again button: restart"
-      ],
-      "source": {
-        "repository": "eden-game-demo-local",
-        "game": "dust2",
-        "cover": "cover-b456b17c-d789-4c08-8d00-98d86c47e910"
-      }
+      ]
     }
   ]
 }
