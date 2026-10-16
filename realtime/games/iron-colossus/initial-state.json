@@ -1,0 +1,98 @@
+{
+  "state": "RUNNING",
+  "roundId": 1,
+  "elapsed": 0.06666666666666667,
+  "terminalCount": 0,
+  "outcomeReason": "",
+  "events": [],
+  "paused": false,
+  "player": {
+    "x": 0,
+    "y": 0,
+    "z": 9,
+    "yaw": 0,
+    "pitch": 0,
+    "vy": 0,
+    "moving": false
+  },
+  "health": 150,
+  "maxHealth": 150,
+  "kills": 0,
+  "shots": 0,
+  "hurtAt": -9,
+  "cooldown": 0,
+  "jumpCount": 0,
+  "enemies": [],
+  "projectiles": [],
+  "pid": 0,
+  "towers": [
+    {
+      "x": -6,
+      "z": -10,
+      "hp": 100,
+      "radius": 1.9,
+      "height": 7.5,
+      "shellCd": 1.3333333333333335
+    },
+    {
+      "x": 6,
+      "z": -10,
+      "hp": 100,
+      "radius": 1.9,
+      "height": 7.5,
+      "shellCd": 1.7833333333333334
+    },
+    {
+      "x": -6,
+      "z": -20,
+      "hp": 100,
+      "radius": 1.9,
+      "height": 7.5,
+      "shellCd": 2.2333333333333334
+    },
+    {
+      "x": 6,
+      "z": -20,
+      "hp": 100,
+      "radius": 1.9,
+      "height": 7.5,
+      "shellCd": 2.6833333333333336
+    },
+    {
+      "x": -6,
+      "z": -30,
+      "hp": 100,
+      "radius": 1.9,
+      "height": 7.5,
+      "shellCd": 3.1333333333333337
+    },
+    {
+      "x": 6,
+      "z": -30,
+      "hp": 100,
+      "radius": 1.9,
+      "height": 7.5,
+      "shellCd": 3.5833333333333335
+    }
+  ],
+  "heat": 0,
+  "overheated": false,
+  "breathing": false,
+  "stompCd": 0,
+  "stomps": 0,
+  "breathT": 0,
+  "stompT": -1,
+  "towersLeft": 6,
+  "building": {
+    "error": -0.3058788714048522,
+    "distance": 19.924858845171276,
+    "hp": 100
+  },
+  "target": {
+    "error": 0,
+    "distance": 0,
+    "hp": 0,
+    "stun": 0,
+    "id": -1
+  }
+}

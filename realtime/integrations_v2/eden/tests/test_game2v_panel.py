@@ -142,32 +142,27 @@ def test_extensions_manifest_lists_panel_script(isolated_extension):
 
 
 def test_panel_lists_registered_games_and_rewrites_play_page(isolated_extension):
-    session = SimpleNamespace(model_loop=SimpleNamespace(state=_state("tracer")))
+    session = SimpleNamespace(model_loop=SimpleNamespace(state=_state("ember-den")))
     register_game2v_panel(session)
 
     async def body(client):
         listed = await client.get("/ext/game2v/games")
         payload = await listed.json()
-        assert payload["current"] == "tracer"
+        assert payload["current"] == "ember-den"
         slugs = {game["slug"] for game in payload["games"]}
-        assert "tracer" in slugs
-        assert "freeze" in slugs
-        page = await client.get("/ext/game2v/play/tracer")
+        assert "ember-den" in slugs
+        assert "jade-duel" in slugs
+        page = await client.get("/ext/game2v/play/ember-den")
         html = await page.text()
         assert page.status == 200
-        assert "window.gameSlug=" in html
-        assert "/ext/game2v/host/play-page.js" in html
+        # Standalone games own their page: it loads the game's own entry module.
+        assert "/ember-den/main.js" in html
         assert "/shared/host/play-page.js" not in html
-        # The game's own asset tree, not the shared games/assets/.
-        assert '"/assets/": "/game/tracer/assets/"' in html
-        assert '"three": "/vendor/three-demo.module.js"' in html
-        subway = next(game for game in payload["games"] if game["slug"] == "tracer")
-        assert subway["cover"] == "files/tracer/cover.png"
-        # A hand-ported game has no generation source; a workbench game does.
-        assert subway["source"] == ""
-        assert slugs == {"freeze", "spiders", "tracer", "deepwater-shock", "kaiju-rampage", "arcadeduel", "desert-crossfire"}
+        subway = next(game for game in payload["games"] if game["slug"] == "ember-den")
+        assert subway["cover"] == "files/ember-den/cover.png"
+        assert slugs == {"ember-den", "iron-colossus", "jade-duel", "warehouse-sokoban"}
         assert "/game/game/" not in html
-        assert '<base href="/game/tracer/">' in html
+        assert '<base href="/game/ember-den/">' in html
         assert "/shared/recorder/" not in html
         script = await client.get("/ext/game2v/panel.js")
         assert script.status == 200
@@ -180,25 +175,25 @@ def test_panel_lists_registered_games_and_rewrites_play_page(isolated_extension)
 
 
 def test_panel_switch_sets_pending_slug(isolated_extension):
-    state = _state("tracer")
+    state = _state("ember-den")
     session = SimpleNamespace(model_loop=SimpleNamespace(state=state))
     register_game2v_panel(session)
 
     async def body(client):
         bad = await client.post("/ext/game2v/switch", json={"slug": "not-a-game"})
         assert bad.status == 400
-        ok = await client.post("/ext/game2v/switch", json={"slug": "freeze"})
+        ok = await client.post("/ext/game2v/switch", json={"slug": "jade-duel"})
         assert ok.status == 200
         payload = await ok.json()
-        assert payload["current"] == "freeze"
-        assert state.pending_game_slug == "freeze"
-        same = await client.post("/ext/game2v/switch", json={"slug": "tracer"})
+        assert payload["current"] == "jade-duel"
+        assert state.pending_game_slug == "jade-duel"
+        same = await client.post("/ext/game2v/switch", json={"slug": "ember-den"})
         assert same.status == 200
         assert state.pending_game_slug is None
         # "Play again" rewinds even though the slug has not changed.
-        again = await client.post("/ext/game2v/switch", json={"slug": "tracer", "restart": True})
+        again = await client.post("/ext/game2v/switch", json={"slug": "ember-den", "restart": True})
         assert again.status == 200
-        assert state.pending_game_slug == "tracer"
+        assert state.pending_game_slug == "ember-den"
         assert state.pending_game_restart is True
 
     asyncio.run(_with_client(body))

@@ -81,7 +81,7 @@ def test_registry_static_prompt(tmp_path):
 
 def test_shipped_registries_declare_a_static_prompt():
     """Both vendored games describe their scene, which is the prompt base."""
-    for slug in ('freeze', 'tracer'):
+    for slug in ('ember-den', 'jade-duel'):
         assert game_static_prompt(slug)
 
 

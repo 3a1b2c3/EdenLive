@@ -1,153 +1,220 @@
 {
   "games": [
     {
-      "slug": "freeze",
-      "title": "Cryo Crossing",
-      "description": "Freeze stepping stones across a lava lake and reach the far platform.",
-      "prompt": "First-person traversal of a volcanic cavern above a lava lake. A freeze gun remains visible in the foreground. Small stepping stones lead toward a raised exit platform. Maintain the same cavern layout and weapon identity throughout.",
-      "cover_prompt": "A gun overlooks a lava lake inside a cavern. Small rocky outcrops form a route toward a raised platform.",
+      "slug": "ember-den",
+      "title": "Ember Den",
+      "description": "Explore a firelit cave and use an axe to defeat three approaching eight-legged spiders.",
+      "prompt": "First-person axe combat in a basalt cavern with faceted rock walls, stalactites, glowing teal crystals and amber braziers. Exactly three large brown eight-legged spiders crawl toward the camera. A steel axe on a long wooden handle stays in the lower right foreground without hands or arms. Axe swings leave a pale slash trail, strike sparks and green ichor; spiders rear up before biting; defeated spiders curl up on the ground. Keep the cave layout and spider identities. No extra creatures, text or HUD.",
+      "cover_prompt": "A forward-facing camera looks down a wide basalt cavern passage lit by amber braziers, with teal crystals and stalactites. A steel axe with a long wooden handle fills the lower right foreground with no visible operator. Exactly three large brown eight-legged spiders stand at different distances ahead on the stone floor.",
       "cover": "cover.png",
-      "entry": "main.js",
+      "entry": "index.html",
+      "host": "standalone",
       "vendor": {
-        "three-demo": "npm:three@0.186.1"
+        "three": "0.161.0"
       },
       "controls": [
         "WASD: move",
-        "Arrow keys: look / aim",
-        "F: Freeze",
+        "Arrow keys: aim",
+        "F: swing axe",
         "Space: jump",
         "P / Escape: pause",
-        "Play again button: restart"
-      ]
+        "Enter: restart"
+      ],
+      "modules": [
+        "/assets/camera/BaseCameraRig.js",
+        "/assets/camera/FirstPersonCameraRig.js",
+        "/assets/math/ScalarUtils.js",
+        "/assets/math/TimeUtils.js",
+        "/assets/math/Vector3Utils.js",
+        "/assets/math/WorldBasis.js",
+        "/assets/user-interface/GameUiFactory.js",
+        "/assets/user-interface/PrototypeShell.js"
+      ],
+      "restart_keys": [
+        "enter"
+      ],
+      "event_prompts": {
+        "player.moved": "The camera or controlled figure moves through the same space, preserving all fixed scene geometry.",
+        "player.jumped": "The camera or controlled fighter rises briefly and returns to the ground.",
+        "enemy.hit": "The struck opponent recoils with a bright impact flash and sparks.",
+        "enemy.defeated": "The defeated opponent falls and stays on the ground.",
+        "player.hit": "An enemy attack lands; the view shakes and the screen edges flash red.",
+        "round.won": "The objective is complete and the scene settles into its final state.",
+        "round.lost": "The controlled character is defeated and the scene stops.",
+        "melee.swung": "The axe sweeps across the foreground leaving a pale slash trail, then returns to the ready position.",
+        "melee.hit": "The axe bites into a spider with a flash of sparks and green ichor; the spider is knocked back.",
+        "melee.miss": "The axe slices empty air and kicks up a little dust.",
+        "enemy.attack": "A spider rears up on its hind legs with glowing red eyes before lunging.",
+        "enemy.bite": "A spider lunges and bites; the view jolts.",
+        "bite.dodged": "The spider's lunge misses the player."
+      },
+      "source": {
+        "skill": "game-prototype-turbo",
+        "run": "runs/step3/acceptance"
+      }
     },
     {
-      "slug": "spiders",
-      "title": "Spider Hollow",
-      "description": "Explore a torch-lit cavern and fight giant spiders with an axe.",
-      "prompt": "First-person exploration and axe combat inside a torch-lit stone cave. A single steel axe with a long wooden handle stays in the lower right foreground between swings, its handle extending below the image. The axe moves without visible hands, gloves or arms. Large brown eight-legged spiders crawl on the floor. Maintain the same winding cave, warm orange torches, cool stone walls, weapon and creature identities. No spiderwebs, text or HUD in the scene.",
-      "cover_prompt": "A large steel axe blade and its long wooden handle occupy the right foreground of a stone cave passage. The wooden handle extends below the bottom edge of the image. Only the axe is visible in the foreground, with no hands, gloves or arms. Large brown spiders stand on the rocky floor. Orange wall torches illuminate blue-grey rock walls and stalactites.",
+      "slug": "iron-colossus",
+      "title": "Iron Colossus",
+      "description": "Rampage as a single giant reptile, breathe flame and stomp to demolish a defended city.",
+      "prompt": "An elevated rear camera follows exactly one large dark green reptilian monster with golden dorsal plates and a long tail down a wide city avenue lined with tall teal, ochre and gray skyscrapers, a harbor with cranes beyond. Six gray defense towers with red lamps stand in two rows ahead. Fire breath is a bright orange jet from its mouth; stomps send a dust ring and debris; towers shoot glowing shells with smoke trails; burning towers smoke; destroyed towers collapse into low gray rubble. No duplicate creatures, people, text or HUD.",
+      "cover_prompt": "An elevated camera looks from behind a single large dark green reptilian monster with golden dorsal plates and a long tail, standing on a wide city avenue between tall teal, ochre and gray skyscrapers with lit windows. Exactly six gray defense towers with red lamps stand in two rows ahead; a harbor with cranes is visible far down the avenue.",
       "cover": "cover.png",
-      "entry": "main.js",
+      "entry": "index.html",
+      "host": "standalone",
       "vendor": {
-        "three-demo": "npm:three@0.186.1"
+        "three": "0.161.0"
       },
       "controls": [
         "WASD: move",
-        "Arrow keys: look / aim",
-        "F: Swing axe",
-        "Space: jump",
+        "Arrow keys: aim / turn",
+        "F: breathe fire",
+        "Space: stomp",
         "P / Escape: pause",
-        "Play again button: restart"
-      ]
-    },
-    {
-      "slug": "tracer",
-      "title": "Pulse Skirmish",
-      "description": "Fight street robots with twin pulse pistols, blink and recall.",
-      "prompt": "First-person dual-pistol combat in a sunlit stylized city street. Two compact white and orange pulse pistols with glowing cyan cores stay visible in the lower foreground. Red humanoid robots fight among blue cargo crates, ochre and teal buildings and small trees. Maintain weapon identity, street layout and enemy identities. Cyan player projectiles and orange enemy projectiles remain clearly visible. No text or HUD in the scene.",
-      "cover_prompt": "Two compact white and orange futuristic pistols with cyan energy cores occupy the lower left and lower right foreground. Red humanoid robots stand on a sunlit street between ochre and teal buildings. Blue cargo crates with orange straps and small trees line the street.",
-      "cover": "cover.png",
-      "entry": "main.js",
-      "vendor": {
-        "three-demo": "npm:three@0.186.1"
+        "Enter: restart"
+      ],
+      "modules": [
+        "/assets/camera/BaseCameraRig.js",
+        "/assets/camera/FirstPersonCameraRig.js",
+        "/assets/camera/PoseFollowCameraRig.js",
+        "/assets/math/ScalarUtils.js",
+        "/assets/math/TimeUtils.js",
+        "/assets/math/Vector3Utils.js",
+        "/assets/math/WorldBasis.js",
+        "/assets/user-interface/GameUiFactory.js",
+        "/assets/user-interface/PrototypeShell.js"
+      ],
+      "restart_keys": [
+        "enter"
+      ],
+      "event_prompts": {
+        "player.moved": "The camera or controlled figure moves through the same space, preserving all fixed scene geometry.",
+        "player.jumped": "The camera or controlled fighter rises briefly and returns to the ground.",
+        "enemy.hit": "The struck opponent recoils with a bright impact flash and sparks.",
+        "enemy.defeated": "The defeated opponent falls and stays on the ground.",
+        "player.hit": "An enemy attack lands; the view shakes and the screen edges flash red.",
+        "round.won": "The objective is complete and the scene settles into its final state.",
+        "round.lost": "The controlled character is defeated and the scene stops.",
+        "flame.breathed": "The monster opens its jaws and breathes a bright orange flame jet forward.",
+        "flame.overheated": "The flame sputters out as the monster overheats.",
+        "ground.stomped": "The monster stamps the ground; a dust ring and debris burst outward.",
+        "building.hit": "A tower is scorched or cracked by flame or a stomp, with sparks.",
+        "building.collapsed": "The tower collapses in a cloud of dust into a low pile of gray rubble.",
+        "defense.fired": "A tower fires a glowing shell with a muzzle flash and smoke trail toward the monster.",
+        "projectile.impact": "A shell explodes on the ground near the monster with fire and smoke."
       },
-      "controls": [
-        "WASD: move",
-        "Arrow keys: look / aim",
-        "F: Fire",
-        "Space: jump",
-        "SHIFT: Blink",
-        "E: Recall",
-        "R: Reload",
-        "P / Escape: pause",
-        "Play again button: restart"
-      ]
+      "source": {
+        "skill": "game-prototype-turbo",
+        "run": "runs/step3/acceptance"
+      }
     },
     {
-      "slug": "deepwater-shock",
-      "title": "Deepwater Shock",
-      "description": "Use electrical shocks and a pipe wrench in an underwater machine room.",
-      "prompt": "First-person electro bolt and pipe wrench combat in an underwater art deco machine room. Keep the same orange pipe wrench in the right hand and bare electrical left hand visible, teal tiled walls and floor, copper pipes, brass trim, warm lamps, underwater window and central generator. Hostile masked workers approach and attack with their hands. Electric shocks are bright blue; stunned enemies tremble with blue arcs. A shallow pool at the back conducts electricity. Defeated enemies remain on the floor. No text or HUD in the scene.",
-      "cover_prompt": "First-person view inside an underwater art deco machine room. A large orange steel pipe wrench held in the right hand fills the lower right foreground. An open left hand with faint blue electrical veins is visible at lower left. Two hostile masked workers in worn brown and purple work clothes stand ahead on teal floor tiles. Copper pipes, brass beams, boilers and warm lamps line the room. A blue underwater window is on the left wall and a large generator stands farther ahead on the right.",
+      "slug": "jade-duel",
+      "title": "Jade Duel",
+      "description": "Defeat a martial artist with combos, guard, uppercut, energy wave and dash.",
+      "prompt": "A fixed side view of exactly two unarmed martial artists on a large jade platform, a blue-uniformed fighter at left and an orange-uniformed fighter at right, both full bodies large in frame. Four red and gold pillars, a round moon gate, red lanterns and mountains stand behind. Punch combos, kicks and uppercuts land with bright impact bursts and shock rings; guards flash cyan; a cyan crescent energy wave crosses the gap; dashes leave speed streaks. No additional fighters, weapons, text or HUD.",
+      "cover_prompt": "A fixed side-view camera looks across one large jade fighting platform. Exactly two unarmed martial artists face each other, a blue-uniformed fighter on the left and an orange-uniformed fighter on the right, both complete bodies large in frame with a gap between them. Four red and gold pillars, a large round moon gate and red lanterns stand behind the platform at dusk.",
       "cover": "cover.png",
-      "entry": "main.js",
+      "entry": "index.html",
+      "host": "standalone",
       "vendor": {
-        "three-demo": "npm:three@0.186.1"
-      },
-      "controls": [
-        "WASD: move",
-        "Arrow keys: look / aim",
-        "F: Wrench",
-        "Space: jump",
-        "E: Electro bolt",
-        "P / Escape: pause",
-        "Play again button: restart"
-      ]
-    },
-    {
-      "slug": "kaiju-rampage",
-      "title": "Kaiju Rampage",
-      "description": "Breathe fire and stomp through a miniature city as a giant monster.",
-      "prompt": "Third-person elevated following camera behind exactly one giant dark green reptilian kaiju rampaging through a miniature city. There is only one monster in the entire scene, always the same continuous body with jagged dorsal plates and one long tail. Keep the same city layout. The monster breathes a continuous orange-yellow flame jet from its open mouth, burning buildings into chunks and dust. Stomps create ground shockwaves. Warm bronze defense towers fire slow visible orange cannon shells. Collapsed buildings remain as low piles of grey and brown angular concrete blocks and dust. Rubble has no scales, limbs, heads or tails. No additional monsters, duplicate bodies or monster-shaped debris appear. Destroyed buildings never reappear. No text, HUD or human figures.",
-      "cover_prompt": "Third-person elevated rear three-quarter view of a huge dark green kaiju-style reptilian monster standing in a miniature city. Its full body, thick legs, short arms, jagged dorsal plates and long heavy tail are visible. Rectangular grey concrete buildings line broad empty streets. Some taller warm bronze defense towers have rooftop cannons and glowing amber beacons. Overcast daylight, muted blue-grey sky, no people, text or UI.",
-      "cover": "cover.png",
-      "entry": "main.js",
-      "vendor": {
-        "three-demo": "npm:three@0.186.1"
-      },
-      "controls": [
-        "WASD: move",
-        "Arrow keys: Aim",
-        "F: Breath",
-        "Space: Stomp",
-        "P / Escape: pause",
-        "Play again button: restart"
-      ]
-    },
-    {
-      "slug": "arcadeduel",
-      "title": "Arcade Duel",
-      "description": "Fight a martial arts duel with combos, kicks and energy attacks.",
-      "prompt": "A side-view arcade fighting match between exactly two martial artists, one in blue on the left and one in orange on the right, on a raised teal arena platform with dark pillars behind them. Keep their identities and the arena consistent. Full bodies stay visible. Fast punches, spinning kicks, rising uppercuts, jumping and brief dash afterimages follow the fighters. Crescent energy projectiles fly horizontally and disappear on impact. Brief sparks mark contact. A blocked strike meets raised forearms; a missed strike does not hurt the other fighter. No additional fighters, weapons, text or HUD.",
-      "cover_prompt": "Two martial artists facing each other on a raised fighting platform. Both fighters stand with their fists raised. Pillars stand behind the platform.",
-      "cover": "cover.png",
-      "entry": "main.js",
-      "vendor": {
-        "three-demo": "npm:three@0.186.1"
+        "three": "0.161.0"
       },
       "controls": [
         "A / D: move",
-        "F: Combo",
+        "F: punch combo",
+        "G: guard",
         "Space: jump",
-        "G: Guard",
-        "E: Uppercut · 15 energy",
-        "R: Wave · 30 energy",
-        "SHIFT: Dash · 10 energy",
+        "E: uppercut (15 energy)",
+        "R: wave (30 energy)",
+        "Shift: dash (10 energy)",
         "P / Escape: pause",
-        "Play again button: restart"
-      ]
+        "Enter: restart"
+      ],
+      "modules": [
+        "/assets/camera/BaseCameraRig.js",
+        "/assets/camera/FirstPersonCameraRig.js",
+        "/assets/math/ScalarUtils.js",
+        "/assets/math/TimeUtils.js",
+        "/assets/math/Vector3Utils.js",
+        "/assets/math/WorldBasis.js",
+        "/assets/user-interface/GameUiFactory.js",
+        "/assets/user-interface/PrototypeShell.js"
+      ],
+      "restart_keys": [
+        "enter"
+      ],
+      "event_prompts": {
+        "player.moved": "The camera or controlled figure moves through the same space, preserving all fixed scene geometry.",
+        "player.jumped": "The camera or controlled fighter rises briefly and returns to the ground.",
+        "enemy.hit": "The struck opponent recoils with a bright impact flash and sparks.",
+        "enemy.defeated": "The defeated opponent falls and stays on the ground.",
+        "player.hit": "An enemy attack lands; the view shakes and the screen edges flash red.",
+        "round.won": "The objective is complete and the scene settles into its final state.",
+        "round.lost": "The controlled character is defeated and the scene stops.",
+        "combo.struck": "The blue fighter throws a punch or kick combination with a cyan fist trail.",
+        "combo.missed": "The blue fighter's strike hits only air.",
+        "uppercut.struck": "The blue fighter delivers a rising uppercut with a golden streak.",
+        "wave.launched": "The blue fighter thrusts both palms and launches a cyan crescent energy wave across the gap.",
+        "player.dashed": "The blue fighter dashes forward leaving cyan speed streaks.",
+        "enemy.attack": "The orange fighter cocks back an arm with a red glow.",
+        "opponent.struck": "The orange fighter's strike connects with the blue fighter.",
+        "strike.blocked": "The blue fighter blocks the strike with raised arms and a cyan flash.",
+        "enemy.guarding": "The orange fighter raises both forearms to guard.",
+        "enemy.guarded": "A blow glances off the guarding fighter with a flash.",
+        "projectile.impact": "The energy wave bursts against the opponent in cyan light."
+      },
+      "source": {
+        "skill": "game-prototype-turbo",
+        "run": "runs/step3/acceptance"
+      }
     },
     {
-      "slug": "desert-crossfire",
-      "title": "Desert Crossfire",
-      "description": "Clear a desert passage with a rifle, cover and flashbangs.",
-      "prompt": "First-person rifle combat through a sunlit sandy desert alley, stone arch, courtyard and right-hand passage. Keep the same rifle, hands, architecture and wooden crates. Helmeted soldiers in green fatigues aim, fire short bursts, react to hits and fall when defeated. Cover blocks gunfire. Rifle shots show brief muzzle flashes, recoil, ejected casings and impact sparks. Flashbangs burst briefly and stunned soldiers stop firing. Keep the geography and enemy identities consistent, no extra soldiers or on-screen text, no HUD or blood.",
-      "cover_prompt": "A rifle held by two hands in the foreground of a desert alley. Armed soldiers stand ahead among wooden crates. An arched gateway, shuttered buildings and barrels line the alley.",
+      "slug": "warehouse-sokoban",
+      "title": "Warehouse Sokoban",
+      "description": "Push two wooden boxes onto the two marked goals, one tile at a time; boxes cannot be pulled or pushed in pairs.",
+      "prompt": "A fixed elevated isometric view of a warehouse pushing puzzle that fills the frame. One worker in an orange vest and yellow hard hat moves tile by tile inside gray stone perimeter walls with a few inner wall blocks. Exactly two wooden crates and exactly two brass destination pads. The worker pushes one crate at a time. The board sits on a concrete warehouse floor with shelves, pallets and barrels around it. No extra crates, text or HUD.",
+      "cover_prompt": "An elevated diagonal camera shows one warehouse Sokoban board filling most of the frame: gray stone perimeter walls with a few inner blocks around a checkered floor. Exactly one worker in an orange vest and yellow hard hat stands near the front. Exactly two wooden crates and exactly two brass destination pads are on the board. Concrete warehouse floor with shelves and pallets surrounds the board.",
       "cover": "cover.png",
-      "entry": "main.js",
+      "entry": "index.html",
+      "host": "standalone",
       "vendor": {
-        "three-demo": "npm:three@0.186.1"
+        "three": "0.161.0"
       },
       "controls": [
-        "WASD: move",
-        "Arrow keys: Aim",
-        "F: Fire",
-        "Space: jump",
-        "R: Reload",
-        "E: Flashbang",
+        "WASD / Arrow keys: move and push",
         "P / Escape: pause",
-        "Play again button: restart"
-      ]
+        "Enter: restart"
+      ],
+      "modules": [
+        "/assets/camera/BaseCameraRig.js",
+        "/assets/camera/FirstPersonCameraRig.js",
+        "/assets/math/ScalarUtils.js",
+        "/assets/math/TimeUtils.js",
+        "/assets/math/Vector3Utils.js",
+        "/assets/math/WorldBasis.js",
+        "/assets/user-interface/GameUiFactory.js",
+        "/assets/user-interface/PrototypeShell.js"
+      ],
+      "restart_keys": [
+        "enter"
+      ],
+      "event_prompts": {
+        "player.moved": "The worker steps one tile.",
+        "player.jumped": "The camera or controlled fighter rises briefly and returns to the ground.",
+        "enemy.hit": "The struck opponent recoils with a bright impact flash and sparks.",
+        "enemy.defeated": "The defeated opponent falls and stays on the ground.",
+        "player.hit": "An enemy attack lands; the view shakes and the screen edges flash red.",
+        "round.won": "Both crates are on their pads and green; green sparkles burst.",
+        "round.lost": "A crate is stuck in a wall corner and sparks flare.",
+        "box.pushed": "The worker pushes exactly one crate one tile along the floor with a little dust.",
+        "move.blocked": "The worker bumps against a wall or crate and stays on the tile with a small red spark.",
+        "box.on_goal": "The pushed crate settles onto a brass pad and turns green with a ring burst; only this crate turns green."
+      },
+      "source": {
+        "skill": "game-prototype-turbo",
+        "run": "runs/step3/acceptance"
+      }
     }
   ]
 }

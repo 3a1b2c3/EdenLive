@@ -1,0 +1,51 @@
+{
+  "title": "Jade Duel",
+  "core_verb": "Defeat a martial artist with combos, guard, uppercut, energy wave and dash.",
+  "fantasy": "Exactly two martial artists on a jade platform, backed by stone pillars at sunset.",
+  "control_scheme": "custom",
+  "player_modality": "avatar",
+  "fail_state": "Player health reaches zero.",
+  "win_state": "Reduce the opponent health to zero.",
+  "interaction_tags": [
+    {
+      "id": "primary",
+      "meaning": "Defeat a martial artist with combos, guard, uppercut, energy wave and dash.",
+      "role": "action"
+    }
+  ],
+  "time_budget_seconds": 90,
+  "context": {
+    "distilled_prompt": "Build a new playable game using the repository skill. Reference the existing arcadeduel game; preserve its signature actions in a new scene and layout.",
+    "assumptions": [
+      "Silent desktop keyboard play, one continuous round with restart."
+    ]
+  },
+  "scene": {
+    "description": "Exactly two martial artists on a jade platform, backed by stone pillars at sunset.",
+    "theme_elements": [
+      {
+        "id": "theme_0",
+        "label": "Jade arena",
+        "role": "setting"
+      },
+      {
+        "id": "theme_1",
+        "label": "Blue martial artist",
+        "role": "object"
+      },
+      {
+        "id": "theme_2",
+        "label": "Orange martial artist",
+        "role": "actor"
+      },
+      {
+        "id": "theme_3",
+        "label": "Energy wave",
+        "role": "object"
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

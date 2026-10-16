@@ -1,0 +1,17 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Warehouse Sokoban</title>
+<link rel="stylesheet" href="/warehouse-sokoban/assets/user-interface/game-ui.css">
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#16212d}#app{position:absolute;inset:0}#app canvas{display:block;width:100%;height:100%}#fatal{display:none;position:absolute;inset:20px;color:white;background:#8b2929;z-index:50}.game-ui{pointer-events:none}</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script></head><body><div id="app"></div><pre id="fatal"></pre>
+<script>
+// The streaming host dispatches synthetic Enter events; activate the focused restart button.
+window.addEventListener('keydown', event => {
+  if (event.code === 'Enter' && event.target.matches('button[data-ui-action="restart"]')) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.target.click();
+  }
+}, true);
+</script>
+<script type="module">import('/warehouse-sokoban/main.js').then(m=>m.start()).catch(e=>{const n=document.querySelector('#fatal');n.style.display='block';n.textContent=e.stack;});</script></body></html>

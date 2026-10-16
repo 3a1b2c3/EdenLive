@@ -1,0 +1,51 @@
+{
+  "title": "Ember Den",
+  "core_verb": "Explore a firelit cave and use an axe to defeat three approaching eight-legged spiders.",
+  "fantasy": "A basalt cave with amber braziers, a heavy axe and three brown eight-legged spiders.",
+  "control_scheme": "first_person_mouse",
+  "player_modality": "avatar",
+  "fail_state": "Health reaches zero from spider bites.",
+  "win_state": "Defeat all three spiders.",
+  "interaction_tags": [
+    {
+      "id": "primary",
+      "meaning": "Explore a firelit cave and use an axe to defeat three approaching eight-legged spiders.",
+      "role": "action"
+    }
+  ],
+  "time_budget_seconds": 90,
+  "context": {
+    "distilled_prompt": "Build a new playable game using the repository skill. Reference the existing spiders game; preserve its signature actions in a new scene and layout.",
+    "assumptions": [
+      "Silent desktop keyboard play, one continuous round with restart."
+    ]
+  },
+  "scene": {
+    "description": "A basalt cave with amber braziers, a heavy axe and three brown eight-legged spiders.",
+    "theme_elements": [
+      {
+        "id": "theme_0",
+        "label": "Basalt cavern",
+        "role": "setting"
+      },
+      {
+        "id": "theme_1",
+        "label": "Steel axe",
+        "role": "object"
+      },
+      {
+        "id": "theme_2",
+        "label": "Eight-legged spiders",
+        "role": "actor"
+      },
+      {
+        "id": "theme_3",
+        "label": "Amber braziers",
+        "role": "object"
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

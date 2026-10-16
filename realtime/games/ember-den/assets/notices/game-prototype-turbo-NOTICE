@@ -1,0 +1,39 @@
+game-prototype-turbo
+Copyright (c) 2026 Vast AI.
+
+Licensed under the Apache License, Version 2.0; see the repository's LICENSE.
+
+This skill's module library under assets/ is built on GameBlocks
+(https://github.com/xt4d/GameBlocks), which is MIT-licensed. 53 modules are
+redistributed unmodified, 18 carry modifications by Vast AI, and the remaining
+files under assets/ are Vast AI's own additions. The repository's REUSE.toml
+lists each GameBlocks-derived file. Their license and copyright notice:
+
+    MIT License
+
+    Copyright (c) 2026 Weihao Cheng
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+Generated game prototypes copy modules from assets/ into their own output
+directory, so a generated game that includes GameBlocks-derived modules carries
+the notice above with it.
+
+The skill's browser runtime loads three.js (MIT, https://threejs.org), which is
+installed at deploy time and is not redistributed here.

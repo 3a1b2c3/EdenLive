@@ -1,0 +1,17 @@
+{
+  "caption": "An elevated camera looks from behind a single large dark green reptilian monster with golden dorsal plates and a long tail, standing on a wide city avenue between tall teal, ochre and gray skyscrapers with lit windows. Exactly six gray defense towers with red lamps stand in two rows ahead; a harbor with cranes is visible far down the avenue.",
+  "seed": 20261105,
+  "input": "first-frame.png",
+  "output": "cover.png",
+  "width": 1024,
+  "height": 576,
+  "steps": 28,
+  "guidance": 4.0,
+  "pipeline": "FLUX.2 Klein base with coarse-to-fine LoRA",
+  "generation": {
+    "seconds": 16.25,
+    "peak_gb": 33.8
+  },
+  "input_sha256": "638acf2562e80fa698187488eef7017238bae7b0f9a357604872e07292a9db9e",
+  "output_sha256": "60c24192d53a636a7a8a334479a011c2862827614cfbf33371dcb164cb31c743"
+}

@@ -1,0 +1,110 @@
+{
+  "interaction_events": [
+    "melee.swung",
+    "melee.hit",
+    "enemy.hit",
+    "player.moved"
+  ],
+  "restart_actions": [
+    {
+      "type": "tap",
+      "key": "Enter"
+    }
+  ],
+  "scenarios": [
+    {
+      "expect": "WON",
+      "rules": [
+        {
+          "when": {
+            "target.error": {
+              "$gt": 0.05
+            }
+          },
+          "hold": [
+            "ArrowRight"
+          ]
+        },
+        {
+          "when": {
+            "target.error": {
+              "$lt": -0.05
+            }
+          },
+          "hold": [
+            "ArrowLeft"
+          ]
+        },
+        {
+          "when": {
+            "target.distance": {
+              "$gt": 2.7
+            }
+          },
+          "hold": [
+            "w"
+          ]
+        },
+        {
+          "when": {
+            "target.distance": {
+              "$lt": 2.7
+            }
+          },
+          "hold": [
+            "f"
+          ]
+        }
+      ]
+    },
+    {
+      "expect": "LOST",
+      "rules": []
+    },
+    {
+      "expect": "WON",
+      "rules": [
+        {
+          "when": {
+            "target.error": {
+              "$gt": 0.05
+            }
+          },
+          "hold": [
+            "ArrowRight"
+          ]
+        },
+        {
+          "when": {
+            "target.error": {
+              "$lt": -0.05
+            }
+          },
+          "hold": [
+            "ArrowLeft"
+          ]
+        },
+        {
+          "when": {
+            "target.distance": {
+              "$gt": 2.7
+            }
+          },
+          "hold": [
+            "w"
+          ]
+        },
+        {
+          "when": {
+            "target.distance": {
+              "$lt": 2.7
+            }
+          },
+          "hold": [
+            "f"
+          ]
+        }
+      ]
+    }
+  ]
+}

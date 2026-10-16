@@ -109,24 +109,9 @@
   }
 
   let canvas = null;
-  let pageShot = null;
   let scratch = null;
-  // The scene canvas alone misses everything a game draws as DOM: the HUD,
-  // the key hints, the countdown and result cards. html-to-image renders the
-  // document over a copy of the WebGL canvas, since a live WebGL buffer reads
-  // back blank inside a foreign drawing context. The capture page is pinned to
-  // a device pixel ratio of 1, so the shot matches the model's frame size.
-  function shotOptions() {
-    return {
-      width: window.innerWidth,
-      height: window.innerHeight,
-      canvasWidth: window.innerWidth,
-      canvasHeight: window.innerHeight,
-      pixelRatio: 1,
-      skipAutoScale: true,
-      quality: 0.8,
-    };
-  }
+  // Like host/backend.js, the model sees only the scene canvas: DOM overlays
+  // (HUD, key hints, result cards) are never captured.
   // A game that pins its own pixel ratio renders larger than the viewport;
   // resample so the fallback frame still matches the model's frame size.
   function canvasShot() {
@@ -153,31 +138,20 @@
   }
 
   // The game draws inside its RAF callback, so the drawing buffer still holds
-  // that frame when this runs in the same task. The page shot starts here and
-  // encodes while the round-trip back to Python is in flight; a shot that
-  // fails falls back to the bare scene canvas rather than dropping the frame.
-  async function capture() {
-    const shot = pageShot ?? htmlToImage.toJpeg(document.body, shotOptions());
-    pageShot = htmlToImage.toJpeg(document.body, shotOptions());
-    let ui;
-    try {
-      ui = await shot;
-    } catch (error) {
-      console.error('Page capture failed; sending the scene canvas.', error);
-      ui = canvasShot();
-    }
+  // that frame when this runs in the same task.
+  function capture() {
     return {
       tick,
       width: window.innerWidth,
       height: window.innerHeight,
-      ui,
+      ui: canvasShot(),
       state: readState(),
     };
   }
 
   const backend = {
     dispatch(events) { dispatchEvents(events); },
-    async advanceToFrame({events, targetTick}) {
+    advanceToFrame({events, targetTick}) {
       dispatchEvents(events);
       simulateTo(targetTick);
       return capture();
@@ -194,7 +168,7 @@
       const captured = [];
       for (const frame of frames) {
         simulateTo(frame.targetTick);
-        captured.push(await capture());
+        captured.push(capture());
       }
       return {tick, frames: captured};
     },
@@ -216,7 +190,6 @@
       return;
     }
     runFrame();
-    pageShot = htmlToImage.toJpeg(document.body, shotOptions());
     window.gameBackend = backend;
   };
   setTimeout(ready, 0);
