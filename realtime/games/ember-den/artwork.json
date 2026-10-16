@@ -1,0 +1,17 @@
+{
+  "caption": "A forward-facing camera looks down a wide basalt cavern passage lit by amber braziers, with teal crystals and stalactites. A steel axe with a long wooden handle fills the lower right foreground with no visible operator. Exactly three large brown eight-legged spiders stand at different distances ahead on the stone floor.",
+  "seed": 20261100,
+  "input": "first-frame.png",
+  "output": "cover.png",
+  "width": 1024,
+  "height": 576,
+  "steps": 28,
+  "guidance": 4.0,
+  "pipeline": "FLUX.2 Klein base with coarse-to-fine LoRA",
+  "generation": {
+    "seconds": 16.93,
+    "peak_gb": 33.8
+  },
+  "input_sha256": "e5208027d56ac9d84fd928854f5b7c47f604554f77b40e4c80a81f52735e626c",
+  "output_sha256": "e23a7c1c0847ce085274637c6d7e0ba68eadd14ef071abea4cf55f172ced21ac"
+}

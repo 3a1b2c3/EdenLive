@@ -1,0 +1,51 @@
+{
+  "title": "Warehouse Sokoban",
+  "core_verb": "Push two wooden boxes onto the two marked goals, one tile at a time; boxes cannot be pulled or pushed in pairs.",
+  "fantasy": "An isometric 3D warehouse board with stone walls, two wooden crates, brass goal pads and a warehouse worker.",
+  "control_scheme": "custom",
+  "player_modality": "avatar",
+  "fail_state": "A box is pushed into a wall corner that is not a goal.",
+  "win_state": "Both boxes occupy goal pads.",
+  "interaction_tags": [
+    {
+      "id": "primary",
+      "meaning": "Push two wooden boxes onto the two marked goals, one tile at a time; boxes cannot be pulled or pushed in pairs.",
+      "role": "action"
+    }
+  ],
+  "time_budget_seconds": 90,
+  "context": {
+    "distilled_prompt": "Build a new playable game using the repository skill. Build classic Sokoban from scratch.",
+    "assumptions": [
+      "Silent desktop keyboard play, one continuous round with restart."
+    ]
+  },
+  "scene": {
+    "description": "An isometric 3D warehouse board with stone walls, two wooden crates, brass goal pads and a warehouse worker.",
+    "theme_elements": [
+      {
+        "id": "theme_0",
+        "label": "Warehouse board",
+        "role": "setting"
+      },
+      {
+        "id": "theme_1",
+        "label": "Warehouse worker",
+        "role": "object"
+      },
+      {
+        "id": "theme_2",
+        "label": "Wooden crates",
+        "role": "actor"
+      },
+      {
+        "id": "theme_3",
+        "label": "Goal pads",
+        "role": "object"
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

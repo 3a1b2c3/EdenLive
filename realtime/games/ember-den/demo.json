@@ -1,0 +1,49 @@
+{
+ "rules": [
+  {
+   "when": {
+    "target.error": {
+     "$gt": 0.05
+    }
+   },
+   "hold": [
+    "ArrowRight"
+   ]
+  },
+  {
+   "when": {
+    "target.error": {
+     "$lt": -0.05
+    }
+   },
+   "hold": [
+    "ArrowLeft"
+   ]
+  },
+  {
+   "when": {
+    "target.distance": {
+     "$gt": 2.7
+    }
+   },
+   "hold": [
+    "w"
+   ]
+  },
+  {
+   "when": {
+    "target.distance": {
+     "$lt": 2.7
+    }
+   },
+   "hold": [
+    "f"
+   ]
+  }
+ ],
+ "duty": [
+  40,
+  40
+ ],
+ "startDelay": 60
+}

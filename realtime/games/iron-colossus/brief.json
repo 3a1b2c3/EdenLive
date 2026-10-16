@@ -1,0 +1,51 @@
+{
+  "title": "Iron Colossus",
+  "core_verb": "Rampage as a single giant reptile, breathe flame and stomp to demolish a defended city.",
+  "fantasy": "A miniature port city with six towers, a green reptilian monster, fire and permanent rubble.",
+  "control_scheme": "third_person_chase",
+  "player_modality": "avatar",
+  "fail_state": "Health reaches zero from defense shells.",
+  "win_state": "Demolish all six city towers.",
+  "interaction_tags": [
+    {
+      "id": "primary",
+      "meaning": "Rampage as a single giant reptile, breathe flame and stomp to demolish a defended city.",
+      "role": "action"
+    }
+  ],
+  "time_budget_seconds": 90,
+  "context": {
+    "distilled_prompt": "Build a new playable game using the repository skill. Reference the existing kaiju-rampage game; preserve its signature actions in a new scene and layout.",
+    "assumptions": [
+      "Silent desktop keyboard play, one continuous round with restart."
+    ]
+  },
+  "scene": {
+    "description": "A miniature port city with six towers, a green reptilian monster, fire and permanent rubble.",
+    "theme_elements": [
+      {
+        "id": "theme_0",
+        "label": "Port city",
+        "role": "setting"
+      },
+      {
+        "id": "theme_1",
+        "label": "Giant reptile",
+        "role": "object"
+      },
+      {
+        "id": "theme_2",
+        "label": "Defense towers",
+        "role": "actor"
+      },
+      {
+        "id": "theme_3",
+        "label": "Fire and rubble",
+        "role": "object"
+      }
+    ]
+  },
+  "ui": {
+    "mode": "polish"
+  }
+}

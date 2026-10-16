@@ -1,0 +1,17 @@
+{
+  "caption": "An elevated diagonal camera shows one warehouse Sokoban board filling most of the frame: gray stone perimeter walls with a few inner blocks around a checkered floor. Exactly one worker in an orange vest and yellow hard hat stands near the front. Exactly two wooden crates and exactly two brass destination pads are on the board. Concrete warehouse floor with shelves and pallets surrounds the board.",
+  "seed": 20261107,
+  "input": "first-frame.png",
+  "output": "cover.png",
+  "width": 1024,
+  "height": 576,
+  "steps": 28,
+  "guidance": 4.0,
+  "pipeline": "FLUX.2 Klein base with coarse-to-fine LoRA",
+  "generation": {
+    "seconds": 16.26,
+    "peak_gb": 33.8
+  },
+  "input_sha256": "b78b879a543170320a4b301d497ce556f2b7bb3bf63117a24c9c193cbfc02e4d",
+  "output_sha256": "d3a88235ec24fa89077f8dbe7e1a4e9cea593ed6bec06809f7136b2dd011850e"
+}

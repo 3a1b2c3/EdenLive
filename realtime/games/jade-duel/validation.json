@@ -1,0 +1,25 @@
+{
+  "skill": "game-prototype-turbo",
+  "revision": "visual and feedback rework: larger map framing, muzzle flashes, visible projectiles, impact/hit/death effects, dedicated per-game rules and scenes; lite effects pass (no dynamic point lights, capped particles/smoke/beams, no ambient particle loops)",
+  "checks": {
+    "headless_real_input_playthrough": "WON by strategy in playthrough.json (software WebGL, virtual 60 Hz clock)",
+    "idle_loss": "LOST or input-driven loss confirmed",
+    "restart": "same-page restart gives RUNNING round+1 with empty events",
+    "formal_forge_gates": "not_run",
+    "hardware_performance": "not_evaluated",
+    "streaming_host_check": "not_run (needs the Eden capture host)"
+  },
+  "runtime_sha256": {
+    "index.html": "45444553c14a101c4fbaf20ad3fc6d8bc6c74a31afe7ad6de0db361d43d669bc",
+    "main.js": "e21f1ba920ad8a18514d0d76a3a7b247773d7cf55dfd2efa697007dcf1c67b2e",
+    "game.mjs": "94c51e2568525f11ce8eaa92d7d34699ed74599a64c9fa081bf79fd3fab270a4",
+    "scene.mjs": "114175e8e5f05ef4e21ae5ad57d4845659c12e5c1ddd6859be96d4d4c7d587b3",
+    "lib/app.mjs": "db57f782339ccb0869c7a699d8e30cff784526cfa02230e5260b5055cb16f4d7",
+    "lib/fps-core.mjs": "04c699c4c740a5e4d6f368fccb1f33241c53a16619d8913bfb3e2431e0d25a1a",
+    "lib/fpsview.mjs": "a7565e6afa00c200a24573495df6e4c959bd7d7789a276726e1dfb8aa7be9413",
+    "lib/fx.mjs": "018b0103b4323d451552e2c45cd00379da0c6ea55c21cdd85b3aab3383c96d7a",
+    "lib/game-loop.mjs": "a475622d3b466f2325a2d6a34a9c7bd583304e6100bc288ac8312eb0d29e7fa4",
+    "lib/hud.mjs": "712200afdb890884d48be2903ab913213827e0e151907274760fb6c46f0a4bdb",
+    "lib/kit.mjs": "850cc0a69e192a653178967d5fc96a1b5f7224455c2df791bde26f2f629abe64"
+  }
+}

@@ -1,0 +1,59 @@
+{
+ "rules": [
+  {
+   "when": {
+    "building.error": {
+     "$gt": 0.06
+    }
+   },
+   "hold": [
+    "ArrowRight"
+   ]
+  },
+  {
+   "when": {
+    "building.error": {
+     "$lt": -0.06
+    }
+   },
+   "hold": [
+    "ArrowLeft"
+   ]
+  },
+  {
+   "when": {
+    "building.distance": {
+     "$gt": 11
+    }
+   },
+   "hold": [
+    "w"
+   ]
+  },
+  {
+   "when": {
+    "building.distance": {
+     "$lt": 13
+    }
+   },
+   "hold": [
+    "f"
+   ]
+  },
+  {
+   "when": {
+    "building.distance": {
+     "$lt": 7
+    },
+    "stompCd": 0
+   },
+   "action": {
+    "type": "tap",
+    "key": " "
+   },
+   "cooldown_ms": 1000
+  }
+ ],
+ "duty": null,
+ "startDelay": 60
+}

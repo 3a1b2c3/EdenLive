@@ -1,0 +1,369 @@
+{
+  "interaction_events": [
+    "box.pushed",
+    "player.moved"
+  ],
+  "restart_actions": [
+    {
+      "type": "tap",
+      "key": "Enter"
+    }
+  ],
+  "scenarios": [
+    {
+      "expect": "WON",
+      "rules": [
+        {
+          "when": {
+            "moves": 0
+          },
+          "action": {
+            "type": "tap",
+            "key": "a"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 1
+          },
+          "action": {
+            "type": "tap",
+            "key": "w"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 2
+          },
+          "action": {
+            "type": "tap",
+            "key": "a"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 3
+          },
+          "action": {
+            "type": "tap",
+            "key": "w"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 4
+          },
+          "action": {
+            "type": "tap",
+            "key": "w"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 5
+          },
+          "action": {
+            "type": "tap",
+            "key": "s"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 6
+          },
+          "action": {
+            "type": "tap",
+            "key": "d"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 7
+          },
+          "action": {
+            "type": "tap",
+            "key": "d"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 8
+          },
+          "action": {
+            "type": "tap",
+            "key": "d"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 9
+          },
+          "action": {
+            "type": "tap",
+            "key": "s"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 10
+          },
+          "action": {
+            "type": "tap",
+            "key": "d"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 11
+          },
+          "action": {
+            "type": "tap",
+            "key": "w"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 12
+          },
+          "action": {
+            "type": "tap",
+            "key": "w"
+          },
+          "cooldown_ms": 120
+        }
+      ]
+    },
+    {
+      "expect": "LOST",
+      "rules": [
+        {
+          "when": {
+            "moves": 0
+          },
+          "action": {
+            "type": "tap",
+            "key": "a"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 1
+          },
+          "action": {
+            "type": "tap",
+            "key": "w"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 2
+          },
+          "action": {
+            "type": "tap",
+            "key": "w"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 3
+          },
+          "action": {
+            "type": "tap",
+            "key": "a"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 4
+          },
+          "action": {
+            "type": "tap",
+            "key": "w"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 5
+          },
+          "action": {
+            "type": "tap",
+            "key": "a"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 6
+          },
+          "action": {
+            "type": "tap",
+            "key": "s"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 7
+          },
+          "action": {
+            "type": "tap",
+            "key": "s"
+          },
+          "cooldown_ms": 120
+        }
+      ]
+    },
+    {
+      "expect": "WON",
+      "rules": [
+        {
+          "when": {
+            "moves": 0
+          },
+          "action": {
+            "type": "tap",
+            "key": "a"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 1
+          },
+          "action": {
+            "type": "tap",
+            "key": "w"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 2
+          },
+          "action": {
+            "type": "tap",
+            "key": "a"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 3
+          },
+          "action": {
+            "type": "tap",
+            "key": "w"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 4
+          },
+          "action": {
+            "type": "tap",
+            "key": "w"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 5
+          },
+          "action": {
+            "type": "tap",
+            "key": "s"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 6
+          },
+          "action": {
+            "type": "tap",
+            "key": "d"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 7
+          },
+          "action": {
+            "type": "tap",
+            "key": "d"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 8
+          },
+          "action": {
+            "type": "tap",
+            "key": "d"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 9
+          },
+          "action": {
+            "type": "tap",
+            "key": "s"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 10
+          },
+          "action": {
+            "type": "tap",
+            "key": "d"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 11
+          },
+          "action": {
+            "type": "tap",
+            "key": "w"
+          },
+          "cooldown_ms": 120
+        },
+        {
+          "when": {
+            "moves": 12
+          },
+          "action": {
+            "type": "tap",
+            "key": "w"
+          },
+          "cooldown_ms": 120
+        }
+      ]
+    }
+  ]
+}

@@ -76,7 +76,6 @@ def standalone_page(html: str, entry: Mapping[str, Any]) -> str:
     payload = json.dumps(config).replace('</', '<\\/')
     script = (
         f'<script>window.gameStandalone={payload}</script>'
-        '<script src="/host/html-to-image.js"></script>'
         '<script src="/host/standalone.js"></script>'
     )
     head = re.search(r'<head[^>]*>', html, flags=re.IGNORECASE)
@@ -239,11 +238,15 @@ class GameRenderer:
             route.fulfill(status=404, body=f'Missing game resource: {rel}')
             return
         body = path.read_bytes()
-        if rel == 'host/html-to-image.js':
-            body = (b'(function(requestAnimationFrame){\n' + body
-                    + b'\n})(window.requestAnimationFrame.bind(window));')
         if rel == f'{self.slug}/index.html' and self.entry.get('host') == STANDALONE_HOST:
-            body = standalone_page(body.decode(), self.entry).encode()
+            html = standalone_page(body.decode(), self.entry)
+            # Same opt-in autopilot as the built-in pages; it must load after
+            # host/standalone.js so it sees the virtual clock.
+            autopilot = os.environ.get('EDEN_GAME_AUTOPILOT', '')
+            if autopilot:
+                marker = '<script src="/host/standalone.js"></script>'
+                html = html.replace(marker, marker + f'<script src="/bench/{Path(autopilot).name}"></script>', 1)
+            body = html.encode()
         elif rel == f'{self.slug}/index.html':
             html = body.decode().replace('<script type="module" src="/shared/host/play-page.js"></script>',
                 f'<script>window.gameSlug={json.dumps(self.slug)}</script><script type="module" src="/host/backend.js"></script>')

@@ -1,0 +1,104 @@
+{
+  "interaction_events": [
+    "combo.struck",
+    "enemy.hit",
+    "player.moved",
+    "wave.launched"
+  ],
+  "restart_actions": [
+    {
+      "type": "tap",
+      "key": "Enter"
+    }
+  ],
+  "scenarios": [
+    {
+      "expect": "WON",
+      "rules": [
+        {
+          "when": {
+            "duelDistance": {
+              "$gt": 1.7
+            }
+          },
+          "hold": [
+            "d"
+          ]
+        },
+        {
+          "when": {
+            "duelDistance": {
+              "$lt": 2.0
+            }
+          },
+          "action": {
+            "type": "tap",
+            "key": "f"
+          },
+          "cooldown_ms": 340
+        },
+        {
+          "when": {
+            "duelDistance": {
+              "$gt": 3.5
+            },
+            "energy": {
+              "$gte": 30
+            }
+          },
+          "action": {
+            "type": "tap",
+            "key": "r"
+          },
+          "cooldown_ms": 1200
+        }
+      ]
+    },
+    {
+      "expect": "LOST",
+      "rules": []
+    },
+    {
+      "expect": "WON",
+      "rules": [
+        {
+          "when": {
+            "duelDistance": {
+              "$gt": 1.7
+            }
+          },
+          "hold": [
+            "d"
+          ]
+        },
+        {
+          "when": {
+            "duelDistance": {
+              "$lt": 2.0
+            }
+          },
+          "action": {
+            "type": "tap",
+            "key": "f"
+          },
+          "cooldown_ms": 340
+        },
+        {
+          "when": {
+            "duelDistance": {
+              "$gt": 3.5
+            },
+            "energy": {
+              "$gte": 30
+            }
+          },
+          "action": {
+            "type": "tap",
+            "key": "r"
+          },
+          "cooldown_ms": 1200
+        }
+      ]
+    }
+  ]
+}
