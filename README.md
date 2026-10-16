@@ -2,7 +2,7 @@
 
 # EdenLive
 
-**EdenLive: Real-Time Generative Rendering from Any Reference**
+**EdenLive: Real-Time Generative Rendering from Any Visual Reference**
 
 [![Project Page](https://img.shields.io/badge/Project-Page-blue)](https://vast-eden.ai/?p=edenlive)
 [![Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-yellow)](https://huggingface.co/VAST-AI/EdenLive)
@@ -242,7 +242,7 @@ python -m edenlive.scripts.infer --config CONFIG.yaml \
 
 ```bibtex
 @misc{edenlive2026,
-  title  = {EdenLive: Real-Time Generative Rendering from Any Reference},
+  title  = {EdenLive: Real-Time Generative Rendering from Any Visual Reference},
   author = {Zehuan Huang and Tianxing Xu and Chunli Peng and Cheng Zhang and Yifei Song and Zeyi Zheng and Zhipeng Yu and Peng Wang and Yanpei Cao},
   year   = {2026},
   url    = {https://vast-eden.ai/?p=edenlive}
