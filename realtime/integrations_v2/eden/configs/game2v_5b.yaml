@@ -39,7 +39,7 @@ fps: 24
 guidance_scale: 1.0
 seed: 2026092901
 # Set to the recording latent length for bounded replay; initial noise is CPU-offloaded.
-max_latent_frames: 360
+max_latent_frames: null
 # The AR cache commits the clean latent, so the cache-update forward runs at t=0.
 context_noise: 0
 

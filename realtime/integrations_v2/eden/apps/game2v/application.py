@@ -1,4 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026 Vast AI
+# Modified by Vast AI for EdenLive.
 # SPDX-License-Identifier: Apache-2.0
 
 """Reusable camera-to-video application on the FlashDreams v2 API."""
@@ -378,6 +380,16 @@ class Game2VApplication(IApplication):
             raise ValueError("Game2V paired streaming currently requires --postprocess-preset= (no postprocessing).")
         if args.total_blocks <= 0:
             raise ValueError("--total-blocks must be > 0.")
+        model = self._pipeline_config.diffusion_model
+        if model.max_latent_frames is not None:
+            len_t = model.transformer.len_t
+            max_blocks = (model.max_latent_frames + len_t - 1) // len_t
+            if args.total_blocks > max_blocks:
+                raise ValueError(
+                    f"--total-blocks must be <= {max_blocks} for "
+                    f"max_latent_frames={model.max_latent_frames} (len_t={len_t}); "
+                    f"got {args.total_blocks}."
+                )
         if args.warmup_blocks < 0:
             raise ValueError("--warmup-blocks must be >= 0.")
         if args.prompt_event_chunks <= 0:
