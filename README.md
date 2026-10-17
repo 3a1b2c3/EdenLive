@@ -12,7 +12,7 @@
 
 **English** · [简体中文](README_zh.md)
 
-Zehuan Huang<sup>1,*</sup>, Tianxing Xu<sup>1,*</sup>, Chunli Peng<sup>1,*</sup>, Cheng Zhang<sup>1,*</sup>, Yifei Song<sup>1,†</sup>, Zeyi Zheng<sup>1,†</sup>, Zhipeng Yu<sup>1</sup>, Peng Wang<sup>1,‡</sup>, Yanpei Cao<sup>1,✉</sup>
+Zehuan Huang<sup>1,\*</sup>, Tianxing Xu<sup>1,\*</sup>, Chunli Peng<sup>1,\*</sup>, Cheng Zhang<sup>1,\*</sup>, Yifei Song<sup>1,†</sup>, Zeyi Zheng<sup>1,†</sup>, Zhipeng Yu<sup>1</sup>, Peng Wang<sup>1,‡</sup>, Yanpei Cao<sup>1,✉</sup>
 
 \* Equal contribution · † Intern at VAST · ‡ Project lead · ✉ Corresponding author
 
@@ -20,21 +20,25 @@ Zehuan Huang<sup>1,*</sup>, Tianxing Xu<sup>1,*</sup>, Chunli Peng<sup>1,*</sup>
 
 </div>
 
+**TL;DR:**
+* For interactive world models, we decouple state evolution (maintained by coding agents or engines) and appearance (rendered by EdenLive).
+* EdenLive renders reference videos to enhanced videos in real time at 24 fps or higher, even on a consumer GPU (RTX 5090).
+
 https://github.com/user-attachments/assets/19978f5c-329d-4dce-a952-25c3b3187baf
 
 ## Overview
 
-EdenLive renders a **proxy or reference video stream**, a **target first frame**,
-and a **text prompt** into refined or stylized video. References can come from
-2D/3D scenes, existing engines, or recordings. Upstream code maintains interaction
-state; the model handles visual rendering.
+EdenLive is a real-time generative renderer that treats the
+reference video as the interface between an interactive program and neural visual synthesis: the upstream program executes the rules and maintains the world state, whereas EdenLive renders the resulting reference video, guided by a target first frame and a text prompt, into detailed frames.
 
-Control is injected through a **vision encoder**: a post-trained DINOv3 encoder embeds
-each proxy frame, and those features condition the diffusion transformer.
+The [project page](https://vast-eden.ai/?p=edenlive) demonstrates over 24 FPS, minute-scale generation, and 480P/720P output. The 5B model supports single-GPU deployment at 720P.
 
-The [project page](https://vast-eden.ai/?p=edenlive) demonstrates over 24 FPS,
-minute-scale generation, and 480P/720P output. The 5B model supports
-single-GPU deployment at 720P.
+We have open-sourced:
+
+- [x] **5B and 14B model weights**, for both bidirectional and few-step (chunk-AR) inference.
+- [x] **Real-time streaming inference code**.
+- [x] **[`game-prototype-turbo`](realtime/skills/game-prototype-turbo/) skill that turns a text prompt into a coarse playable game.**
+- [x] **A frontend to try the full prompt-to-game pipeline.**
 
 ## Installation
 

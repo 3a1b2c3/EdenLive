@@ -12,7 +12,7 @@
 
 [English](README.md) · **简体中文**
 
-Zehuan Huang<sup>1,*</sup>, Tianxing Xu<sup>1,*</sup>, Chunli Peng<sup>1,*</sup>, Cheng Zhang<sup>1,*</sup>, Yifei Song<sup>1,†</sup>, Zeyi Zheng<sup>1,†</sup>, Zhipeng Yu<sup>1</sup>, Peng Wang<sup>1,‡</sup>, Yanpei Cao<sup>1,✉</sup>
+Zehuan Huang<sup>1,\*</sup>, Tianxing Xu<sup>1,\*</sup>, Chunli Peng<sup>1,\*</sup>, Cheng Zhang<sup>1,\*</sup>, Yifei Song<sup>1,†</sup>, Zeyi Zheng<sup>1,†</sup>, Zhipeng Yu<sup>1</sup>, Peng Wang<sup>1,‡</sup>, Yanpei Cao<sup>1,✉</sup>
 
 \* 同等贡献 · † VAST 实习生 · ‡ 项目负责人 · ✉ 通讯作者
 
@@ -20,19 +20,24 @@ Zehuan Huang<sup>1,*</sup>, Tianxing Xu<sup>1,*</sup>, Chunli Peng<sup>1,*</sup>
 
 </div>
 
+**TL;DR：**
+* 面向交互式世界模型，我们把状态演化（由 coding agent 或引擎维护）和外观（由 EdenLive 渲染）解耦。
+* EdenLive 实时把参考视频渲染成增强视频，帧率 24 FPS 或更高，即便在消费级显卡（RTX 5090）上也能做到。
+
 https://github.com/user-attachments/assets/19978f5c-329d-4dce-a952-25c3b3187baf
 
 ## 简介
 
-EdenLive 面向交互场景，以 **proxy 或参考视频流、目标首帧和文本提示词**为输入，
-持续生成精细或风格化视频。参考可来自代码生成的 2D/3D 场景、现有引擎或录制视频；
-交互状态由上游维护，模型负责视觉渲染。
+EdenLive 是一个实时生成式渲染器，把参考视频当作交互程序与神经视觉合成之间的接口：上游程序执行规则、维护世界状态，EdenLive 则在目标首帧和文本提示词的引导下，把由此得到的参考视频渲染成精细画面。
 
-控制信号通过 **vision encoder** 注入：一个后训练的 DINOv3 编码器逐帧提取 proxy 特征，
-再用这些特征条件化扩散 Transformer。
+[官网](https://vast-eden.ai/?p=edenlive)展示了超过 24 FPS、分钟级连续生成及 480P/720P 输出。5B 模型支持 720P 单 GPU 部署。
 
-[官网](https://vast-eden.ai/?p=edenlive)展示了超过 24 FPS、分钟级连续生成及 480P/720P 输出；
-5B 720P 模型支持单 GPU 部署。
+我们已开源：
+
+- [x] **5B 和 14B 模型权重**，覆盖双向和 few-step（分块自回归）两种推理。
+- [x] **实时流式推理代码**。
+- [x] **[`game-prototype-turbo`](realtime/skills/game-prototype-turbo/) skill**，把文本提示词变成可玩的粗粒度游戏。
+- [x] **体验完整 prompt-to-game 管线的前端页面**。
 
 ## 安装
 
