@@ -241,7 +241,7 @@ python -m edenlive.scripts.infer --config CONFIG.yaml \
 ## Inference with LightX2V
 
 [LightX2V](https://github.com/ModelTC/LightX2V) provides accelerated inference for
-EdenLive's Wan2.1 14B and Wan2.2 5B models in both bidirectional and four-step
+EdenLive's 14B and 5B models in both bidirectional and four-step
 autoregressive modes. Autoregressive inference supports persistent KV caching
 and streaming LightTAE decoding.
 
