@@ -268,7 +268,7 @@ Built on [Wan2.1 / Wan2.2](https://github.com/Wan-Video),
 [DINOv3](https://github.com/facebookresearch/dinov3),
 [FLUX.2 \[klein\]](https://bfl.ai/models/flux-2-klein) by Black Forest Labs, and the
 [LightX2V](https://huggingface.co/lightx2v/Autoencoders) LightTAE decoders. The game
-renders use [three.js](https://threejs.org), and the workbench's game-generation skill
+renders use [Three.js](https://threejs.org), and the workbench's game-generation skill
 builds on [GameBlocks](https://github.com/xt4d/GameBlocks).
 
 The real-time streaming service under `realtime/` builds on
