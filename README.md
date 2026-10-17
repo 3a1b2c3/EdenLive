@@ -240,7 +240,7 @@ python -m edenlive.scripts.infer --config CONFIG.yaml \
 
 ## Inference with LightX2V
 
-[LightX2V](https://github.com/ModelTC/LightX2V) provides accelerated inference for EdenLive's 14B and 5B models in both bidirectional and four-step autoregressive modes. Optimizations include low-bit quantization, efficient kernels and operator fusion, autoregressive cache optimizations, `torch.compile`, CUDA Graphs, and streaming LightTAE decoding.
+[LightX2V](https://github.com/ModelTC/LightX2V) provides accelerated inference for EdenLive's 14B and 5B models in both bidirectional and four-step autoregressive modes. Optimizations include low-bit quantization, efficient kernels and operator fusion, KV cache optimizations, `torch.compile`, CUDA Graphs, and streaming LightTAE decoding.
 
 **Real-time inference on a single RTX 5090:** EdenLive 5B achieves approximately **24.7 FPS inference throughput at 1280×704**, meeting the throughput requirement for **real-time 24 FPS playback**.
 
