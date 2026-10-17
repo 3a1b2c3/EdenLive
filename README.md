@@ -10,13 +10,11 @@
 
 [Project Page](https://vast-eden.ai/?p=edenlive) · [Code](https://github.com/VAST-AI-Research/EdenLive) · [Models](https://huggingface.co/VAST-AI/EdenLive)
 
-**English** · [简体中文](README_zh.md)
-
-Zehuan Huang<sup>1,\*</sup>, Tianxing Xu<sup>1,\*</sup>, Chunli Peng<sup>1,\*</sup>, Cheng Zhang<sup>1,\*</sup>, Yifei Song<sup>1,†</sup>, Zeyi Zheng<sup>1,†</sup>, Zhipeng Yu<sup>1</sup>, Peng Wang<sup>1,‡</sup>, Yanpei Cao<sup>1,✉</sup>
+Zehuan Huang<sup>1,\*</sup>, Tianxing Xu<sup>1,\*</sup>, Chunli Peng<sup>1,\*</sup>, Cheng Zhang<sup>1,\*</sup>, Zeyi Zheng<sup>1,†</sup>, Yifei Song<sup>1,†</sup>, Zekai Gu<sup>1,†</sup>, Zhipeng Yu<sup>1</sup>, Peng Wang<sup>1,‡</sup>, Yanpei Cao<sup>1,✉</sup>
 
 \* Equal contribution · † Intern at VAST · ‡ Project lead · ✉ Corresponding author
 
-<sup>1</sup>[VAST](https://www.tripo3d.ai/) · [Project Eden](https://vast-eden.ai/)
+<sup>1</sup>[VAST](https://www.tripo3d.ai/) · [Project Eden](https://www.tripo3d.ai/research/project-eden)
 
 </div>
 
@@ -255,7 +253,7 @@ See the [EdenLive deployment guide](https://github.com/ModelTC/LightX2V/blob/mai
 ```bibtex
 @misc{edenlive2026,
   title  = {EdenLive: Real-Time Generative Rendering from Any Visual Reference},
-  author = {Zehuan Huang and Tianxing Xu and Chunli Peng and Cheng Zhang and Yifei Song and Zeyi Zheng and Zhipeng Yu and Peng Wang and Yanpei Cao},
+  author = {Zehuan Huang and Tianxing Xu and Chunli Peng and Cheng Zhang and Zeyi Zheng and Yifei Song and Zekai Gu and Zhipeng Yu and Peng Wang and Yanpei Cao},
   year   = {2026},
   url    = {https://vast-eden.ai/?p=edenlive}
 }
