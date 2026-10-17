@@ -226,6 +226,15 @@ python -m edenlive.scripts.infer --config CONFIG.yaml \
   data.dataset.params.root=/data
 ```
 
+## 使用 LightX2V 推理
+
+[LightX2V](https://github.com/ModelTC/LightX2V) 为 EdenLive 的 Wan2.1 14B 和
+Wan2.2 5B 模型提供加速推理，覆盖双向和四步自回归模式。自回归推理支持持久 KV 缓存
+与 LightTAE 流式解码。
+
+环境准备、模型转换、量化和启动命令见
+[EdenLive 部署指南](https://github.com/ModelTC/LightX2V/blob/main/scripts/edenlive/README_zh.md)。
+
 ## 引用
 
 ```bibtex
