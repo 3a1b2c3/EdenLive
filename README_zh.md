@@ -226,6 +226,14 @@ python -m edenlive.scripts.infer --config CONFIG.yaml \
   data.dataset.params.root=/data
 ```
 
+## 使用 LightX2V 推理
+
+[LightX2V](https://github.com/ModelTC/LightX2V) 为 EdenLive 的 14B 和 5B 模型提供加速推理，覆盖双向和四步自回归模式。支持低比特量化、高效算子与算子融合、KV缓存优化、`torch.compile` 与 CUDA Graph 加速，以及 LightTAE 流式解码。
+
+**支持单张 RTX 5090 实时推理：** EdenLive 5B 在 **1280×704** 分辨率下实测推理吞吐约 **24.7 FPS**，满足 **24 FPS 实时播放**的帧率需求。
+
+环境准备、模型转换、量化和启动命令见 [EdenLive 部署指南](https://github.com/ModelTC/LightX2V/blob/main/scripts/ed/README_zh.md)。
+
 ## 引用
 
 ```bibtex
