@@ -22,8 +22,7 @@ Zehuan Huang<sup>1,\*</sup>, Tianxing Xu<sup>1,\*</sup>, Chunli Peng<sup>1,\*</s
 * For interactive world models, we decouple state evolution (maintained by coding agents or engines) and appearance (rendered by EdenLive).
 * EdenLive renders reference videos to enhanced videos in real time at 24 fps or higher, even on a consumer GPU (RTX 5090).
 
-https://github.com/user-attachments/assets/9dcc66b2-8542-455b-8655-ba354e500496
-
+https://github.com/user-attachments/assets/243f1392-b41e-4ee6-a9c0-f5be8263bbec
 
 
 ## Overview
