@@ -247,7 +247,7 @@ python -m edenlive.scripts.infer --config CONFIG.yaml \
 
 **Real-time inference on a single RTX 5090:** EdenLive 5B achieves approximately **24.7 FPS inference throughput at 1280×704**, meeting the throughput requirement for **real-time 24 FPS playback**.
 
-See the [EdenLive deployment guide](https://github.com/ModelTC/LightX2V/blob/main/scripts/ed/README.md) for environment setup, model conversion, quantization, and launch commands.
+See the [EdenLive deployment guide](https://github.com/ModelTC/LightX2V/blob/main/scripts/edenlive/README.md) for environment setup, model conversion, quantization, and launch commands.
 
 ## Citation
 
