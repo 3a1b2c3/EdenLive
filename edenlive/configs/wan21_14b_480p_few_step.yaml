@@ -27,7 +27,7 @@ model:
     first_frame_encoding: masked_video
     mode: mask_channel_concat
   proxy_dino:
-    cfg_unconditional_control: zero
+    cfg_unconditional_control: same
     channel_concat_rmsnorm: true
     channel_concat_zero_init: true
     checkpoint_path: vision-encoder/projection.safetensors
@@ -42,7 +42,7 @@ model:
     use_cached_latents: false
     vae_time_compression_ratio: 4
     video_context_time_axis: latent
-    resize_mode: bicubic_center_crop
+    resize_mode: bicubic
     projection_autocast: true
   teacher_forcing_attention_backend: triton
   dynamic_prompt:
@@ -61,7 +61,7 @@ runtime:
     axis: temporal
     layout: balanced_blocks
   attention_backend:
-    enabled: false
+    enabled: true
     backend: _native_flash
   torch_compile:
     enabled: false
@@ -118,7 +118,7 @@ inference:
     - 750.0
     - 500.0
   output_type: np
-  seed: 2026092901
+  seed: 42
   outputs:
   - video
   output_dir: inference/wan21_14b_480p_few_step
@@ -127,4 +127,4 @@ inference:
   save_condition_videos:
     video_context: proxy
   condition_video_fps:
-    video_context: 4
+    video_context: 16
