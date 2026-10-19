@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Iron Colossus rules: a giant reptile breathes fire and stomps to demolish six defended towers.
-import { FpsSim, wrap, clamp } from './lib/fps-core.mjs';
+import { FpsSim, wrap, clamp } from '../_shared/fps-core.mjs';
 
 export const ARENA = { minX: -15, maxX: 15, minZ: -40, maxZ: 16 };
 // Six defence towers in two rows; they shoot shells at the monster until destroyed.

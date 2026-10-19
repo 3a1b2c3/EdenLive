@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import * as T from 'three';
-import { box, ball, cyl, cone, rod, group, mat, noiseTexture, texturedMat, facadeTexture, skyDome, mulberry32, clamp, smooth, ownMaterials, setEmissive, createDrain , LiteLight } from './lib/kit.mjs';
-import { Fx, createBolt } from './lib/fx.mjs';
-import { v3 } from './lib/fpsview.mjs';
+import { box, ball, cyl, cone, rod, group, mat, noiseTexture, texturedMat, facadeTexture, skyDome, mulberry32, clamp, smooth, ownMaterials, setEmissive, createDrain , LiteLight } from '../_shared/kit.mjs';
+import { Fx, createBolt } from '../_shared/fx.mjs';
+import { v3 } from '../_shared/fpsview.mjs';
 import { PoseFollowCameraRig } from '/assets/camera/PoseFollowCameraRig.js';
 import { ARENA, TOWERS, BLOCKS, FLAME } from './game.mjs';
 

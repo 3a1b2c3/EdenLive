@@ -331,7 +331,10 @@ def _map_game_assets(slug: str, html: str) -> str:
     ``/assets/...``; capture resolves that per slug in Playwright routing, so
     the live preview does the same through the page's import map.
     """
-    mapping = {"/assets/": f"/game/{slug}/assets/"}
+    mapping = {
+        "/assets/": f"/game/{slug}/assets/",
+        "/game/_shared/": "/ext/game2v/files/_shared/",
+    }
     match = _IMPORTMAP.search(html)
     if match is None:
         tag = f'<script type="importmap">{json.dumps({"imports": mapping})}</script>'

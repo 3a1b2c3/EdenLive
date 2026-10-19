@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import * as T from 'three';
-import { box, ball, cyl, cone, rod, setRod, group, mat, metal, basic, glowMat, tunnelGeometry, noiseTexture, texturedMat, mulberry32, clamp, smooth, ownMaterials, setEmissive , LiteLight } from './lib/kit.mjs';
-import { Trail } from './lib/fx.mjs';
-import { createFpsStage, v3 } from './lib/fpsview.mjs';
+import { box, ball, cyl, cone, rod, setRod, group, mat, metal, basic, glowMat, tunnelGeometry, noiseTexture, texturedMat, mulberry32, clamp, smooth, ownMaterials, setEmissive , LiteLight } from '../_shared/kit.mjs';
+import { Trail } from '../_shared/fx.mjs';
+import { createFpsStage, v3 } from '../_shared/fpsview.mjs';
 import { ARENA, ROCKS, SWING } from './game.mjs';
 
 const ICHOR = 0x9fe03c;

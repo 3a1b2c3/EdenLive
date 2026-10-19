@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import * as T from 'three';
-import { box, ball, cyl, cone, rod, group, mat, noiseTexture, texturedMat, skyDome, mulberry32, clamp, smooth, ownMaterials, setEmissive, createDrain , LiteLight } from './lib/kit.mjs';
-import { Fx } from './lib/fx.mjs';
-import { v3 } from './lib/fpsview.mjs';
+import { box, ball, cyl, cone, rod, group, mat, noiseTexture, texturedMat, skyDome, mulberry32, clamp, smooth, ownMaterials, setEmissive, createDrain , LiteLight } from '../_shared/kit.mjs';
+import { Fx } from '../_shared/fx.mjs';
+import { v3 } from '../_shared/fpsview.mjs';
 import { W, H } from './game.mjs';
 
 function buildWorker() {

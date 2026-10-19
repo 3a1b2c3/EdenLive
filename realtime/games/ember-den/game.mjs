@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Ember Den rules: axe melee against three spiders in a firelit basalt cave.
-import { FpsSim, wrap } from './lib/fps-core.mjs';
+import { FpsSim, wrap } from '../_shared/fps-core.mjs';
 
 export const ARENA = { minX: -5.4, maxX: 5.4, minZ: -36, maxZ: 11 };
 // Boulders double as collision boxes and as scene meshes.

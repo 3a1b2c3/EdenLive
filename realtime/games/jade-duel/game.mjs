@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Jade Duel rules: a side-view duel with combos, guard, uppercut, energy wave and dash.
-import { mulberry32, clamp } from './lib/fps-core.mjs';
+import { mulberry32, clamp } from '../_shared/fps-core.mjs';
 
 export const STAGE = { minX: -7.2, maxX: 7.2, gap: 1.15 };
 export const COMBO = { window: 1.1, hits: 3 };

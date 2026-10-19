@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import { boot } from './lib/app.mjs';
+import { boot } from '../_shared/app.mjs';
 import { createGame } from './game.mjs';
 import { createScene } from './scene.mjs';
 
