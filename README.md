@@ -8,7 +8,7 @@
 [![Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-yellow)](https://huggingface.co/VAST-AI/EdenLive)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green)](LICENSE)
 
-[Project Page](https://vast-eden.ai/?p=edenlive) · [Code](https://github.com/VAST-AI-Research/EdenLive) · [Models](https://huggingface.co/VAST-AI/EdenLive)
+[Project Page](https://vast-eden.ai/?p=edenlive) · [Code](https://github.com/VAST-AI-Research/EdenLive) · [Models](https://huggingface.co/VAST-AI/EdenLive) · [Paper](https://assets.vast-eden.ai/assets/edenlive/EdenLive-tech-report.pdf)
 
 Zehuan Huang<sup>1,\*</sup>, Tianxing Xu<sup>1,\*</sup>, Chunli Peng<sup>1,\*</sup>, Cheng Zhang<sup>1,\*</sup>, Zeyi Zheng<sup>1,†</sup>, Yifei Song<sup>1,†</sup>, Zekai Gu<sup>1,†</sup>, Zhipeng Yu<sup>1</sup>, Peng Wang<sup>1,‡</sup>, Yanpei Cao<sup>1,✉</sup>
 
