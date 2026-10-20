@@ -9,9 +9,11 @@ REM     14B-only and the offline example does not read them.
 REM   - the real-time service is skipped entirely: no playwright, no npm.
 setlocal enabledelayedexpansion
 
+REM %~dp0 ends in a backslash, which escapes the closing quote in "%ROOT%"
 set ROOT=%~dp0
-set VENV=%ROOT%.venv
-set MODELS=%ROOT%models\EdenLive
+if "%ROOT:~-1%"=="\" set ROOT=%ROOT:~0,-1%
+set VENV=%ROOT%\.venv
+set MODELS=%ROOT%\models\EdenLive
 set NEED_GB=45
 set SKIP_MODELS=0
 if /I "%~1"=="--no-models" set SKIP_MODELS=1
@@ -61,7 +63,8 @@ if "%SKIP_MODELS%"=="1" (
 )
 echo === 4/4 weights, 5B subset only ===
 if not exist "%MODELS%" mkdir "%MODELS%"
-"%VENV%\Scripts\python.exe" -m huggingface_hub.commands.huggingface_cli download VAST-AI/EdenLive --local-dir "%MODELS%" --include "dit-5b-bidir/*" "vae-5b/*" "scheduler-5b/*" "umt5/*" "vision-encoder/*"
+set MODELS=%MODELS%
+"%VENV%\Scripts\python.exe" -c "import os;from huggingface_hub import snapshot_download;snapshot_download(repo_id='VAST-AI/EdenLive',local_dir=os.environ['MODELS'],allow_patterns=['dit-5b-bidir/*','vae-5b/*','scheduler-5b/*','umt5/*','vision-encoder/*'],max_workers=8)"
 if errorlevel 1 exit /b 1
 
 echo.

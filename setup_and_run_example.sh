@@ -76,9 +76,23 @@ fi
 echo
 echo "=== 4/4 weights, 5B subset only ==="
 mkdir -p "$MODELS"
-"$PY" -m huggingface_hub.commands.huggingface_cli download VAST-AI/EdenLive \
-    --local-dir "$MODELS" \
-    --include "dit-5b-bidir/*" "vae-5b/*" "scheduler-5b/*" "umt5/*" "vision-encoder/*"
+export MODELS
+"$PY" - <<'PYDL'
+from huggingface_hub import snapshot_download
+import os
+# The CLI module path moved between hub versions (huggingface_hub.commands is
+# gone in recent releases, "hf download" is the new entry point), so call the
+# library directly instead of depending on either.
+snapshot_download(
+    repo_id="VAST-AI/EdenLive",
+    local_dir=os.environ["MODELS"],
+    allow_patterns=["dit-5b-bidir/*", "vae-5b/*", "scheduler-5b/*",
+                    "umt5/*", "vision-encoder/*"],
+    max_workers=8,
+)
+print("weights complete")
+PYDL
+
 
 echo
 echo "=== running the shipped example: 5B bidirectional, 720p ==="
