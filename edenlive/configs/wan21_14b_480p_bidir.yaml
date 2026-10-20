@@ -92,14 +92,13 @@ inference:
   num_frames: 81
   max_frames: 81
   fps: 16
-  num_inference_steps: 30
+  # UniPC 40 steps, the official Wan2.1 I2V-14B sampler (generate.py defaults); shift and CFG unchanged.
+  num_inference_steps: 40
   guidance_scale: 3.0
   use_image_condition: true
   scheduler:
-    name: flow_euler
-    schedule: shifted_linear
+    name: flow_unipc
     shift: 3.0
-    stretch: false
   output_type: np
   seed: 42
   outputs:
