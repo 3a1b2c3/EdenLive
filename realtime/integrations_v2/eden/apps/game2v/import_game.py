@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Register a GamePrototypeTurbo project as an Eden game.
 
-The skill (``skills/game-prototype-turbo``) produces a standalone project: a
+The skill (``skills/edengolem``) produces a standalone project: a
 brief, a state file, ``runs/step{1,2,3}/<name>/`` and the ``assets/`` closure
 its runs import. This copies the accepted run and that closure into
 ``games/<slug>/``, writes a minimal HUD overlay, and appends a registry entry
@@ -293,7 +293,7 @@ def registry_entry(
         "modules": [str(module) for module in meta.get("modules") or ()],
         "restart_keys": _restart_keys(run),
         "event_prompts": dict(event_prompts if event_prompts is not None else event_prompts_from_source(run)),
-        "source": {"skill": "game-prototype-turbo", "run": run.relative_to(project).as_posix()},
+        "source": {"skill": "edengolem", "run": run.relative_to(project).as_posix()},
     }
 
 

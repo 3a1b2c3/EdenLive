@@ -49,7 +49,7 @@
         "bite.dodged": "The spider's lunge misses the player."
       },
       "source": {
-        "skill": "game-prototype-turbo",
+        "skill": "edengolem",
         "run": "runs/step3/acceptance"
       }
     },
@@ -104,7 +104,7 @@
         "projectile.impact": "A shell explodes on the ground near the monster with fire and smoke."
       },
       "source": {
-        "skill": "game-prototype-turbo",
+        "skill": "edengolem",
         "run": "runs/step3/acceptance"
       }
     },
@@ -165,7 +165,7 @@
         "projectile.impact": "The energy wave bursts against the opponent in cyan light."
       },
       "source": {
-        "skill": "game-prototype-turbo",
+        "skill": "edengolem",
         "run": "runs/step3/acceptance"
       }
     },
@@ -212,7 +212,7 @@
         "box.on_goal": "The pushed crate settles onto a brass pad and turns green with a ring burst; only this crate turns green."
       },
       "source": {
-        "skill": "game-prototype-turbo",
+        "skill": "edengolem",
         "run": "runs/step3/acceptance"
       }
     }

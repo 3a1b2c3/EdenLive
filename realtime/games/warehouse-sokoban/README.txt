@@ -9,7 +9,7 @@ WASD / Arrow keys: move and push
 P / Escape: pause
 Enter: restart
 
-Created with the repository game-prototype-turbo skill.
+Created with the repository edengolem skill.
 first-frame.png: proxy image rendered from the game scene. cover.png / poster.png: FLUX artwork generated from first-frame.png (regenerate after any scene change).
 artwork.json: caption, seed and generation settings. validation.json: checks.
 

@@ -36,7 +36,7 @@ We have open-sourced:
 
 - [x] **5B and 14B model weights**, for both bidirectional and few-step (chunk-AR) inference.
 - [x] **Real-time streaming inference code**.
-- [x] **[`game-prototype-turbo`](realtime/skills/game-prototype-turbo/) skill that turns a text prompt into a coarse playable game.**
+- [x] **[EdenGolem（v0.1）](realtime/skills/edengolem/) skill that turns a text prompt into a coarse playable game.**
 - [x] **A frontend to try the full prompt-to-game pipeline.**
 
 ## Installation

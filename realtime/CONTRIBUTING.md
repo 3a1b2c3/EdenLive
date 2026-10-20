@@ -312,7 +312,7 @@ that flag.
 
 A `test_*.py` under either test directory is collected automatically.
 The vendored game-authoring skill uses a separate test entry point: run
-`python -m pytest forge/tests -q -m "not slow"` from `skills/game-prototype-turbo/`.
+`python -m pytest forge/tests -q -m "not slow"` from `skills/edengolem/`.
 The runtime configuration skips `parity_check`,
 `parity_check_v2`, `baseline_fastvideo`, and `baseline_lightx2v` via
 `norecursedirs`.

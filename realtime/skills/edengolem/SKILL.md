@@ -1,9 +1,9 @@
 ---
-name: game-prototype-turbo
+name: edengolem
 description: "Build or revise standalone Three.js browser game prototypes with a silent desktop keyboard/mouse 3D scene, one continuous round, and reachable win and loss states. Use for bounded playable game requests within those limits; not 2D-only, audio-led, or open-ended games without both terminal outcomes."
 ---
 
-# Game Prototype Turbo
+# EdenGolem（v0.1）
 
 The final project includes `serve_step.py` and `launch.sh` in a copied output directory. It does not promise production art or a full commercial game.
 

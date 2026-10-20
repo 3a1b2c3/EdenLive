@@ -15,7 +15,7 @@ Shift: dash (10 energy)
 P / Escape: pause
 Enter: restart
 
-Created with the repository game-prototype-turbo skill using arcadeduel as the gameplay reference.
+Created with the repository edengolem skill using arcadeduel as the gameplay reference.
 first-frame.png: proxy image rendered from the game scene. cover.png / poster.png: FLUX artwork generated from first-frame.png (regenerate after any scene change).
 artwork.json: caption, seed and generation settings. validation.json: checks.
 

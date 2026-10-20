@@ -1,4 +1,4 @@
-# game-prototype-turbo
+# EdenGolem（v0.1）
 
 A skill for building bounded, browser-playable game prototypes from gameplay ideas.
 The product requires reachable win and loss states in one silent desktop keyboard/mouse 3D round.

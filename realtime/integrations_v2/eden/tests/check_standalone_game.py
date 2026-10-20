@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
-SKILL = REPO / 'skills/game-prototype-turbo'
+SKILL = REPO / 'skills/edengolem'
 sys.path.insert(0, str(SKILL / 'forge/tests'))
 from gate_fixtures import MENU_GAME, MENU_STRATEGY  # noqa: E402
 
