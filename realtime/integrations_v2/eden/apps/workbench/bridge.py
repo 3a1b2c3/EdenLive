@@ -48,7 +48,7 @@ from . import prompts
 from .agent import Agent, AgentResult, claude_command
 
 REALTIME = Path(__file__).resolve().parents[4]
-SKILL = REALTIME / "skills" / "game-prototype-turbo"
+SKILL = REALTIME / "skills" / "edengolem"
 GAME_TIMEOUT_S = float(os.environ.get("EDEN_WORKBENCH_GAME_TIMEOUT_S", 3 * 3600))
 CAPTION_TIMEOUT_S = 300.0
 TOKEN_HEADER = "X-Workbench-Token"

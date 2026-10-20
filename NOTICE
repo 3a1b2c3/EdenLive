@@ -10,9 +10,9 @@ THIRD-PARTY-NOTICES and REUSE.toml list the third-party components it
 depends on and the MIT-licensed source it redistributes (html-to-image, and the
 GameBlocks modules the game-generation skill is built on).
 
-The game-prototype-turbo skill under realtime/skills/ builds its module library
+The edengolem skill under realtime/skills/ builds its module library
 on GameBlocks (https://github.com/xt4d/GameBlocks), MIT License, Copyright (c)
-2026 Weihao Cheng. See realtime/skills/game-prototype-turbo/NOTICE for the
+2026 Weihao Cheng. See realtime/skills/edengolem/NOTICE for the
 notice that travels with the skill and its generated games.
 
 The offline inference package (edenlive/) builds on Wan2.1 / Wan2.2

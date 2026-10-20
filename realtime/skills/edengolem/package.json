@@ -1,5 +1,5 @@
 {
-  "name": "game-prototype-turbo-devtests",
+  "name": "edengolem-devtests",
   "private": true,
   "type": "module",
   "description": "Dev-only manifest so forge/tests/js can resolve the pinned three build headlessly. The shipped assets/ library itself uses an import map and has no package dependencies.",

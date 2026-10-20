@@ -57,7 +57,7 @@ pytest integrations_v2/eden/tests -m ci_cpu
 
 ## Importing a generated game
 
-`skills/game-prototype-turbo/` is a vendored copy of the GamePrototypeTurbo
+`skills/edengolem/` is a vendored copy of the GamePrototypeTurbo
 skill. Given a game description, an agent following its `SKILL.md` builds a
 standalone Three.js project with reachable win and loss states. Generating the
 project takes an agent. Registering the finished project is one command:

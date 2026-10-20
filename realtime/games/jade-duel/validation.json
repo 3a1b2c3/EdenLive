@@ -1,5 +1,5 @@
 {
-  "skill": "game-prototype-turbo",
+  "skill": "edengolem",
   "revision": "visual and feedback rework: larger map framing, muzzle flashes, visible projectiles, impact/hit/death effects, dedicated per-game rules and scenes; lite effects pass (no dynamic point lights, capped particles/smoke/beams, no ambient particle loops)",
   "checks": {
     "headless_real_input_playthrough": "WON by strategy in playthrough.json (software WebGL, virtual 60 Hz clock)",

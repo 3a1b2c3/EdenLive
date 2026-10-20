@@ -121,13 +121,13 @@ It carries no inline notice, so REUSE.toml records its copyright and license.
 GameBlocks
 --------------------------------------------------------------------------------
 
-Path:     skills/game-prototype-turbo/assets/{actor-motion,behavior,camera,
+Path:     skills/edengolem/assets/{actor-motion,behavior,camera,
           gameplay,math,user-interface,world}/
 License:  MIT (see LICENSES/MIT.txt)
           Copyright (c) 2026 Weihao Cheng
 Upstream: https://github.com/xt4d/GameBlocks
 
-The game-prototype-turbo skill builds its browser game prototypes from the
+The edengolem skill builds its browser game prototypes from the
 GameBlocks module library (camera rigs, actor motion, world structure,
 gameplay and UI building blocks). 53 modules are redistributed unmodified and
 18 carry modifications by Vast AI; the remaining files under assets/ are
