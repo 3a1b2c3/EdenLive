@@ -70,8 +70,12 @@ data:
       height: 704
       fps: 24
       max_frames: 121
-      text_mode: timeline
-      dynamic: true
+      # timeline feeds a text_timeline condition, which the adapter accepts only
+      # when model.dynamic_prompt.enabled is true. That profile requires flash4
+      # and so is off on non-SM90 hardware, so the whole clip takes one prompt.
+      # Valid values: global, chunk, timeline.
+      text_mode: global
+      dynamic: false
       chunk_size: 3
   batch_size: 1
   shuffle: false
