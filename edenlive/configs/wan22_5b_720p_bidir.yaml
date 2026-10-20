@@ -18,7 +18,10 @@ model:
   expand_timesteps: true
   torch_dtype: bfloat16
   max_sequence_length: 512
-  teacher_forcing_attention_backend: flash4
+  # flash4 is accepted only on SM90: the adapter tests compute capability for
+  # equality with (9, 0), so no CUDA or torch version admits Blackwell. triton
+  # is the only other backend the validator allows.
+  teacher_forcing_attention_backend: triton
   proxy_dino:
     cfg_unconditional_control: same
     channel_concat_rmsnorm: false
@@ -38,7 +41,11 @@ model:
     resize_mode: bilinear
     projection_autocast: true
   dynamic_prompt:
-    enabled: true
+    # This profile requires flash4 and cannot fall back, so on non-SM90 it is
+    # disabled rather than switched. The timestamped prompts in prompts.json are
+    # then ignored and staticPrompt applies throughout; geometry and motion still
+    # come from the reference video.
+    enabled: false
     backend: flash4
 runtime:
   fsdp2:
