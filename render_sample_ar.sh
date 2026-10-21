@@ -10,6 +10,7 @@
 #   --frames    must be 12n-3: 117 (4.9 s), 237 (9.9 s), ...; must fit the recording  [117]
 #   --out       output folder under the repository                                [inference/<samples folder name>_ar]
 #   --download  fetch the dit-5b weights (about 20 GB) from Hugging Face when they are missing
+#   --condition-fps N  rate at which the proxy video is sampled for conditioning, 1..24; the model was trained with 6   [config default 6]
 # Environment: MIN_FREE_MIB    free GPU memory required, in MiB                     [40000]
 #              TEXT_MODE       data.dataset.params.text_mode                        [global]
 #              DYNAMIC         data.dataset.params.dynamic (true or false)          [false]
@@ -24,6 +25,7 @@ cover=""
 frames=117
 out=""
 download=0
+condition_fps=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --samples) samples="${2:?--samples needs a folder}"; shift 2 ;;
@@ -31,7 +33,8 @@ while [[ $# -gt 0 ]]; do
     --frames) frames="${2:?--frames needs a number}"; shift 2 ;;
     --out) out="${2:?--out needs a folder}"; shift 2 ;;
     --download) download=1; shift ;;
-    -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
+    --condition-fps) condition_fps="${2:?--condition-fps needs a number}"; shift 2 ;;
+    -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
     *) echo "ERROR: unknown option $1" >&2; exit 2 ;;
   esac
 done
@@ -92,6 +95,14 @@ overrides=(
   inference.num_frames="${frames}"
   inference.output_dir="${out}"
 )
+if [[ -n "${condition_fps}" ]]; then
+  if ! [[ "${condition_fps}" =~ ^[0-9]+$ ]] || (( condition_fps < 1 || condition_fps > 24 )); then
+    echo "ERROR: --condition-fps must be a whole number from 1 to 24, got ${condition_fps}" >&2
+    exit 2
+  fi
+  overrides+=(inference.condition_video_fps.video_context="${condition_fps}")
+  echo "proxy conditioning rate: ${condition_fps} fps (the model was trained with 6)"
+fi
 if [[ -n "${EXTRA_OVERRIDES:-}" ]]; then
   read -r -a extra <<< "${EXTRA_OVERRIDES}"
   overrides+=("${extra[@]}")
