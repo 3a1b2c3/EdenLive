@@ -103,7 +103,7 @@ start="$(date +%s)"
 .venv/bin/python -m edenlive.scripts.infer --config edenlive/configs/wan22_5b_720p_few_step.yaml "${overrides[@]}" 2>&1 | tee "${log}"
 end="$(date +%s)"
 elapsed=$(( end - start ))
-echo "Done in ${elapsed} s for ${frames} frames (whole run, including model load). Output folder: $(pwd)/${out}"
+echo "Done in ${elapsed} s for ${frames} frames = $(awk -v f="${frames}" -v s="${elapsed}" 'BEGIN {printf "%.2f", f / s}') fps (whole run, including model load). Output folder: $(pwd)/${out}"
 # Model loading is excluded from the speed: generation starts at the last "components loaded" line of the log.
 .venv/bin/python - "${log}" "${end}" "${frames}" <<'PY'
 import datetime

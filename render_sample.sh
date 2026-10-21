@@ -60,7 +60,32 @@ if [[ "${frames}" != 121 ]]; then
   overrides+=(data.dataset.params.max_frames="${frames}" inference.num_frames="${frames}" inference.max_frames="${frames}")
 fi
 
+log="${out}.render.log"
+mkdir -p "$(dirname "${out}")"
 start="$(date +%s)"
-.venv/bin/python -m edenlive.scripts.infer --config edenlive/configs/wan22_5b_720p_bidir.yaml "${overrides[@]}"
-echo "Done in $(( $(date +%s) - start )) s. Output folder: $(pwd)/${out}/save/inference/base/"
+.venv/bin/python -m edenlive.scripts.infer --config edenlive/configs/wan22_5b_720p_bidir.yaml "${overrides[@]}" 2>&1 | tee "${log}"
+end="$(date +%s)"
+elapsed=$(( end - start ))
+echo "Done in ${elapsed} s for ${frames} frames = $(awk -v f="${frames}" -v s="${elapsed}" 'BEGIN {printf "%.2f", f / s}') fps (whole run, including model load). Output folder: $(pwd)/${out}/save/inference/base/"
+# Model loading is excluded from the speed: generation starts at the last "components loaded" line of the log.
+.venv/bin/python - "${log}" "${end}" "${frames}" <<'PY'
+import datetime
+import re
+import sys
+
+log, end, frames = sys.argv[1], float(sys.argv[2]), int(sys.argv[3])
+loaded = None
+with open(log, encoding="utf-8", errors="replace") as stream:
+    for line in stream:
+        match = re.match(r"(\d\d)/(\d\d) (\d\d:\d\d:\d\d) \|.*components loaded", line)
+        if match:
+            loaded = match.groups()
+if loaded is None:
+    print('speed without model load: not found (no "components loaded" line in the log)')
+    sys.exit(0)
+year = datetime.date.today().year
+start = datetime.datetime.strptime(f"{year}-{loaded[0]}-{loaded[1]} {loaded[2]}", "%Y-%m-%d %H:%M:%S").timestamp()
+seconds = end - start
+print(f"speed without model load: {frames} frames in {seconds:.0f} s = {frames / seconds:.2f} fps (log: {log})")
+PY
 ls -la "${out}/save/inference/base/"*.mp4
