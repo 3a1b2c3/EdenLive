@@ -396,7 +396,7 @@ class Wan22DiffusersAdapter(ModelAdapter):
             validate_flash4_environment(device, dtype)
         if self.config.dynamic_prompt.get("enabled"):
             from .dynamic_prompt import validate_environment
-            validate_environment(device, dtype)
+            validate_environment(device, dtype, self.config.dynamic_prompt.get("backend", "flash4"))
         pipe = self._assemble_pipeline(dtype=dtype, runtime_context=runtime_context)
 
         pipe.to(device)
@@ -1046,6 +1046,7 @@ class Wan22DiffusersAdapter(ModelAdapter):
             text_length=int(self.config.max_sequence_length),
             device=latents.device,
         )
+        layout["backend"] = self.config.dynamic_prompt.get("backend", "flash4")
         expected_tokens = max(len(sample) for sample in layout["lengths"]) * layout["text_length"]
         if conditions.require("prompt_embeds").data.shape[1] != expected_tokens:
             raise ValueError("dynamic prompt embedding bank does not match timeline segments")

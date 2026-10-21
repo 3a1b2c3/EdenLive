@@ -5,7 +5,12 @@ from __future__ import annotations
 import bisect
 from importlib.metadata import version
 
+import torch
+import torch.nn.functional as F
+
 from edenlive.core.text_timeline import clip_text_timeline
+
+BACKENDS = ("flash4", "sdpa")
 
 
 def validate_config(config, variant):
@@ -13,11 +18,14 @@ def validate_config(config, variant):
         return
     if variant != "5b":
         raise ValueError("dynamic_prompt currently supports Wan 2.2 5B only")
-    if config["backend"] != "flash4":
-        raise ValueError("The reference dynamic prompt profile requires flash4")
+    if config["backend"] not in BACKENDS:
+        raise ValueError(f"dynamic_prompt backend must be one of {BACKENDS}; flash4 is the reference profile (SM90 only)")
 
 
-def validate_environment(device, dtype):
+def validate_environment(device, dtype, backend="flash4"):
+    if backend == "sdpa":
+        # Plain PyTorch attention runs on any CUDA GPU, including Blackwell.
+        return
     from .teacher_forcing_attention import validate_flash4_environment
 
     validate_flash4_environment(device, dtype)
@@ -79,8 +87,28 @@ def build_layout(timelines, *, latent_shape, patch_size, text_length, device):
     )
 
 
+def sdpa_cross_attention(q, k, v, layout):
+    """Each text segment's queries (contiguous, frame-major) attend to that segment's own prompt bank.
+
+    The same computation as the flash4 varlen call, with PyTorch scaled-dot-product attention instead.
+    Shapes: q (batch, tokens, heads, dim); k and v (batch, banks * text_length, heads, dim).
+    """
+    lengths, text_length = layout["lengths"], layout["text_length"]
+    out = torch.empty_like(q)
+    for i, sample in enumerate(lengths):
+        start = 0
+        for bank, count in enumerate(sample):
+            keys = slice(bank * text_length, (bank + 1) * text_length)
+            query = q[i, start : start + count].transpose(0, 1).unsqueeze(0)
+            key = k[i, keys].transpose(0, 1).unsqueeze(0)
+            value = v[i, keys].transpose(0, 1).unsqueeze(0)
+            result = F.scaled_dot_product_attention(query, key, value)
+            out[i, start : start + count] = result.squeeze(0).transpose(0, 1)
+            start += count
+    return out
+
+
 def cross_attention(attn, hidden_states, encoder_hidden_states, layout):
-    import torch
     from diffusers.models.transformers.transformer_wan import _get_qkv_projections
 
     if attn.add_k_proj is not None:
@@ -90,24 +118,27 @@ def cross_attention(attn, hidden_states, encoder_hidden_states, layout):
     k = attn.norm_k(k).unflatten(2, (attn.heads, -1))
     v = v.unflatten(2, (attn.heads, -1))
     lengths, text_length = layout["lengths"], layout["text_length"]
-    from .flash4_varlen import varlen_fwd
+    if layout.get("backend", "flash4") == "sdpa":
+        out = sdpa_cross_attention(q, k, v, layout)
+    else:
+        from .flash4_varlen import varlen_fwd
 
-    # Discard per-sample padding between prompt banks before the varlen call.
-    packed_k = torch.cat(
-        [k[i, : len(sample) * text_length] for i, sample in enumerate(lengths)]
-    )
-    packed_v = torch.cat(
-        [v[i, : len(sample) * text_length] for i, sample in enumerate(lengths)]
-    )
-    out, _ = varlen_fwd(
-        q.flatten(0, 1),
-        packed_k,
-        packed_v,
-        layout["cu_q"],
-        layout["cu_k"],
-        layout["max_q"],
-        text_length,
-    )
-    out = out.reshape_as(q)
+        # Discard per-sample padding between prompt banks before the varlen call.
+        packed_k = torch.cat(
+            [k[i, : len(sample) * text_length] for i, sample in enumerate(lengths)]
+        )
+        packed_v = torch.cat(
+            [v[i, : len(sample) * text_length] for i, sample in enumerate(lengths)]
+        )
+        out, _ = varlen_fwd(
+            q.flatten(0, 1),
+            packed_k,
+            packed_v,
+            layout["cu_q"],
+            layout["cu_k"],
+            layout["max_q"],
+            text_length,
+        )
+        out = out.reshape_as(q)
     out = out.flatten(2, 3).type_as(q)
     return attn.to_out[1](attn.to_out[0](out))
