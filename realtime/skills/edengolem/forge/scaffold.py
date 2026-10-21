@@ -165,7 +165,7 @@ def initialize(root, name, brief_path, entries=(), extras=(), rapier=False, inst
     count = len(STAGES)
     write_new(root, files, replace=('package.json',), directories=tuple(f'runs/step{i}' for i in range(1, count)))
     (root / 'launch.sh').chmod(0o755)
-    command = ['npm', 'install', '--ignore-scripts', '--no-audit', '--no-fund']
+    command = [shutil.which('npm') or 'npm', 'install', '--ignore-scripts', '--no-audit', '--no-fund']
     if not install:
         command.append('--package-lock-only')
     subprocess.run(command, cwd=root, check=True, timeout=180)

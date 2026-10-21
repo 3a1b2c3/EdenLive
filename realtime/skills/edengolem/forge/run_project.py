@@ -12,6 +12,7 @@ import sys
 import tempfile
 import time
 import urllib.request
+import uuid
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
@@ -46,9 +47,10 @@ def project_server(root, *, stage=None, timeout=10, port=0, log=None):
             log = Path(log).resolve()
             log.parent.mkdir(parents=True, exist_ok=True)
             stream = log.open('w', buffering=1, encoding='utf-8')
+        owner = uuid.uuid4().hex
         process = subprocess.Popen(command, cwd=base.parent,
                                    stdout=stream or subprocess.DEVNULL, stderr=subprocess.STDOUT,
-                                   env={**os.environ, 'PYTHONUNBUFFERED': '1'})
+                                   env={**os.environ, 'PYTHONUNBUFFERED': '1', 'GAMEBLOCKS_OWNER': owner})
         deadline = time.monotonic() + timeout
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         url = f'http://127.0.0.1:{selected_port}/'
@@ -58,7 +60,9 @@ def project_server(root, *, stage=None, timeout=10, port=0, log=None):
             try:
                 with opener.open(url, timeout=min(.3, timeout)) as response:
                     # A listener on an occupied port must never count as our server.
-                    if response.status == 200 and response.headers.get('X-GameBlocks-Pid') == str(process.pid):
+                    owned = (response.headers.get('X-GameBlocks-Pid') == str(process.pid)
+                             or response.headers.get('X-GameBlocks-Owner') == owner)
+                    if response.status == 200 and owned:
                         break
             except OSError:
                 pass
@@ -69,7 +73,11 @@ def project_server(root, *, stage=None, timeout=10, port=0, log=None):
                'pid': process.pid, 'log': str(log) if log else None}
     finally:
         if process is not None and process.poll() is None:
-            process.terminate()
+            if os.name == 'nt':
+                # The shell wrapper does not exec on Windows; end the whole tree or the server outlives the check.
+                subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'], capture_output=True)
+            else:
+                process.terminate()
             try:
                 process.wait(timeout=3)
             except subprocess.TimeoutExpired:
@@ -97,7 +105,7 @@ def relocation_check(root, destination=None):
         for path in target.rglob('*'):
             if path.is_symlink():
                 raise ValueError(f'relocated runtime must contain copied files: {path}')
-        installed = subprocess.run(['npm', 'ci', '--ignore-scripts'], cwd=target, timeout=120,
+        installed = subprocess.run([shutil.which('npm') or 'npm', 'ci', '--ignore-scripts'], cwd=target, timeout=120,
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         if installed.returncode:
             raise RuntimeError(f'npm ci failed: {installed.stdout[-2000:]}')

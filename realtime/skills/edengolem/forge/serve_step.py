@@ -23,12 +23,16 @@ import argparse
 import html
 import http.server
 import json
+import mimetypes
 import os
 import socket
 import socketserver
 import sys
 from functools import partial
 from pathlib import Path
+
+# Windows registries and minimal Pythons lack .mjs; browsers reject it as text/plain.
+mimetypes.add_type("text/javascript", ".mjs")
 
 # A repository tool lives in forge/; the standalone copy lives at the project root.
 # Check the skill marker too, so a project named "forge" still serves itself.
@@ -257,6 +261,10 @@ class Step1Handler(http.server.SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.send_header('X-GameBlocks-Pid', str(os.getpid()))
+        # A launcher that starts the server through a shell (Windows) cannot match on PID; it sets a token instead.
+        owner = os.environ.get('GAMEBLOCKS_OWNER')
+        if owner:
+            self.send_header('X-GameBlocks-Owner', owner)
         # These prototypes are edited and reloaded constantly; a cached stale
         # main.js is the most confusing possible failure.
         self.send_header("Cache-Control", "no-store, max-age=0")
