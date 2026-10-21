@@ -18,4 +18,7 @@ if [ ! -d "runs/$step" ]; then
     printf '%s\n' "No runs/$step directory in $project_dir" >&2
     exit 2
 fi
-exec python3 "$project_dir/serve_step.py" --runs "runs/$step" "$@"
+# PYTHON overrides the interpreter; otherwise python3, then python (Windows installs often lack python3).
+python_bin=${PYTHON:-python3}
+if ! command -v "$python_bin" >/dev/null 2>&1; then python_bin=python; fi
+exec "$python_bin" "$project_dir/serve_step.py" --runs "runs/$step" "$@"
