@@ -1,0 +1,26 @@
+{
+  "durationMs": 9042,
+  "staticPrompt": "Cinematic photorealism. A yellow city taxi races down a long downtown avenue at golden hour, seen from a chase camera behind the car. Towering high-rise buildings line both sides, richly detailed: glass curtain-wall facades with endless grids of windows, some warmly lit and some reflecting the orange sky, concrete and brick towers with balconies, fire escapes, setbacks and stepped crowns, rooftop water tanks, antennas and mechanical units, billboards and shop signs at street level, awnings and lit storefronts. Buildings vary in height and style, with deep shadowed canyons between them. Streetlights, traffic signals, parked cars and orange roadblocks along the road, a slow bus and civilian cars ahead, glowing cyan checkpoint gates arching over the lanes and a checkered finish gate in the distance. Warm low sun, long soft shadows, light haze between the buildings.",
+  "dynamicPrompts": [
+    {
+      "startMs": 0,
+      "endMs": 3000,
+      "text": "Clear golden hour: warm low sun, a dry asphalt avenue with long soft shadows and a clean orange sky."
+    },
+    {
+      "startMs": 3000,
+      "endMs": 5500,
+      "text": "Dark clouds roll in and cover the sun; the light turns cool and gray and the first raindrops start to fall."
+    },
+    {
+      "startMs": 5500,
+      "endMs": 7500,
+      "text": "Heavy rain pours over the city; the road is soaked and shiny with reflections, mist hangs between the towers and car headlights switch on."
+    },
+    {
+      "startMs": 7500,
+      "endMs": 9042,
+      "text": "Stormy dusk: dim blue-gray light, streetlights and lit windows glowing, rain streaking through the air and puddles on the asphalt."
+    }
+  ]
+}
