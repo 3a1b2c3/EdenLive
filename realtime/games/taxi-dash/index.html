@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Downtown Taxi Dash</title>
+  <style>
+    :root {
+      --taxi: #ffd21f; --ink: #10151d; --panel: rgba(16, 21, 29, 0.78); --text: #f3efe4;
+      --muted: #b8b09c; --good: #59e08a; --bad: #ff6b5e; --cyan: #25c7dd;
+    }
+    html, body { margin: 0; height: 100%; background: #0b0e14; overflow: hidden; }
+    body { font: 14px/1.4 system-ui, "Segoe UI", Roboto, sans-serif; color: var(--text); }
+    #app { position: absolute; inset: 0; }
+    #app canvas { display: block; width: 100%; height: 100%; }
+
+    #hud { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+    .panel {
+      position: absolute; background: var(--panel); border: 1px solid rgba(255, 210, 31, 0.28);
+      border-radius: 10px; padding: 8px 12px; box-sizing: border-box;
+    }
+    .label { font-size: 11px; letter-spacing: 0.12em; color: var(--muted); }
+    .value { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+    .health { left: 16px; top: 16px; width: 230px; }
+    .health .bar { margin: 6px 0 4px; height: 10px; border-radius: 6px; background: #2a313d; overflow: hidden; }
+    .health .bar i { display: block; height: 100%; width: 100%; background: var(--good); }
+    .health.low .bar i { background: var(--bad); }
+
+    .clock { left: 50%; top: 16px; transform: translateX(-50%); text-align: center; min-width: 150px; }
+    .clock b { display: block; font-size: 34px; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--taxi); }
+    .clock.warn b { color: var(--bad); }
+
+    .progress { right: 16px; top: 16px; width: 230px; text-align: right; }
+    #hud-pips { display: flex; gap: 6px; justify-content: flex-end; align-items: center; margin: 6px 0 4px; }
+    #hud-pips i { width: 18px; height: 10px; border-radius: 3px; background: #2a313d; border: 1px solid var(--cyan); }
+    #hud-pips i.done { background: var(--good); border-color: var(--good); }
+    #hud-pips em { font-style: normal; font-size: 11px; letter-spacing: 0.1em; color: var(--muted); margin-left: 4px; }
+    #hud-pips em.open { color: var(--ink); background: var(--taxi); padding: 1px 6px; border-radius: 4px; }
+
+    .speed { right: 16px; bottom: 16px; text-align: right; }
+    .speed b { font-size: 44px; line-height: 1; font-variant-numeric: tabular-nums; }
+    .speed span { margin-left: 6px; color: var(--muted); }
+    .keys { left: 16px; bottom: 16px; color: var(--muted); font-size: 12px; }
+
+    #hud-toast {
+      position: absolute; left: 50%; top: 30%; transform: translateX(-50%); padding: 8px 18px;
+      border-radius: 999px; background: var(--panel); font-weight: 700; letter-spacing: 0.06em; display: none;
+    }
+    #hud-toast.good { color: var(--good); border: 1px solid var(--good); }
+    #hud-toast.bad { color: var(--bad); border: 1px solid var(--bad); }
+
+    #result {
+      position: absolute; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center;
+      background: rgba(8, 11, 16, 0.6); cursor: pointer;
+    }
+    #result .card {
+      min-width: 340px; max-width: 80vw; padding: 26px 32px; text-align: center; border-radius: 14px;
+      background: #151b25; border: 2px solid var(--taxi); box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+    }
+    #result.won .card { border-color: var(--good); }
+    #result.lost .card { border-color: var(--bad); }
+    #result h1 { margin: 0; font-size: 32px; letter-spacing: 0.08em; }
+    #result.won h1 { color: var(--good); }
+    #result.lost h1 { color: var(--bad); }
+    #result .reason { margin: 6px 0 16px; color: var(--muted); }
+    #result dl { display: grid; grid-template-columns: 1fr auto; gap: 4px 24px; margin: 0 0 18px; text-align: left; }
+    #result dt { color: var(--muted); }
+    #result dd { margin: 0; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+    #result .hint { margin: 0; padding-top: 14px; border-top: 1px solid #2b3648; color: var(--taxi); font-weight: 600; }
+
+    #fatal {
+      position: absolute; left: 12px; bottom: 12px; z-index: 20; max-width: 80vw; padding: 10px 12px; display: none;
+      color: #ffd9d9; background: rgba(120, 20, 20, 0.9); white-space: pre-wrap; border-radius: 6px;
+      font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/vendor/three.module.js",
+      "@dimforge/rapier3d-compat": "/vendor/rapier.es.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="hud">
+    <div class="panel health" id="hud-health">
+      <div class="label">TAXI HEALTH</div>
+      <div class="bar"><i id="hud-health-fill"></i></div>
+      <span class="value" id="hud-health-text">100 / 100</span>
+    </div>
+    <div class="panel clock" id="hud-clock">
+      <div class="label">TIME LEFT</div>
+      <b id="hud-time">0:32</b>
+    </div>
+    <div class="panel progress">
+      <div class="label" id="hud-progress-text">CHECKPOINT 0 / 4</div>
+      <div id="hud-pips"><i></i><i></i><i></i><i></i><em id="hud-finish">FINISH</em></div>
+      <span class="value" id="hud-distance">&nbsp;</span>
+    </div>
+    <div class="panel speed"><b id="hud-speed">0</b><span>km/h</span></div>
+    <div class="panel keys">W/S drive &nbsp; A/D steer &nbsp; Space brake &nbsp; R restart</div>
+    <div id="hud-toast"></div>
+  </div>
+  <div id="result">
+    <div class="card">
+      <h1 id="result-title"></h1>
+      <div class="reason" id="result-reason"></div>
+      <dl>
+        <dt>Time used</dt><dd id="result-time"></dd>
+        <dt>Checkpoints</dt><dd id="result-checkpoints"></dd>
+        <dt>Taxi health</dt><dd id="result-health"></dd>
+        <dt>Crashes</dt><dd id="result-hits"></dd>
+      </dl>
+      <p class="hint">Press R or Enter, or click, to race again</p>
+    </div>
+  </div>
+  <div id="fatal" style="display:none"></div>
+  <script type="module">
+    import('./main.js').then(({ start }) => start()).catch((err) => {
+      const fatal = document.getElementById('fatal');
+      fatal.style.display = 'block';
+      fatal.textContent = err?.stack ?? String(err);
+    });
+  </script>
+</body>
+</html>
