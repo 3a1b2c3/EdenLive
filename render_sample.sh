@@ -8,7 +8,6 @@
 #   --cover     reference image (the photoreal first frame); copied into the first manifest row's folder as cover.png
 #   --frames    121 (5 s) or 241 (10 s); must be 1 + 4*n and fit the recording    [121]
 #   --out       output folder under the repository                                [inference/<samples folder name>]
-#   --condition-fps N  rate at which the proxy video is sampled for conditioning, 1..24; the model was trained with 6   [config default 6]
 # Environment: MIN_FREE_MIB  free GPU memory required, in MiB                       [40000]
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
@@ -17,15 +16,13 @@ samples="examples/city_racer"
 cover=""
 frames=121
 out=""
-condition_fps=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --samples) samples="${2:?--samples needs a folder}"; shift 2 ;;
     --cover) cover="${2:?--cover needs an image path}"; shift 2 ;;
     --frames) frames="${2:?--frames needs a number}"; shift 2 ;;
     --out) out="${2:?--out needs a folder}"; shift 2 ;;
-    --condition-fps) condition_fps="${2:?--condition-fps needs a number}"; shift 2 ;;
-    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
     *) echo "ERROR: unknown option $1" >&2; exit 2 ;;
   esac
 done
@@ -61,14 +58,6 @@ fi
 overrides=(data.dataset.params.path="${samples}/manifest.csv" data.dataset.params.root="${samples}" inference.output_dir="${out}")
 if [[ "${frames}" != 121 ]]; then
   overrides+=(data.dataset.params.max_frames="${frames}" inference.num_frames="${frames}" inference.max_frames="${frames}")
-fi
-if [[ -n "${condition_fps}" ]]; then
-  if ! [[ "${condition_fps}" =~ ^[0-9]+$ ]] || (( condition_fps < 1 || condition_fps > 24 )); then
-    echo "ERROR: --condition-fps must be a whole number from 1 to 24, got ${condition_fps}" >&2
-    exit 2
-  fi
-  overrides+=(inference.condition_video_fps.video_context="${condition_fps}")
-  echo "proxy conditioning rate: ${condition_fps} fps (the model was trained with 6)"
 fi
 
 log="${out}.render.log"
